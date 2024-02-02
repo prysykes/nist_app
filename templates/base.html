@@ -1,0 +1,159 @@
+{% load static%}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{% static '/css/styles.css' %}">
+    <link rel="stylesheet" href="{% static '/css/forms.css' %}">
+    <title>Video Anotation Framework</title>
+</head>
+<body>
+   
+    {% block header %}
+        <header>
+            <div class="tm_banner">
+                <div id="logo-nist">
+                    <img src="{{ STATIC_URL }}/static/media\nist_logo.jpg" alt="nist logo">
+                </div>
+                <div style="margin-right: 1%;">
+                    <div >
+                        {% if request.user.is_authenticated %}
+                            <div id="name_plate">
+                                <p id="last_name">Welcome {{ request.user}}</p> &nbsp;&nbsp;
+                                <a href="{% url 'user_logout' %}"><input class="nist-button" type="button" value="logout"></a>
+                            </div>
+                        {% else %}
+                            <p id="tm-login"> login - to use the application</p>
+                            <span style="font-size: small; cursor: pointer;"> <a href="{% url 'signup' %}" > not a user? - sign-up </a></span>
+                            </div>
+                            
+                            <div class="display-none" id="tm_login_form">
+                                <form action="login" method="POST" id="login_form">
+                                    <input type="text" name="username" id="username" placeholder="username">
+                                    <input type="password" name="password" id="password" placeholder="password">
+                                
+                                    <a href="{% url 'user_login' %}"> <input class="nist-button" type="button" value="login"></a>
+                                    
+                                </form>
+                                
+                            </div>
+                        {% endif %}
+                    
+                </div>
+            </div>
+        </header>
+    {% endblock header %}
+    {% block section %}
+        <div class="section">
+            <h1 class="tm_headings">NIST Automatic Video Anotation Application</h1>
+            {% if request.user.is_authenticated %}
+            <div class="tm_main_body">
+                {% block uploadVid %}
+                    <div class="upload_vid">
+                        <form  action="" method="POST" enctype="multipart/form-data">{% csrf_token %}
+                            
+                        </form>
+                    </div>
+                {% endblock uploadVid %}
+                {% block aside %}
+                <div id="tm_aside">
+                    <h3 class="tm_headings">
+                        Video Categories
+                    </h3>
+                    Lorem ipsum dolor sit amet consectetur adipisicing elit. Quas dicta voluptate, 
+                    tenetur omnis voluptates expedita rerum ullam, at magni quo, mollitia tempora
+                    illo quidem accusamus quis. Dolores adipisci perferendis quasi.
+                </div>
+                {% endblock aside %}
+
+                {% block main %}
+                <div class="tm_vid_main">
+                    {% block video_list %}
+                    <div id="tm_video_list">
+                        <h3 class="tm_headings">
+                            Category Name
+                        </h3>
+                        Lorem ipsum dolor sit amet consectetur adipisicing elit. Totam iste quae obcaecati
+                    ab culpa deleniti maxime illo, facere,
+                    dignissimos perspiciatis sed! A fuga impedit ipsam id provident adipisci, maiores illum?
+                    </div>
+                    
+                    {% endblock video_list %}
+
+                    {% block video_preview %}
+                    <div id="tm_preview">
+                        <h3 class="tm_headings">
+                            Video Preview
+                        </h3>
+                        <div id="tm_p">
+                            Lorem ipsum dolor sit amet consectetur adipisicing elit. Totam iste quae obcaecati
+                    ab culpa deleniti maxime illo, facere,
+                    dignissimos perspiciatis sed! A fuga impedit ipsam id provident adipisci, maiores illum?
+                            <div id="approve_btn">
+                                <input class="nist-button" type="button" value="approve">
+                                <input class="nist-button" type="button" value="reject">
+                            </div>
+                        </div>
+                        
+                        
+                    </div>
+                    {% endblock video_preview %}
+                    
+                </div>
+                {% endblock main %}
+            </div>
+            {% else %}
+            <div style="width: max-content;" class="cf">
+                <form  action="" method="POST" enctype="multipart/form-data">{% csrf_token %}
+                    <div class="form-column">
+                      <div class="form-row">
+                        <h3> Login to use the application</h3>
+                        <hr>
+                      </div>
+                      <div class="form-row">
+                        <div class="row-align" > 
+                          <div><label for="username"></label> Username</div>
+                          <div> <input type="text" name="username" id="username"></div>
+                        </div>
+                        <div class="row-align"> 
+                          <div><label for="password"></label> Password</div>
+                          <div> <input type="password" name="password" id="password"></div>  
+                        </div>
+                        
+                      <div class="form-row row-align">
+                        <label for="login"> Login to your account</label>
+                        <input name="login" class="nist-button" type="submit" value="Login"> 
+                       
+                      </div>
+                      
+                    </div>
+      
+                  </form>
+            </div>
+            {% endif %}
+        </div>
+        
+    {% endblock section %}   
+        
+        
+        
+    {% block footer %}
+    <footer>
+        <div id="footer">
+            Lorem ipsum dolor sit amet consectetur adipisicing elit.
+            Ab quos a sunt voluptas ut commodi iusto alias molestiae itaque et corrupti
+            vitae quas dolor, nihil, libero quasi porro ratione aut!
+        </div>
+    </footer>
+    {% endblock footer %}
+    
+    
+    
+
+{% block scripts %}
+<script src="{% static '/scripts/main.js' %}"></script>
+{% endblock scripts %}
+</body>
+</html>
