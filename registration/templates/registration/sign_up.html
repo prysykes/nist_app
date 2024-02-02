@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block section %}
+        <div class="section">
+            <h1 class="tm_headings">NIST Automatic Video Anotation Application</h1>
+            
+            <div class="sign_up_div">
+                
+
+                {% block main %}
+                <div class="tm_vid_main">
+                    
+
+                    {% block video_preview %}
+                    <div id="tm_preview">
+                        <h3 class="tm_headings">
+                            Sign-up to use the application
+                        </h3>
+                        <div id="p-signup-form">
+                            <form  action="" method="POST" enctype="multipart/form-data">{% csrf_token %}
+                              <div class="form-column">
+                                <div class="form-row">
+                                  <h3> Login Information</h3>
+                                  <hr>
+                                </div>
+                                <div class="form-row">
+                                  <div class="row-align" > 
+                                    <div>{{userreg_form.title.label}} </div>
+                                    <div> {{userreg_form.title}}</div>
+                                  </div>
+                                  <div class="row-align"> 
+                                    <div>{{registration_form.first_name.label}} </div>
+                                    <div> {{registration_form.first_name}}</div>  
+                                  </div>
+                                  <div class="row-align"> 
+                                    <div>{{registration_form.last_name.label}} </div>
+                                    <div> {{registration_form.last_name}} </div>  
+                                  </div>
+                                  <div class="row-align"> 
+                                    <div>{{registration_form.username.label}} </div>
+                                    <div> {{registration_form.username}} </div>  
+                                  </div>
+                                  <div class="row-align"> 
+                                    <div>{{registration_form.email.label}} </div>
+                                     <div> {{registration_form.email}} </div>  
+                                  </div>
+                                  <div class="row-align"> 
+                                    <div>{{registration_form.password1.label}} </div>
+                                    <div> {{registration_form.password1}} </div> 
+                                  </div>
+                                  <div class="row-align"> 
+                                    <div>{{registration_form.password2.label}} </div>
+                                    <div> {{registration_form.password2}} </div> 
+                                  </div>
+                                </div>
+                                <div class="form-row row-align">
+                                  <label style="font-size:x-small;"  for="signup"> Create Account</label>
+                                  <input name="signup" class="nist-button" type="submit" value="Sign-Up"> 
+                                 
+                                </div>
+                                
+                              </div>
+                
+                            </form>
+                            
+                          </div>
+                    </div>
+                    {% endblock video_preview %}
+                    
+                </div>
+                {% endblock main %}
+            </div>
+           
+        </div>
+        
+    {% endblock section %}
