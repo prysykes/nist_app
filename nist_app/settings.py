@@ -85,6 +85,8 @@ DATABASES = {
     }
 }
 
+# disable max file upload limitation
+DATA_UPLOAD_MAX_NUMBER_FILES = None
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
