@@ -117,3 +117,15 @@ html,body {
    
 
 }
+
+#video_upload{
+    width: 40%;
+    justify-content: center;
+    margin: auto;
+    padding: 8px;
+
+}
+
+#video_upload h3{
+    text-align: center;
+}

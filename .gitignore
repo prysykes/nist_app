@@ -1,2 +1,4 @@
 venv
 testy.py
+.DS_Store
+trial_videos

@@ -48,6 +48,26 @@
     {% block section %}
         <div class="section">
             <h1 class="tm_headings">NIST Automatic Video Anotation Application</h1>
+            <div id="video_upload">
+                <form  action="" method="POST" enctype="multipart/form-data">{% csrf_token %}
+                    <div class="form-column">
+                        <div class="form-row">
+                            <h3> Multiple Video Upload </h3>
+                            <hr>
+                        </div>
+                        <div class="form-row">
+                            <div class="row-align" > 
+                                <div> {{video_upload}} </div>  <input name="upload_videos" class="nist-button" type="submit" value="upload_videos"/> 
+                            </div>
+                        </div>
+                        
+                      
+                      
+                    </div>
+      
+                </form>
+                
+            </div>
             {% if request.user.is_authenticated %}
             <div class="tm_main_body">
                 {% block uploadVid %}
@@ -60,11 +80,10 @@
                 {% block aside %}
                 <div id="tm_aside">
                     <h3 class="tm_headings">
-                        Video Categories
+                        Video Categories 
                     </h3>
-                    Lorem ipsum dolor sit amet consectetur adipisicing elit. Quas dicta voluptate, 
-                    tenetur omnis voluptates expedita rerum ullam, at magni quo, mollitia tempora
-                    illo quidem accusamus quis. Dolores adipisci perferendis quasi.
+                    
+                    For each category, add explore button. When user clicks the explore, the category is transfered to Category Name div
                 </div>
                 {% endblock aside %}
 
@@ -75,9 +94,7 @@
                         <h3 class="tm_headings">
                             Category Name
                         </h3>
-                        Lorem ipsum dolor sit amet consectetur adipisicing elit. Totam iste quae obcaecati
-                    ab culpa deleniti maxime illo, facere,
-                    dignissimos perspiciatis sed! A fuga impedit ipsam id provident adipisci, maiores illum?
+                        Category Name div, displays a list of categories with next to transverse the entire list.
                     </div>
                     
                     {% endblock video_list %}
