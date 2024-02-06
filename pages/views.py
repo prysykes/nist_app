@@ -8,21 +8,12 @@ from .models import Videos
 from .utils import handle_upload_videos
 from .utils import display_videos
 
-display_videos()
-
-# checked_by = models.CharField(max_length=30, null=True, blank=True)
-#     video = models.FileField(upload_to='videos', verbose_name='Trec Videos')
-#     file_name = models.CharField(max_length=30, null=True, blank=True)
-#     cluster_id = models.CharField(max_length=20)
-#     status = models.BooleanField(default=False)
-#     date_uploaded = models.DateField(auto_now_add=True)
-
-# @login_required(login_url='user_login')
-
-
 
 def index(request):
     video_upload_form = VideoUploadForm()
+    categories = display_videos()
+   
+    # print(type(categories))
     if request.method == 'POST':
         if request.POST.get('username') != None: #check if the login form was submitted
             print('user logn hit', request.POST)
@@ -43,7 +34,8 @@ def index(request):
 
     else:
         context = {
-            'video_upload': video_upload_form
+            'video_upload': video_upload_form,
+            'categories': categories
         }
         return render(request, 'index.html', context)
 

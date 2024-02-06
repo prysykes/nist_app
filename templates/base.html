@@ -82,7 +82,13 @@
                     <h3 class="tm_headings">
                         Video Categories 
                     </h3>
-                    
+                    {% for category in categories %}
+                    <div style="padding-left: 10px; padding-right: 10px;" class="categories">
+                        <h3 class="cat_headings">
+                            {{category.category}}
+                        </h3>
+                    </div>
+                    {% endfor %}
                     For each category, add explore button. When user clicks the explore, the category is transfered to Category Name div
                 </div>
                 {% endblock aside %}

@@ -3,13 +3,13 @@ from django.db import models
 # Create your models here.
 
 class Category(models.Model):
-    cluster_id = models.CharField(max_length=30, unique=True)
+    category = models.CharField(max_length=30)
 
     def __str__(self):
-        return self.cluster_id
+        return self.category
 
 class Videos(models.Model):
-    cluster_id = models.ForeignKey(Category, on_delete=models.CASCADE, default='cluster_id')
+    category = models.ForeignKey(Category, on_delete=models.CASCADE)
     checked_by = models.CharField(max_length=30, null=True, blank=True)
     video = models.FileField(upload_to='videos', verbose_name='Trec Videos')
     file_name = models.CharField(max_length=30, null=True, blank=True)

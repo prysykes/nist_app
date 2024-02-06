@@ -4,7 +4,7 @@ from .models import Videos, Category
 
 
 class VideosAdmin(admin.ModelAdmin):
-    list_display = ('file_name', 'cluster_id', 'status')
+    list_display = ('file_name', 'category', 'status')
     search_fields = ['file_name']
 
 
@@ -12,8 +12,8 @@ admin.site.register(Videos, VideosAdmin)
 
 
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ['cluster_id']
-    search_fields = ['cluster_id']
+    list_display = ['category']
+    search_fields = ['category']
 
 
 admin.site.register(Category, CategoryAdmin)
