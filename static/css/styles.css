@@ -129,3 +129,9 @@ html,body {
 #video_upload h3{
     text-align: center;
 }
+
+.cat_headings{
+    background-color: rgb(239, 239, 242);
+    margin: 4px 0 4px 0;
+    border-radius: 5px;
+}
