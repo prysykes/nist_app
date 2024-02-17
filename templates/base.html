@@ -22,8 +22,10 @@
                         {% if request.user.is_authenticated %}
                             <div id="name_plate">
                                 <p id="last_name">Welcome {{ request.user}}</p> &nbsp;&nbsp;
-                                <a href="{% url 'user_logout' %}"><input class="nist-button" type="button" value="logout"></a>
+                                <a href="{% url 'user_logout' %}"> <input class="nist-button" type="button" value="logout"></a>
+                                
                             </div>
+                            <div> <button  class="nist-button" id="upload_videos"> click to upload videos </button></div>
                         {% else %}
                             <p id="tm-login"> login - to use the application</p>
                             <span style="font-size: small; cursor: pointer;"> <a href="{% url 'signup' %}" > not a user? - sign-up </a></span>
@@ -48,7 +50,7 @@
     {% block section %}
         <div class="section">
             <h1 class="tm_headings">NIST Automatic Video Anotation Application</h1>
-            <div id="video_upload">
+            <div class="display-none" id="video_upload">
                 <form  action="" method="POST" enctype="multipart/form-data">{% csrf_token %}
                     <div class="form-column">
                         <div class="form-row">
@@ -85,7 +87,7 @@
                     {% for category in categories %}
                     <div style="padding-left: 10px; padding-right: 10px;" class="categories">
                         <h3 class="cat_headings">
-                            {{category.category}}
+                            {{category.category}} <span> - explore</span> 
                         </h3>
                     </div>
                     {% endfor %}
@@ -97,7 +99,7 @@
                 <div class="tm_vid_main">
                     {% block video_list %}
                     <div id="tm_video_list">
-                        <h3 class="tm_headings">
+                        <h3 id="cat_name" class="tm_headings_temp">
                             Category Name
                         </h3>
                         Category Name div, displays a list of categories with next to transverse the entire list.

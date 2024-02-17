@@ -6,12 +6,14 @@ from django.contrib import messages
 from .upload_form import VideoUploadForm
 from .models import Videos
 from .utils import handle_upload_videos
-from .utils import display_videos
+from .utils import display_categories,  get_video_list
+import json
+from django.http import JsonResponse
 
 
 def index(request):
     video_upload_form = VideoUploadForm()
-    categories = display_videos()
+    categories = display_categories()
    
     # print(type(categories))
     if request.method == 'POST':
@@ -42,3 +44,16 @@ def index(request):
 def sign_up(request):
     context = {}
     return render(request, 'sign_up.html', context)
+
+def display_videos(request):
+    if request.method == 'GET':
+        term = request.GET.get('term')
+    
+    videos = get_video_list(term)
+
+    context = {
+        'videos': videos,
+    }
+
+    return videos
+   

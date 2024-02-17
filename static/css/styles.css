@@ -92,6 +92,15 @@ html,body {
  .tm_headings{
     text-align: center;
     margin-top: 5px;
+    background-color: rgb(31, 31, 64);
+    color: white;
+    
+ }
+
+ .tm_headings_temp{
+    text-align: center;
+    margin-top: 5px;
+    
  }
 
  .sign_up_div{
@@ -99,13 +108,14 @@ html,body {
  }
 
  .nist-button{
-    background-color: rgb(134, 168, 185);
+    background-color: rgb(31, 31, 64);
     color: white;
     width: fit-content;
     height: fit-content;
-    padding: 6px;
+    padding: 3px;
+    font-size: medium;
+    border-radius: 8px;
     cursor: pointer;
-    font-size: large;
 }
 
 #approve_btn{
@@ -133,5 +143,20 @@ html,body {
 .cat_headings{
     background-color: rgb(239, 239, 242);
     margin: 4px 0 4px 0;
-    border-radius: 5px;
+    border-radius: 8px;
+    padding: 2px 0 2px 8px;
+    cursor: pointer;
+}
+
+.categories :hover {
+    background-color: rgb(31, 31, 64);
+    color: white;
+}
+
+.cat_headings span{
+    font-size:x-small;
+}
+
+#upload_videos{
+    margin-top: 2px;
 }
