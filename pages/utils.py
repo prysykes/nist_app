@@ -1,5 +1,8 @@
 from .models import Videos, Category
 from django.shortcuts import get_list_or_404, get_object_or_404
+from django.core.serializers import serialize
+from django.http import HttpResponse
+import json
 
 
 
@@ -47,8 +50,24 @@ def handle_upload_videos(request, uploaded_videos, video_upload_form):
         cur_vid.save()
 
 
-def display_videos(request=None):
+def display_categories(request=None):
     videos = get_list_or_404(Videos, status=False)
     categories = get_list_or_404(Category)
     return categories
+
+
+#  category = models.ForeignKey(Category, on_delete=models.CASCADE)
+#     checked_by = models.CharField(max_length=30, null=True, blank=True)
+#     video = models.FileField(upload_to='videos', verbose_name='Trec Videos')
+#     file_name = models.CharField(max_length=30, null=True, blank=True)
+#     status = models.BooleanField(default=False)
+#     date_uploaded = models.DateField(auto_now_add=True)
+
+def  get_video_list(term):
+    cur_category = Category.objects.get(category = term)
+    print('cur_cat', cur_category)
+    qs = get_list_or_404(Videos, status=False, category=cur_category)
+    videos = serialize('json', qs, fields=('file_name', 'video'))
     
+    
+    return HttpResponse(videos, content_type='application/json')
