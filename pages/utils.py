@@ -69,5 +69,4 @@ def  get_video_list(term):
     qs = get_list_or_404(Videos, status=False, category=cur_category)
     videos = serialize('json', qs, fields=('file_name', 'video'))
     
-    
     return HttpResponse(videos, content_type='application/json')

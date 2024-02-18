@@ -51,9 +51,5 @@ def display_videos(request):
     
     videos = get_video_list(term)
 
-    context = {
-        'videos': videos,
-    }
-
     return videos
    
