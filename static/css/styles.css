@@ -35,7 +35,7 @@ html,body {
 }
 
 #tm_aside{
-    width: 25%;
+    width: 20%;
     border-right: 1px solid black;
     padding: 0 5px 5px 5px;
 }
@@ -43,24 +43,13 @@ html,body {
 
 .tm_vid_main{
     padding: 0 5px 5px 5px;
+    width: 80%;
 }
 
 #tm_video_list{
     border-bottom: 1px solid black;
     margin-bottom: 5px;
 }
-
-#footer {
-    position: fixed;
-    bottom: 0;
-    width: 100%;
-    height: 60px;   /* Height of the footer */
-    background: rgb(59, 124, 157);
-    border-radius: 10px;
-    padding: 8px;
-    color: white;
-    text-align: center;
- }
 
  .tm_headings{
     background-color: rgb(239, 239, 242);
@@ -71,6 +60,10 @@ html,body {
 
  .display-none{
     display: none;
+ }
+
+ .visibility-hidden{
+    visibility: hidden;
  }
 
  #tm-login{
@@ -93,7 +86,7 @@ html,body {
     text-align: center;
     margin-top: 5px;
     background-color: rgb(31, 31, 64);
-    color: white;
+    color: rgb(255, 255, 255);
     
  }
 
@@ -118,15 +111,6 @@ html,body {
     cursor: pointer;
 }
 
-#approve_btn{
-    display: flex;
-    flex-direction: row;
-    justify-content: space-around;
-    margin: auto;
-    width: 50%;
-   
-
-}
 
 #video_upload{
     width: 40%;
@@ -160,3 +144,70 @@ html,body {
 #upload_videos{
     margin-top: 2px;
 }
+
+#video_list_disp {
+    display:flex;
+    padding-left: 8px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-bottom: 2px;
+    margin-top: 2px;
+    overflow-y: scroll;
+}
+ 
+#video_list_disp span {
+    text-decoration: none;
+    background-color: rgb(239, 239, 242);
+    width: 150px;
+    padding: 3px;
+    margin: 3px 3px 0 3px;
+    border-radius: 5px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+
+#video_list_disp :hover {
+    background-color: rgb(31, 31, 64);
+    color: white;
+}
+
+#vid_preview {
+    padding: 0px;
+}
+
+#vid_tag{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    margin: auto;
+    width: 50%;
+    height: fit-content;
+}
+
+#approve_btn{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    margin: auto;
+    width: 50%;
+   
+
+}
+
+
+#vid_tag video{
+    border-radius: 20px;
+}
+
+#footer {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    height: 30px;   /* Height of the footer */
+    background-color: rgb(31, 31, 64);
+    color: white;
+    border-radius: 10px;
+    padding: 8px;
+    text-align: center;
+ }
