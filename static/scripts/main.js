@@ -9,7 +9,6 @@ let vid_preview = document.getElementById('vid_preview')
 let video = document.querySelector('video')
 let btn_apr_rej = document.querySelectorAll('.btn_apr_rej')
 
-console.log(btn_apr_rej);
 
 
 //http://127.0.0.1:8000/display_videos?term=sports
@@ -47,14 +46,28 @@ function fetch_videos(category){
         // console.log(Object.values(vid_obj));
         for (const item in vid_obj){
             let cur_vid_obj = vid_obj[item]
+            // console.log('cur_vid_obj', cur_vid_obj);
             let cur_vid_obj_fields = cur_vid_obj['fields']
             let file_name = cur_vid_obj_fields['file_name']
             let vid_url = cur_vid_obj_fields['video']
-            
+            let checked_by = cur_vid_obj_fields['checked_by']
+            console.log('hecked_by', checked_by == '');
+            // <i class="material-icons">done</i>
+            let inline_i = document.createElement('i')
+            inline_i.classList.add('material-icons')
+            inline_i.style.color = 'green'
+            inline_i.textContent = 'done'
+
+            // console.log(inline_i);
             let span = document.createElement('span')
             span.innerText = file_name
+            if (checked_by != '') {
+                span.appendChild(inline_i)
+            }
+            
             span.classList.add('vid_name')
             span.addEventListener('click', ()=>{
+                span.classList.toggle('active')
 
                 vid_preview.classList.toggle('display-none')
                 cur_vid_src = base_vid_src+vid_url
@@ -68,14 +81,41 @@ function fetch_videos(category){
    
 
 }
+// let full_url_path = base_url+'/display_videos?term='
+let process_user_sel_url = base_url+'/process_user_selection?selection='
 
+function fetch_processs_selction_endpoint(vid_file_name, vid_category, appr_rej=null){
+    let cur_selection_load = vid_file_name+'_'+vid_category+'_'+appr_rej
+    let process_user_sel_url_selectn = process_user_sel_url+cur_selection_load
+    const response = fetch(process_user_sel_url_selectn, {
+        method: 'GET'
+    })
+    .then(response => response.json())
+    .then((data) => {
+        console.log(data);
+    })
+    console.log('full_sel', process_user_sel_url_selectn);
+}
 btn_apr_rej.forEach((btn)=>{
     btn.addEventListener('click', ()=>{
         if (btn.value == 'approve'){
-            console.log('do approve something');
+            let cur_video = document.querySelectorAll('video')[0]
+            vid_name_cat = cur_video.src
+            //split and slice to retriev the classname_categoty from the video src url
+            vid_name_cat = vid_name_cat.split(':').slice(-1)[0].split('/').slice(-1)[0].split('.')[0]
+            vid_file_name = vid_name_cat.split('_')[0]
+            vid_category = vid_name_cat.split('_')[1]
+            fetch_processs_selction_endpoint(vid_file_name, vid_category, appr_rej=btn.value);
         }
         else if(btn.value == 'reject'){
-            console.log('do reject something');
+            let cur_video = document.querySelectorAll('video')[0]
+            vid_name_cat = cur_video.src
+            //split and slice to retriev the classname_categoty from the video src url
+            vid_name_cat = vid_name_cat.split(':').slice(-1)[0].split('/').slice(-1)[0].split('.')[0]
+            vid_file_name = vid_name_cat.split('_')[0]
+            vid_category = vid_name_cat.split('_')[1]
+
+            fetch_processs_selction_endpoint(vid_file_name, vid_category, appr_rej=btn.value);
         }
     });
 })

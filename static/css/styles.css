@@ -185,7 +185,7 @@ html,body {
     height: fit-content;
 }
 
-#approve_btn{
+.approve_btn{
     display: flex;
     flex-direction: row;
     justify-content: space-around;
@@ -210,4 +210,8 @@ html,body {
     border-radius: 10px;
     padding: 8px;
     text-align: center;
+ }
+
+ .active {
+    border: 2px solid rgb(31, 31, 64);;
  }
