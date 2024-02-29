@@ -6,7 +6,7 @@ from django.contrib import messages
 from .upload_form import VideoUploadForm
 from .models import Videos
 from .utils import handle_upload_videos
-from .utils import display_categories,  get_video_list
+from .utils import display_categories,  get_video_list, check_user_decision
 import json
 from django.http import JsonResponse
 
@@ -35,10 +35,17 @@ def index(request):
             return redirect('/')
 
     else:
-        context = {
-            'video_upload': video_upload_form,
-            'categories': categories
-        }
+        if len(categories) == 0:
+
+            context = {
+                'video_upload': video_upload_form,
+                # 'categories': categories
+            }
+        else:
+            context = {
+                'video_upload': video_upload_form,
+                'categories': categories
+            }
         return render(request, 'index.html', context)
 
 def sign_up(request):
@@ -52,4 +59,19 @@ def display_videos(request):
     videos = get_video_list(term)
 
     return videos
+
+def process_user_selection(request):
+    cur_user = request.user
+    print('process_user_selection hit', request.user)
+    
+    if request.method == 'GET':
+        # selection is a json payload
+        selection = request.GET.get('selection')
+        split_selection = selection.split('_')
+        file_name = split_selection[0]
+        category = split_selection[1]
+        apr_rej = split_selection[2]
+        check_user_decision(file_name, category, cur_user, appr_or_rej=apr_rej)
+        # print('selection', split_selection)
+    return JsonResponse('choice saved', safe=False)
    

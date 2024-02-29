@@ -45,14 +45,14 @@ def handle_upload_videos(request, uploaded_videos, video_upload_form):
             new_category.save()
 
         
-        cur_vid = Videos(video=vid, checked_by=request.user, file_name=cur_filename)
+        cur_vid = Videos(video=vid, checked_by='', file_name=cur_filename)
         cur_vid.category = new_category
         cur_vid.save()
 
 
 def display_categories(request=None):
-    videos = get_list_or_404(Videos, status=False)
-    categories = get_list_or_404(Category)
+    # videos = get_list_or_404(Videos, che=False)
+    categories = Category.objects.all()
     return categories
 
 
@@ -67,6 +67,19 @@ def  get_video_list(term):
     cur_category = Category.objects.get(category = term)
     print('cur_cat', cur_category)
     qs = get_list_or_404(Videos, status=False, category=cur_category)
-    videos = serialize('json', qs, fields=('file_name', 'video'))
+    videos = serialize('json', qs, fields=('file_name', 'video', 'checked_by'))
     
     return HttpResponse(videos, content_type='application/json')
+
+def check_user_decision(file_name, category, cur_user, appr_or_rej=None):
+    video = get_object_or_404(Videos, file_name=file_name)
+    print('video.checked_by', video.checked_by)
+    print(video)
+    
+    if appr_or_rej == 'approve':
+        video.checked_by = str(cur_user)
+        video.status = True
+        video.save()
+    elif appr_or_rej == 'reject':
+        video.checked_by = str(cur_user)
+        video.save()
