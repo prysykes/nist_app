@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_list_or_404
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
@@ -55,10 +55,17 @@ def sign_up(request):
 def display_videos(request):
     if request.method == 'GET':
         term = request.GET.get('term')
+        print(term)
     
     videos = get_video_list(term)
+    # print(videos)
 
     return videos
+
+def paginated_vid_list(request):
+    if request.method == 'GET':
+        category = request.GET.get('term')
+        videos = get_list_or_404(Videos, category=category)
 
 def process_user_selection(request):
     cur_user = request.user
