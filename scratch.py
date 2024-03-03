@@ -7,7 +7,7 @@ print(os.path.isdir(trial_vid))
 print(os.getcwd())
 wkdir = os.getcwd()
 
-for idx, file in enumerate(sorted(os.listdir(trial_vid))):
+for idx, file in enumerate(sorted(os.listdir(trial_vid)), 1):
 
     if idx <= 100:
         class_name = 'className'

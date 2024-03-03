@@ -63,11 +63,14 @@ def display_categories(request=None):
 #     status = models.BooleanField(default=False)
 #     date_uploaded = models.DateField(auto_now_add=True)
 
+
 def  get_video_list(term):
     cur_category = Category.objects.get(category = term)
+    videos = Videos.objects.filter(category=cur_category).order_by('pk')
     print('cur_cat', cur_category)
-    qs = get_list_or_404(Videos, status=False, category=cur_category)
-    videos = serialize('json', qs, fields=('file_name', 'video', 'checked_by'))
+    qs = videos
+    print('a qs', qs)
+    videos = serialize('json', qs, fields=('file_name', 'video', 'checked_by', 'status'))
     
     return HttpResponse(videos, content_type='application/json')
 

@@ -152,13 +152,14 @@ html,body {
     flex-wrap: wrap;
     margin-bottom: 2px;
     margin-top: 2px;
+    height: 150px;
     overflow-y: scroll;
 }
  
 #video_list_disp span {
     text-decoration: none;
     background-color: rgb(239, 239, 242);
-    width: 150px;
+    width: 120px;
     padding: 3px;
     margin: 3px 3px 0 3px;
     border-radius: 5px;
