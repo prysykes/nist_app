@@ -67,9 +67,9 @@ def display_categories(request=None):
 def  get_video_list(term):
     cur_category = Category.objects.get(category = term)
     videos = Videos.objects.filter(category=cur_category).order_by('pk')
-    print('cur_cat', cur_category)
+    # print('cur_cat', cur_category)
     qs = videos
-    print('a qs', qs)
+    # print('a qs', qs)
     videos = serialize('json', qs, fields=('file_name', 'video', 'checked_by', 'status'))
     
     return HttpResponse(videos, content_type='application/json')
@@ -77,7 +77,7 @@ def  get_video_list(term):
 def check_user_decision(file_name, category, cur_user, appr_or_rej=None):
     video = get_object_or_404(Videos, file_name=file_name)
     print('video.checked_by', video.checked_by)
-    print(video)
+    # print(video)
     
     if appr_or_rej == 'approve':
         video.checked_by = str(cur_user)
