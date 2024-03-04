@@ -178,23 +178,23 @@ html,body {
 }
 
 #vid_tag{
-    display: flex;
-    flex-direction: row;
-    justify-content: space-around;
+    /* display: flex;
+    flex-direction: column; */
     margin: auto;
-    width: 50%;
+    width: fit-content;
     height: fit-content;
 }
 
-.approve_btn{
+.apr_rej_btn_div{
     display: flex;
     flex-direction: row;
-    justify-content: space-around;
+    justify-content: space-between;
     margin: auto;
-    width: 50%;
    
 
 }
+
+
 
 
 #vid_tag video{
