@@ -18,7 +18,7 @@ def index(request):
     # print(type(categories))
     if request.method == 'POST':
         if request.POST.get('username') != None: #check if the login form was submitted
-            print('user logn hit', request.POST)
+            # print('user logn hit', request.POST)
             username = request.POST.get('username')
             password = request.POST.get('password')
             user = authenticate(request, username=username, password=password)
@@ -55,7 +55,7 @@ def sign_up(request):
 def display_videos(request):
     if request.method == 'GET':
         term = request.GET.get('term')
-        print(term)
+        # print(term)
     
     videos = get_video_list(term)
     # print(videos)
@@ -69,7 +69,7 @@ def paginated_vid_list(request):
 
 def process_user_selection(request):
     cur_user = request.user
-    print('process_user_selection hit', request.user)
+    # print('process_user_selection hit', request.user)
     
     if request.method == 'GET':
         # selection is a json payload

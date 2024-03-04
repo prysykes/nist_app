@@ -7,15 +7,23 @@ let cat_name = document.querySelector('#cat_name')
 let video_list_disp = document.querySelector('#video_list_disp')
 let vid_preview = document.getElementById('vid_preview')
 let video = document.querySelector('video')
-let btn_apr_rej = document.querySelectorAll('.btn_apr_rej')
+let approve_btn = document.querySelector('#approve_btn')
+let video_name = document.querySelector('#video_name')
 
+// console.log(video_name);
+
+// var btn_apr_rej = null
 
 
 //http://127.0.0.1:8000/display_videos?term=sports
 let base_url = window.location.origin
 let full_url_path = base_url+'/display_videos?term='
 
+// let full_url_path = base_url+'/display_videos?term='
+let process_user_sel_url = base_url+'/process_user_selection?selection='
+
 function delay_run(func1, category){
+    // delay run returns a promise after calling function 1
     return new Promise(func1(category))
     
     
@@ -28,6 +36,8 @@ cat_headings.forEach((elem)=>{
         cat_name.classList.add('tm_headings')
         
         delay_run(fetch_vids, category).then(
+            // check_last_checked runs after the promise has been resolved
+            // hence only runs after func1 (aft)
             check_last_timeout = setTimeout(()=> {
                 check_last(category)}, 5000)
             )
@@ -43,40 +53,35 @@ function isEmptyNode(node){
 // console.log(isEmptyNode(video_list_disp), 'hmm');
 
 var check_last = function check_last_checked(category=null){
-    // check_last is called after user clicks reject or approve.
-    // check last returns to the user the next video to review
-    if (!isEmptyNode(video_list_disp)){
-
-        console.log('not empy');
-    }
-    else {
-        console.log('empty');
-    }
     
-    // console.log(video_list_disp.innerHTML);
-    // base_vid_src = "media/"
-    // category = category.trim()
-    // let full_url_path_term = full_url_path+category
-    // const response =  fetch(full_url_path_term, {
-    //     method: 'GET'
-    // })
-    // .then(response => response.json())
-    // .then((data) => {
-    //     // video_list_disp.innerHTML = ''
-    //     vid_objs = Object.values(data)
-    //     for (const item in vid_objs) {
-    //         let cur_vid_obj = vid_objs[item]
-    //         let cur_vid_obj_fields = cur_vid_obj['fields']
-    //         let file_name = cur_vid_obj_fields['file_name']
-    //         let vid_url = cur_vid_obj_fields['video']
-    //         let checked_by = cur_vid_obj_fields['checked_by']
-    //         let status = cur_vid_obj_fields['status']
-    //         if (checked_by == ""){
-    //             console.log('yes', file_name);
-    //             break
-    //         }
-    //     }
-    // })
+    base_vid_src = "media/"
+    category = category.trim()
+    let full_url_path_term = full_url_path+category
+    const response =  fetch(full_url_path_term, {
+        method: 'GET'
+    })
+    .then(response => response.json())
+    .then((data) => {
+        // video_list_disp.innerHTML = ''
+        vid_objs = Object.values(data)
+        
+        for (const item in vid_objs) {
+            let cur_vid_obj = vid_objs[item]
+            let cur_vid_obj_fields = cur_vid_obj['fields']
+            let file_name = cur_vid_obj_fields['file_name']
+            let vid_url = cur_vid_obj_fields['video']
+            let checked_by = cur_vid_obj_fields['checked_by']
+            let status = cur_vid_obj_fields['status']
+            if (checked_by == ""){
+               
+                video_name.textContent = file_name
+                
+                cur_vid_src = base_vid_src+vid_url
+                video.src = cur_vid_src
+            }
+        }
+    })
+   
 
 }
     
@@ -100,8 +105,29 @@ function create_inline_elemets() {
     
 }
 
+var create_apr_rej = function appr_rej(){
+    let div = document.createElement('div')
+    div.id = 'apr_rej_btn_div'
+    div.classList.add('apr_rej_btn_div')
+
+    let approve_input = document.createElement('input')
+    approve_input.type = 'button'
+    approve_input.value = 'approve'
+    approve_input.className = 'nist-button btn_apr_rej'
+    div.appendChild(approve_input)
+
+    let reject_input = document.createElement('input')
+    reject_input.type = 'button'
+    reject_input.value = 'reject'
+    reject_input.className = 'nist-button btn_apr_rej'
+    div.appendChild(reject_input)
+
+    return div
+}
 
 var fetch_vids = function fetch_videos(category){
+    
+    console.log('approve_btn', approve_btn);
     // functions that fetches a list of videos from the database 
     // based on the category provided by the user
     base_vid_src = "media/"
@@ -114,7 +140,7 @@ var fetch_vids = function fetch_videos(category){
     .then((data) => {
         video_list_disp.innerHTML = ''
         vid_objs = Object.values(data)
-        console.log('vid_objs', vid_objs);
+        console.log('vid_objs**', typeof  vid_objs);
         // console.log(Object.values(vid_obj));
         for (const item in vid_objs){
             let cur_vid_obj = vid_objs[item]
@@ -124,6 +150,7 @@ var fetch_vids = function fetch_videos(category){
             let vid_url = cur_vid_obj_fields['video']
             let checked_by = cur_vid_obj_fields['checked_by']
             let status = cur_vid_obj_fields['status']
+            // console.log('checked_by', checked_by=='');
 
             let inlines = create_inline_elemets()
 
@@ -142,17 +169,40 @@ var fetch_vids = function fetch_videos(category){
                 span.appendChild(inline_bad)
             }
             span.classList.add('vid_name')
-            span.addEventListener('click', ()=>{
+            span.addEventListener('click', (e)=>{
+                
+                // let apr_rej_btn_div = document.querySelector('apr_rej_btn_div')
+                // apr_rej_btn_div.remove()
+                
                 span.classList.toggle('active')
 
                 vid_preview.classList.toggle('display-none')
                 cur_vid_src = base_vid_src+vid_url
                 video.src = cur_vid_src
-                // console.log('cur_vid_src ', cur_vid_src);
+                if (checked_by == ""){
+                    let vid_tag = document.querySelector('#vid_tag')
+                    var apr_rej_btn_div = document.querySelector('#apr_rej_btn_div')
+                    // console.log('apr_rej_btn_div:', apr_rej_btn_div)
+                    if (apr_rej_btn_div == null){
+                        apr_rej_div = create_apr_rej()
+                        vid_tag.appendChild(apr_rej_div)
+                    }
+                    btn_apr_rej = document.querySelectorAll('.btn_apr_rej')
+                    // console.log('btn_apr_rej', btn_apr_rej);
+                    appr_rej_event(btn_apr_rej)
+                    
+                }
+                else{
+                    // let apr_rej_btn_div = document.querySelector('apr_rej_btn_div')
+                    console.log('not empty', apr_rej_btn_div);
+                    apr_rej_btn_div.remove()
+                   
+                }
+               
             })
+          
             video_list_disp.appendChild(span)
             
-            // console.log(`filename-${file_name} \t url- ${vid_url}`);
         }
     }
     
@@ -161,8 +211,19 @@ var fetch_vids = function fetch_videos(category){
    complete = new Function() 
  return complete 
 }
-// let full_url_path = base_url+'/display_videos?term='
-let process_user_sel_url = base_url+'/process_user_selection?selection='
+
+
+preview_videos()
+function preview_videos(){
+    let vid_span = document.querySelectorAll('.vid_name')
+    // vid_span.forEach((el)=> {
+    //     el.addEventListener('click', ()=>{
+            
+    //     })
+    // })
+    
+}
+
 
 function fetch_processs_selction_endpoint(vid_file_name, vid_category, appr_rej=null){
     let cur_selection_load = vid_file_name+'_'+vid_category+'_'+appr_rej
@@ -181,31 +242,32 @@ function fetch_processs_selction_endpoint(vid_file_name, vid_category, appr_rej=
     )
     
 }
-btn_apr_rej.forEach((btn)=>{
-    btn.addEventListener('click', ()=>{
-        if (btn.value == 'approve'){
+
+// console.log('btn_apr_rej', btn_apr_rej);
+let appr_rej_event = function event_apr_rej(node){
+    node.forEach((btn)=>{
+        btn.addEventListener('click', ()=>{
             let cur_video = document.querySelectorAll('video')[0]
-            vid_name_cat = cur_video.src
-            console.log('vidnamecat', vid_name_cat);
-            //split and slice to retriev the classname_categoty from the video src url
-            vid_name_cat = vid_name_cat.split(':').slice(-1)[0].split('/').slice(-1)[0].split('.')[0]
-            vid_file_name = vid_name_cat.split('_')[0]
-            vid_category = vid_name_cat.split('_')[1]
-            console.log('vidnamecat', vid_category);
-            fetch_processs_selction_endpoint(vid_file_name, vid_category, appr_rej=btn.value);
-        }
-        else if(btn.value == 'reject'){
-            let cur_video = document.querySelectorAll('video')[0]
-            vid_name_cat = cur_video.src
-            //split and slice to retriev the classname_categoty from the video src url
-            vid_name_cat = vid_name_cat.split(':').slice(-1)[0].split('/').slice(-1)[0].split('.')[0]
-            vid_file_name = vid_name_cat.split('_')[0]
-            vid_category = vid_name_cat.split('_')[1]
-            console.log('vidnamecat', vid_category);
-            fetch_processs_selction_endpoint(vid_file_name, vid_category, appr_rej=btn.value);
-        }
-    });
-})
+                vid_name_cat = cur_video.src
+                // console.log('vidnamecat', vid_name_cat);
+                //split and slice to retriev the classname_categoty from the video src url
+                vid_name_cat = vid_name_cat.split(':').slice(-1)[0].split('/').slice(-1)[0].split('.')[0]
+                vid_file_name = vid_name_cat.split('_')[0]
+                vid_category = vid_name_cat.split('_')[1]
+                // console.log('vidnamecat', vid_category);
+            check_last(vid_category)
+            if (btn.value == 'approve'){
+                
+                fetch_processs_selction_endpoint(vid_file_name, vid_category, appr_rej=btn.value);
+            }
+            else if(btn.value == 'reject'){
+                
+                fetch_processs_selction_endpoint(vid_file_name, vid_category, appr_rej=btn.value);
+            }
+        })
+    })
+}
+
 
 
 btn_vid_upload.addEventListener('click', ()=>{

@@ -66,7 +66,7 @@ def display_categories(request=None):
 
 def  get_video_list(term):
     cur_category = Category.objects.get(category = term)
-    videos = Videos.objects.filter(category=cur_category).order_by('pk')
+    videos = Videos.objects.filter(category=cur_category)
     # print('cur_cat', cur_category)
     qs = videos
     # print('a qs', qs)
