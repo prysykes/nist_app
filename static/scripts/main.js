@@ -6,18 +6,25 @@ let cat_headings = document.querySelectorAll('.cat_headings')
 let cat_name = document.querySelector('#cat_name')
 let video_list_disp = document.querySelector('#video_list_disp')
 let vid_preview = document.getElementById('vid_preview')
-let video = document.querySelector('video')
+// let video = document.querySelector('video')
 let approve_btn = document.querySelector('#approve_btn')
 let video_name = document.querySelector('#video_name')
+let progress = document.querySelectorAll('.cat_headings .progress')
+
+cat_headings_innerText = cat_headings[0].innerText
+console.log(('progress', cat_headings_innerText));
 
 // console.log(video_name);
 
-// var btn_apr_rej = null
+var app_rej_btn_div = null
 
 
 //http://127.0.0.1:8000/display_videos?term=sports
-let base_url = window.location.origin
-let full_url_path = base_url+'/display_videos?term='
+const base_url = window.location.origin
+const full_url_path = base_url+'/display_videos?term='
+const paginated_vid_url = base_url+'/paginated_vid_list?term='
+const get_unprocessed_vids = base_url+'/get_unprocessed_vids?selection='
+const base_vid_src = "media/"
 
 // let full_url_path = base_url+'/display_videos?term='
 let process_user_sel_url = base_url+'/process_user_selection?selection='
@@ -28,32 +35,141 @@ function delay_run(func1, category){
     
     
 }
+function create_video_tag(){
+    let video = document.createElement('video')
+    video.width = 600
+    video.height = 500
+    video.setAttribute("controls", "controls")
+    video.type = "video/webm"
+
+    return video
+}
+
+let fetch_paginated_vid = function fetch_paginated_vids(full_paginated_vid_url=null, get_all_vids=null, class_name=null){
+    // console.log(`full_paginated_vid_url ${full_paginated_vid_url}, get_all_vids ${get_all_vids}, class_name ${class_name}`);
+    let vid_preview = document.querySelector('#vid_preview')
+    let video = document.querySelector('video')
+    let vid_tag = document.querySelector('#vid_tag')
+    vid_tag.innerHTML = ""
+   
+    let video_name = document.querySelector('#video_name')
+    // vid_preview.classList.toggle('display-none')
+    if (class_name == null){
+        // console.log('yes null');
+        const response = fetch(full_paginated_vid_url, {
+            method: 'GET'
+        })
+        .then(response => response.json())
+        .then((data)=>{
+
+            let video = create_video_tag()
+            
+            let vid_objs = Object.values(data)
+            let vid_obj_arr = vid_obj_to_array(vid_objs)
+            let cur_vid_obj = vid_obj_arr[0]
+            let cur_vid_obj_filename = cur_vid_obj['file_name']
+            let cur_vid_obj_url = cur_vid_obj['vid_url']
+            let cur_vid_obj_checked_by = cur_vid_obj['checked_by']
+            let full_vid_src = base_vid_src+cur_vid_obj_url
+            video_name.textContent = cur_vid_obj_filename
+            video.src = full_vid_src
+            let appr_rej_btn = create_apr_rej()
+            // console.log(('vid tag', vid_tag));
+            vid_tag.appendChild(video)
+            vid_tag.appendChild(appr_rej_btn)
+            let vid_spans = document.querySelectorAll('.vid_name')
+            vid_spans.forEach((span)=>{
+                span.classList.remove('active')
+            })
+            let cur_span = document.querySelector(`[data-name=${CSS.escape(cur_vid_obj_filename)}]`)
+            cur_span.classList.add('active')
+            return cur_span
+        })
+    }
+    
+    else {
+        
+        const response = fetch(get_all_vids, {
+            method: 'GET'
+        })
+        .then(response => response.json())
+        .then((data)=>{
+            // console.log(data);
+            let video = create_video_tag()
+            
+            let vid_objs = Object.values(data)
+            let vid_obj_arr = vid_obj_to_array(vid_objs)
+
+            vid_obj_arr.forEach((vid)=> {
+                // console.log(vid);
+                if (vid['file_name']==class_name){
+                    let cur_vid_name = vid['file_name']
+                    let cur_vid_url = vid['vid_url']
+                    let cur_vid_checked_by = vid['checked_by']
+                    let full_vidsrc = base_vid_src+cur_vid_url 
+                    console.log('full_vidsrc ', full_vidsrc );
+                    video_name.textContent = cur_vid_name
+                    video.src = full_vidsrc
+                    
+                    // console.log(('vid tag', vid_tag));
+                    vid_tag.appendChild(video)
+                    if (cur_vid_checked_by == ''){
+                        let appr_rej_btn = create_apr_rej()
+                        vid_tag.appendChild(appr_rej_btn)
+                    }
+
+                    let vid_spans = document.querySelectorAll('.vid_name')
+                    vid_spans.forEach((span)=>{
+                        span.classList.remove('active')
+                    })
+                    // select current clicked span based on html data attribute
+                    let cur_span = document.querySelector(`[data-name=${CSS.escape(cur_vid_name)}]`)
+                    cur_span.classList.add('active')
+                    
+                }
+                // console.log(vid);
+            })
+            
+            
+        })
+    }
+
+    // check if apr_rej_btn has been created
+
+    
+    
+}
+
 cat_headings.forEach((elem)=>{
-    let text_content = elem.textContent
+    let text_content = elem.innerText
     let category = text_content.split('-')[0]
+    let term = category.trim().split('|')[0]
+    console.log('termo', term);
+    let full_paginated_vid_url = paginated_vid_url+term
     elem.addEventListener('click', ()=>{
+        fetch_paginated_vid(full_paginated_vid_url=full_paginated_vid_url)
+       
         cat_name.textContent = category
         cat_name.classList.add('tm_headings')
-        
-        delay_run(fetch_vids, category).then(
-            // check_last_checked runs after the promise has been resolved
-            // hence only runs after func1 (aft)
-            check_last_timeout = setTimeout(()=> {
-                check_last(category=category, caller='delay_run')}, 2000)
-            )
+        fetch_vids(category)
+        // delay_run(fetch_vids, category).then(
+        //     // check_last_checked runs after the promise has been resolved
+        //     // hence only runs after func1 (aft)
+        //     // check_last_timeout = setTimeout(()=> {
+        //     //     check_last(category=category, caller='delay_run')}, 2000)
+        //     )
    
     })
     
-    
 })
+
+
 
 function isEmptyNode(node){
     return node.innerHTML.trim() ==""
 }
 // console.log(isEmptyNode(video_list_disp), 'hmm');
-var convert_obj_to_array = function objload_to_array(payload){
 
-}
 
 function vid_obj_to_array(vid_objs){
     let vid_obj_arr = []
@@ -79,52 +195,6 @@ function vid_obj_to_array(vid_objs){
         }
         return vid_obj_arr
 }
-var check_last = function check_last_checked(category=null, vid_file_name=null, caller=null){
-    // querries the database and returns all videos that
-    // is yet to be checked by the user in ascendigng order
-    let cur_span = null;
-    if (vid_file_name !=null){
-        cur_span = document.querySelector(`[data-name=${CSS.escape(vid_file_name)}]`)
-    } 
-    base_vid_src = "media/"
-    category = category.trim()
-    let full_url_path_term = full_url_path+category
-    const response =  fetch(full_url_path_term, {
-        method: 'GET'
-    })
-    .then(response => response.json())
-    .then((data) => {
-        // video_list_disp.innerHTML = ''
-        // let vid_obj_arr = []
-        vid_objs = Object.values(data)
-        vid_obj_arr = vid_obj_to_array(vid_objs)
-        vid_obj_arr = vid_obj_arr.reverse()
-        // console.log('vid_obj_arr**', vid_obj_arr);
-        vid_obj_arr.forEach((elem)=>{
-            // console.log('elem', elem['checked_by'] == "");
-            let file_name = elem['file_name']
-            let vid_url = elem['vid_url']
-            let checked_by = elem['checked_by']
-            let status = elem['status']
-            // console.log(`filename: ${file_name} \t vid_url ${vid_url}
-            //                \t checked_by ${checked_by} \t status ${status} `);  
-                  
-            if (checked_by == ""){
-               
-                video_name.textContent = file_name
-                
-                // cur_vid_src = base_vid_src+vid_url
-                
-                // video.src = cur_vid_src
-                set_video(base_vid_src, vid_url)
-            }
-        })
-      
-    })
-
-    return cur_span
-
-}
     
 
 function create_inline_elemets() {
@@ -141,6 +211,70 @@ function create_inline_elemets() {
     
 }
 
+var process_appr_rej = function proc_appr_rej(endpoint, category=null){
+    console.log('vid cataa', category);
+    let vid_tag = document.getElementById('vid_tag')
+    let video_name = document.getElementById('video_name')
+    let video = create_video_tag()
+    let appr_rej_div = create_apr_rej()
+    vid_tag.innerHTML = ""
+    console.log('vid_tag', vid_tag, video, appr_rej_div);
+    console.log('ennd', endpoint);
+    response = fetch(endpoint, {
+        method: 'GET'
+    })
+    .then(response => response.json())
+    .then((data)=>{
+        // console.log('dataooo',data);
+        let rem_total = data['rem_total']
+        let serialized_rem_total = data['serialized_rem_total']
+        let serialized_rem =JSON.parse(serialized_rem_total[0])
+        serialized_rem = vid_obj_to_array(serialized_rem)
+        let serialized_total = JSON.parse(serialized_rem_total[1])
+        serialized_total = vid_obj_to_array(serialized_total)
+
+        let first_vid = serialized_rem[0]
+        let first_vid_name = first_vid['file_name']
+        video_name.textContent = first_vid_name
+        let full_vid_url = base_vid_src+first_vid['vid_url']
+        video.src = full_vid_url
+        vid_tag.appendChild(video)
+        vid_tag.appendChild(appr_rej_div)
+        // console.log('serialized_rem', serialized_rem[0]['vid_url']);
+        // serialized_rem.forEach((obj)=>{
+        //     console.log('obj', obj);
+        // })
+
+        let cat_name = document.querySelector('#cat_name')
+        // console.log('cat_name', cat_name);
+        c_cur_cat = cat_name.textContent
+        // console.log('c_cur_cat', c_cur_cat);
+        cur_cat = cat_name.textContent.trim().split(' ')[0]
+        // console.log('cat_name', cur_cat);
+        fetch_vids(cur_cat)
+        let remaining = rem_total[0]
+        let total = rem_total[1]
+        let cat_rem_total = cur_cat+" "+"|"+remaining+"/"+total
+        
+        // retrieve the whole category class and check for any one matching 
+        // current category to update the text content
+        cat_headings.forEach((elem)=>{
+            let cat_inner_text = elem.innerText
+            cat_inner_text = cat_inner_text.split('|')[0].trim()
+            if(category == String(cat_inner_text)){
+                let progress = elem.children[0]
+                console.log('elem', elem.children[0]);
+                progress.innerText = "|"+remaining+"/"+total
+            }
+        })
+        cat_name.textContent = cat_rem_total
+        // console.log('after cat_name', cat_name);
+        // console.log('cat_rem_total', cat_rem_total);
+
+        // console.log('rem_total', rem_total);
+    })
+}
+
 var create_apr_rej = function appr_rej(){
     let div = document.createElement('div')
     div.id = 'apr_rej_btn_div'
@@ -150,12 +284,30 @@ var create_apr_rej = function appr_rej(){
     approve_input.type = 'button'
     approve_input.value = 'approve'
     approve_input.className = 'nist-button btn_apr_rej'
+    approve_input.addEventListener('click', ()=>{
+        let video = document.querySelector('video')
+        let video_src = video.src
+        let vid_file_name_cat = video_src.split('/').at(-1).split('_')
+        let vid_file_name = vid_file_name_cat[0]
+        let vid_category = vid_file_name_cat.at(-1).split('.')[0]
+        // console.log(vid_file_name, vid_category, 'youp');
+        cur_selection_load = vid_file_name+'_'+vid_category+'_'+'approve'
+        let endpoint = get_unprocessed_vids+cur_selection_load 
+        
+        // endpoint = `${endpoint}&class_name=${vid_file_name}&apr_rej='approve'`
+        process_appr_rej(endpoint, category=vid_category)
+        // console.log('video', video_src);
+        console.log('approved clicked');
+    })
     div.appendChild(approve_input)
 
     let reject_input = document.createElement('input')
     reject_input.type = 'button'
     reject_input.value = 'reject'
     reject_input.className = 'nist-button btn_apr_rej'
+    reject_input.addEventListener('click', ()=>{
+        console.log('reject clicked');
+    })
     div.appendChild(reject_input)
 
     return div
@@ -166,9 +318,13 @@ var fetch_vids = function fetch_videos(category){
     // console.log('approve_btn', approve_btn);
     // functions that fetches a list of videos from the database 
     // based on the category provided by the user
-    base_vid_src = "media/"
+    
     category = category.trim()
     let full_url_path_term = full_url_path+category
+    let term = category.split('|')[0].trim()
+    // console.log('tterm', term);
+    let full_url_path_term_p = full_url_path+term
+    // console.log('full_paginated_vid_url', full_paginated_vid_url);
     const response =  fetch(full_url_path_term, {
         method: 'GET'
     })
@@ -210,32 +366,9 @@ var fetch_vids = function fetch_videos(category){
                 // let apr_rej_btn_div = document.querySelector('apr_rej_btn_div')
                 // apr_rej_btn_div.remove()
                 
-                span.classList.toggle('active')
+                
+                fetch_paginated_vid(full_paginated_vid_url=null, get_all_vids=full_url_path_term_p, class_name=file_name)
 
-                // vid_preview.classList.toggle('display-none')
-                // cur_vid_src = base_vid_src+vid_url
-                // video.src = cur_vid_src
-
-                set_video(base_vid_src, vid_url)
-                if (checked_by == ""){
-                    let vid_tag = document.querySelector('#vid_tag')
-                    var apr_rej_btn_div = document.querySelector('#apr_rej_btn_div')
-                    // console.log('apr_rej_btn_div:', apr_rej_btn_div)
-                    if (apr_rej_btn_div == null){
-                        apr_rej_div = create_apr_rej()
-                        vid_tag.appendChild(apr_rej_div)
-                    }
-                    btn_apr_rej = document.querySelectorAll('.btn_apr_rej')
-                    // console.log('btn_apr_rej', btn_apr_rej);
-                    appr_rej_event(btn_apr_rej)
-                    
-                }
-                else{
-                    // let apr_rej_btn_div = document.querySelector('apr_rej_btn_div')
-                    console.log('not empty', apr_rej_btn_div);
-                    // apr_rej_btn_div.remove()
-                   
-                }
                
             })
           
@@ -249,77 +382,6 @@ var fetch_vids = function fetch_videos(category){
    complete = new Function() 
  return complete 
 }
-
-function set_video(base_vid_src, vid_url){
-    vid_preview.classList.toggle('display-none')
-    cur_vid_src = base_vid_src+vid_url
-    video.src = cur_vid_src
-}
-
-// preview_videos()
-// function preview_videos(){
-//     let vid_span = document.querySelectorAll('.vid_name')
-//     // vid_span.forEach((el)=> {
-//     //     el.addEventListener('click', ()=>{
-            
-//     //     })
-//     // })
-    
-// }
-
-
-function fetch_processs_selction_endpoint(vid_file_name, vid_category, appr_rej=null){
-    // fetches a list of videos based on the category provided by the user
-    let cur_selection_load = vid_file_name+'_'+vid_category+'_'+appr_rej
-    let process_user_sel_url_selectn = process_user_sel_url+cur_selection_load
-    const response = fetch(process_user_sel_url_selectn, {
-        method: 'GET'
-    })
-    .then(response => response.json())
-    .then((data) => {
-        // console.log(data);
-    })
-    .then(()=>{
-        fetch_vids(vid_category);
-        }
-        
-    )
-    
-}
-
-// console.log('btn_apr_rej', btn_apr_rej);
-let appr_rej_event = function event_apr_rej(node){
-    // allows the user to approve a reject a video based on how well
-    // the content relates to the model class O/P
-    node.forEach((btn)=>{
-        btn.addEventListener('click', ()=>{
-            let cur_video = document.querySelectorAll('video')[0]
-                vid_name_cat = cur_video.src
-                // console.log('vidnamecat', vid_name_cat);
-                //split and slice to retriev the classname_categoty from the video src url
-                vid_name_cat = vid_name_cat.split(':').slice(-1)[0].split('/').slice(-1)[0].split('.')[0]
-                vid_file_name = vid_name_cat.split('_')[0]
-                vid_category = vid_name_cat.split('_')[1]
-                // console.log('vidnamecat', vid_category);
-            cur_span = check_last(vid_category, vid_file_name, caller='apr_rej_btn')
-            // console.log('vid file name', vid_file_name);
-            // select a particular span based on data attribute
-            
-            cur_span.classList.add('active')
-
-            // console.log(cur_span);
-            if (btn.value == 'approve'){
-                
-                fetch_processs_selction_endpoint(vid_file_name, vid_category, appr_rej=btn.value);
-            }
-            else if(btn.value == 'reject'){
-                
-                fetch_processs_selction_endpoint(vid_file_name, vid_category, appr_rej=btn.value);
-            }
-        })
-    })
-}
-
 
 
 btn_vid_upload.addEventListener('click', ()=>{

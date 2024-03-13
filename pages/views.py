@@ -4,10 +4,10 @@ from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from .upload_form import VideoUploadForm
-from .models import Videos
+from .models import Category, Videos
 from .utils import handle_upload_videos
-from .utils import display_categories,  get_video_list, check_user_decision
-import json
+from .utils import display_categories, get_rem_and_total,  get_video_list, check_user_decision, get_paginated_video_list
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse
 
 
@@ -64,8 +64,26 @@ def display_videos(request):
 
 def paginated_vid_list(request):
     if request.method == 'GET':
-        category = request.GET.get('term')
-        videos = get_list_or_404(Videos, category=category)
+        term = request.GET.get('term')
+        videos = get_paginated_video_list(term)
+    print('videos.get_unprocessed_videos()', videos)
+    return videos
+
+def get_unprocessed_vids(request):
+    cur_user = request.user
+    print(cur_user, 'cur')
+    if request.method == "GET":
+        selection = request.GET.get('selection')
+        split_selection = selection.split('_')
+        file_name = split_selection[0]
+        category = split_selection[1]
+        apr_rej = split_selection[2]
+        context = get_rem_and_total(category)
+        # return HttpResponse(videos, content_type='application/json')
+        
+        check_user_decision(file_name, category, cur_user, appr_or_rej=apr_rej)
+        # print('context', context)
+    return JsonResponse(context, safe=False)
 
 def process_user_selection(request):
     cur_user = request.user
