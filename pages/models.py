@@ -7,6 +7,11 @@ class Category(models.Model):
 
     def __str__(self):
         return self.category
+    
+    def get_total_videos(self):
+        return self.videos_set.all()
+    def get_unprocessed_videos(self):
+        return self.videos_set.all().filter(checked_by='')
 
 class Videos(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
@@ -18,3 +23,6 @@ class Videos(models.Model):
 
     def __str__(self):
         return self.file_name
+    
+    def get_unprocessed_videos(self):
+        return self.objects.all().filter(checked_by='')

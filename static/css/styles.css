@@ -110,7 +110,10 @@ html,body {
     border-radius: 8px;
     cursor: pointer;
 }
-
+.progress{
+    font-size:x-small;
+    font-weight: 400;
+}
 
 #video_upload{
     width: 40%;

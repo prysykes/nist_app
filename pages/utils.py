@@ -56,17 +56,11 @@ def display_categories(request=None):
     return categories
 
 
-#  category = models.ForeignKey(Category, on_delete=models.CASCADE)
-#     checked_by = models.CharField(max_length=30, null=True, blank=True)
-#     video = models.FileField(upload_to='videos', verbose_name='Trec Videos')
-#     file_name = models.CharField(max_length=30, null=True, blank=True)
-#     status = models.BooleanField(default=False)
-#     date_uploaded = models.DateField(auto_now_add=True)
-
-
 def  get_video_list(term):
+    term = term.split(' ')[0]
     cur_category = Category.objects.get(category = term)
     videos = Videos.objects.filter(category=cur_category)
+    # print('videos', videos)
     # print('cur_cat', cur_category)
     qs = videos
     # print('a qs', qs)
@@ -74,9 +68,19 @@ def  get_video_list(term):
     
     return HttpResponse(videos, content_type='application/json')
 
+def get_paginated_video_list(term):
+    #term is category field in the DB
+    category = Category.objects.get(category=term)
+    qs = Videos.objects.all().filter(category=category).filter(checked_by='')
+
+    videos = serialize('json', qs, fields=('file_name', 'video', 'checked_by', 'status'))
+    
+    return HttpResponse(videos, content_type='application/json')
+
 def check_user_decision(file_name, category, cur_user, appr_or_rej=None):
+    print('appr_or_rej', appr_or_rej, appr_or_rej=='approve')
     video = get_object_or_404(Videos, file_name=file_name)
-    print('video.checked_by', video.checked_by)
+    print('video.checked_by', video.file_name, appr_or_rej=='approve')
     # print(video)
     
     if appr_or_rej == 'approve':
@@ -86,3 +90,21 @@ def check_user_decision(file_name, category, cur_user, appr_or_rej=None):
     elif appr_or_rej == 'reject':
         video.checked_by = str(cur_user)
         video.save()
+
+def get_rem_and_total(category):
+    # Category.objects.all().filter(category=category)
+    cur_category = get_object_or_404(Category, category=category)
+    remaining = cur_category.get_unprocessed_videos()
+    total = cur_category.get_total_videos()
+
+    # serialize rem and total videos
+    serialized_rem = serialize('json', remaining, fields=('file_name', 'video', 'checked_by', 'status'))
+    serialized_total = serialize('json', total, fields=('file_name', 'video', 'checked_by', 'status'))
+    serialized_rem_total = (serialized_rem, serialized_total)
+    rem_total = (len(remaining), len(total))
+    context = {'serialized_rem_total': serialized_rem_total,
+               'rem_total': rem_total}
+    
+    # context = json.dumps(context, indent=2)
+    # print(context, 'hii')
+    return context

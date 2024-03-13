@@ -89,7 +89,7 @@
                     {% for category in categories %}
                     <div style="padding-left: 10px; padding-right: 10px;" class="categories">
                         <h3 class="cat_headings">
-                            {{category.category}} <span> - explore</span> 
+                            {{category.category}} <i class="progress">|{{category.get_unprocessed_videos|length}}/{{category.get_total_videos|length}}</i> <span>  - explore</span> 
                         </h3>
                     </div>
                     {% endfor %}
@@ -101,8 +101,9 @@
                     {% block video_list %}
                     <div id="tm_video_list">
                         <h3 id="cat_name" class="tm_headings_temp">
-                            Category Name - <span>remaining/total</span>
+                            Click explore to begin...
                         </h3>
+                        
                         <div id="video_list_disp">
                             
                         </div>
@@ -118,18 +119,14 @@
                             Video Preview
                         </h3>
                         <h4 style="text-align: center;" id="video_name"></h4>
-                        <div class="display-none" id="vid_preview">
+                        <div  id="vid_preview">
                             <div id="vid_tag">
                                 
-                                <video  width="600" height="500" controls type="video/webm">
-                                    
-                                    Your browser does not support the video type
-                                </video>
+                               
                             </div>
                             
                             
                         </div>
-                        
                         
                     </div>
                     {% endblock video_preview %}
