@@ -89,6 +89,7 @@ def check_user_decision(file_name, category, cur_user, appr_or_rej=None):
         video.save()
     elif appr_or_rej == 'reject':
         video.checked_by = str(cur_user)
+        video.status = False
         video.save()
 
 def get_rem_and_total(category):

@@ -10,11 +10,28 @@ from .utils import display_categories, get_rem_and_total,  get_video_list, check
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse
 
+from django.contrib.auth.models import Group
+
+
+
 
 def index(request):
+    avaliable_groups = Group.objects.all()
+    # print('request.user', request.user.is_anonymous)
     video_upload_form = VideoUploadForm()
     categories = display_categories()
-   
+    
+    if not request.user.is_anonymous:
+        user = request.user
+        user_group = list(user.groups.all())[0]
+        
+        print('user_group', user_group)
+        user_processed_videos = Videos.objects.all().filter(checked_by=user)
+        user_processed_videos = len(user_processed_videos)
+        print('user procesed video', user_processed_videos)
+    else:
+        user_processed_videos = None
+    
     # print(type(categories))
     if request.method == 'POST':
         if request.POST.get('username') != None: #check if the login form was submitted
@@ -36,16 +53,31 @@ def index(request):
 
     else:
         if len(categories) == 0:
-
-            context = {
-                'video_upload': video_upload_form,
-                # 'categories': categories
-            }
+            if user_processed_videos != None:
+                context = {
+                    'video_upload': video_upload_form,
+                    'total_processed': user_processed_videos,
+                    # 'categories': categories
+                }
+            else:
+                context = {
+                    'video_upload': video_upload_form,
+                    # 'categories': categories
+                }
         else:
-            context = {
-                'video_upload': video_upload_form,
-                'categories': categories
-            }
+            if user_processed_videos != None:
+                context = {
+                    'video_upload': video_upload_form,
+                    'categories': categories,
+                    'total_processed': user_processed_videos,
+                }
+            else:
+                context = {
+                    'video_upload': video_upload_form,
+                    'categories': categories,
+                    # 'total_processed': len(user_process_videos),
+                }
+
         return render(request, 'index.html', context)
 
 def sign_up(request):
@@ -85,18 +117,5 @@ def get_unprocessed_vids(request):
         # print('context', context)
     return JsonResponse(context, safe=False)
 
-def process_user_selection(request):
-    cur_user = request.user
-    # print('process_user_selection hit', request.user)
-    
-    if request.method == 'GET':
-        # selection is a json payload
-        selection = request.GET.get('selection')
-        split_selection = selection.split('_')
-        file_name = split_selection[0]
-        category = split_selection[1]
-        apr_rej = split_selection[2]
-        check_user_decision(file_name, category, cur_user, appr_or_rej=apr_rej)
-        # print('selection', split_selection)
-    return JsonResponse('choice saved', safe=False)
+
    

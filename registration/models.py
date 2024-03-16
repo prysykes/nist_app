@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+# print('USER', User)
 # Create your models here.
 
 class Userreg(models.Model):
