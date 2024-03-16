@@ -26,3 +26,5 @@ class Videos(models.Model):
     
     def get_unprocessed_videos(self):
         return self.objects.all().filter(checked_by='')
+    
+    

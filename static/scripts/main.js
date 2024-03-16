@@ -9,10 +9,8 @@ let vid_preview = document.getElementById('vid_preview')
 // let video = document.querySelector('video')
 let approve_btn = document.querySelector('#approve_btn')
 let video_name = document.querySelector('#video_name')
-let progress = document.querySelectorAll('.cat_headings .progress')
+// let progress = document.querySelectorAll('.cat_headings .progress')
 
-cat_headings_innerText = cat_headings[0].innerText
-console.log(('progress', cat_headings_innerText));
 
 // console.log(video_name);
 
@@ -83,6 +81,7 @@ let fetch_paginated_vid = function fetch_paginated_vids(full_paginated_vid_url=n
             })
             let cur_span = document.querySelector(`[data-name=${CSS.escape(cur_vid_obj_filename)}]`)
             cur_span.classList.add('active')
+            cur_span.focus()
             return cur_span
         })
     }
@@ -113,9 +112,14 @@ let fetch_paginated_vid = function fetch_paginated_vids(full_paginated_vid_url=n
                     
                     // console.log(('vid tag', vid_tag));
                     vid_tag.appendChild(video)
+                    console.log();
                     if (cur_vid_checked_by == ''){
                         let appr_rej_btn = create_apr_rej()
                         vid_tag.appendChild(appr_rej_btn)
+                    }
+                    else{
+                        let edit_btn_div = create_edit_btn()
+                        vid_tag.appendChild(edit_btn_div)
                     }
 
                     let vid_spans = document.querySelectorAll('.vid_name')
@@ -268,10 +272,7 @@ var process_appr_rej = function proc_appr_rej(endpoint, category=null){
             }
         })
         cat_name.textContent = cat_rem_total
-        // console.log('after cat_name', cat_name);
-        // console.log('cat_rem_total', cat_rem_total);
-
-        // console.log('rem_total', rem_total);
+        
     })
 }
 
@@ -284,6 +285,7 @@ var create_apr_rej = function appr_rej(){
     approve_input.type = 'button'
     approve_input.value = 'approve'
     approve_input.className = 'nist-button btn_apr_rej'
+
     approve_input.addEventListener('click', ()=>{
         let video = document.querySelector('video')
         let video_src = video.src
@@ -296,8 +298,11 @@ var create_apr_rej = function appr_rej(){
         
         // endpoint = `${endpoint}&class_name=${vid_file_name}&apr_rej='approve'`
         process_appr_rej(endpoint, category=vid_category)
+        let cur_span = document.querySelector(`[data-name=${CSS.escape(vid_file_name)}]`)
+        cur_span.classList.toggle('active')
+        cur_span.focus()
         // console.log('video', video_src);
-        console.log('approved clicked');
+        console.log('approved clicked', cur_span);
     })
     div.appendChild(approve_input)
 
@@ -305,10 +310,46 @@ var create_apr_rej = function appr_rej(){
     reject_input.type = 'button'
     reject_input.value = 'reject'
     reject_input.className = 'nist-button btn_apr_rej'
+
     reject_input.addEventListener('click', ()=>{
+        let video = document.querySelector('video')
+        let video_src = video.src
+        let vid_file_name_cat = video_src.split('/').at(-1).split('_')
+        let vid_file_name = vid_file_name_cat[0]
+        let vid_category = vid_file_name_cat.at(-1).split('.')[0]
+        // console.log(vid_file_name, vid_category, 'youp');
+        cur_selection_load = vid_file_name+'_'+vid_category+'_'+'reject'
+        let endpoint = get_unprocessed_vids+cur_selection_load 
+        
+        // endpoint = `${endpoint}&class_name=${vid_file_name}&apr_rej='approve'`
+        process_appr_rej(endpoint, category=vid_category)
+        let curr_span = document.querySelector(`[data-name=${CSS.escape(vid_file_name)}]`)
+        curr_span.classList.toggle('active')
+        curr_span.focus()
         console.log('reject clicked');
     })
     div.appendChild(reject_input)
+
+    return div
+}
+
+function create_edit_btn(){
+    let div = document.createElement('div')
+    div.id = 'edit_res'
+    div.style.textAlign = 'center'
+
+    let btn = document.createElement('input')
+    btn.type = 'button'
+    btn.value = 'edit response'
+    btn.classList.add('nist-button')
+
+    btn.addEventListener('click', ()=>{
+        let edit_div = document.getElementById('edit_res')
+        let app_rej_btn_div = create_apr_rej()
+        edit_div.appendChild(app_rej_btn_div)
+    })
+
+    div.appendChild(btn)
 
     return div
 }
