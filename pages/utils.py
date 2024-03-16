@@ -1,53 +1,97 @@
-from .models import Videos, Category
+from .models import Videos, Category, ProjectTitle
 from django.shortcuts import get_list_or_404, get_object_or_404
 from django.core.serializers import serialize
 from django.http import HttpResponse
+from django.contrib.contenttypes.models import ContentType
+import math
 import json
 
 
+from django.contrib.auth.models import Group, Permission
 
 
-# class Category(models.Model):
-#     category = models.CharField(max_length=30, unique=True)
 
-#     def __str__(self):
-#         return self.cluster_id
-
-# class Videos(models.Model):
-#     category = models.ForeignKey(Category, on_delete=models.CASCADE, default='cluster_id')
-#     checked_by = models.CharField(max_length=30, null=True, blank=True)
-#     video = models.FileField(upload_to='videos', verbose_name='Trec Videos')
-#     file_name = models.CharField(max_length=30, null=True, blank=True)
-#     status = models.BooleanField(default=False)
-#     date_uploaded = models.DateField(auto_now_add=True)
-
-#     def __str__(self):
-#         return self.file_name
+APP_LABEL = 'pages'
 
 
-def handle_upload_videos(request, uploaded_videos, video_upload_form):
-    for vid in uploaded_videos:
-        str_vid = str(vid)
-        # print(str_vid, type(str_vid))
-        split_vid = str_vid.split('_')
-        cur_filename = split_vid[0]
-        cur_clusterid = split_vid[1].split('.')[0]
-        # print(split_vid, cur_filename, cur_clusterid)
-        
-        try: 
-            #checks to see if a category with this cluster_id exist,
-            #if it exist, 
-            new_category = Category.objects.get(category = cur_clusterid)
-            print('yes', new_category)
-        except Exception as e:
-            new_category = Category()
-            new_category.category = cur_clusterid
-            new_category.save()
+# def create_permisions():
+#     all_permisions = []
+#     content_type_v = ContentType.objects.get_for_model(Videos)
+#     content_type_c = ContentType.objects.get_for_model(Category)
+#     video_permisions = Permission.objects.filter(content_type__app_label=APP_LABEL, content_type__model='Vidoes')
+#     category_permisions = Permission.objects.filter(content_type__app_label=APP_LABEL, content_type__model='Category')
+#     all_permisions.extend(video_permisions)
+#     all_permisions.extend(category_permisions)
 
-        
-        cur_vid = Videos(video=vid, checked_by='', file_name=cur_filename)
-        cur_vid.category = new_category
-        cur_vid.save()
+#     return all_permisions
+
+
+
+def create_groups(num_annotators, project_name):
+    """
+    creates a group to associate with each video
+    Params: num_groups: int
+            project_name: str
+    
+    return: project_name_group_idx idx = 0, 1,2,3,4,5
+    """
+    groups = []
+    for idx in range(1, num_annotators+1):
+        print(idx)
+        cur_group, created = Group.objects.get_or_create(name=f'{project_name}_grp_{idx}')
+        groups.append(cur_group)
+        # group_name = Group
+    return groups
+
+
+def handle_upload_videos(request, num_annotators, project_name, uploaded_videos, video_upload_form):
+    # create_groups(num_groups, project_name, permisions_list)
+    """
+        TODO: Divide the total video uploaded by the number of anotators
+              The assign groups when on these values as iterators
+    """
+    total_uploaded_vids = len(uploaded_videos)
+    # permisions_list = create_permisions()
+    groups = create_groups(num_annotators, project_name)
+    
+
+    print(f'groups : {groups } \t total_uploaded_vids: {total_uploaded_vids} num_annotators: {num_annotators}')
+
+    # put this into the loop of annotators
+    min_idx = 0
+    quota = math.ceil(total_uploaded_vids/num_annotators)
+    max_idx = quota
+    for idx in range(num_annotators):
+        cur_uploaded_vid_batch = uploaded_videos[min_idx:max_idx]
+        for vid in cur_uploaded_vid_batch:
+            new_project = ProjectTitle()
+            new_project.project_name = project_name
+            new_project.save()
+            str_vid = str(vid)
+            # print(str_vid, type(str_vid))
+            split_vid = str_vid.split('_')
+            cur_filename = split_vid[0]
+            cur_clusterid = split_vid[1].split('.')[0]
+            # print(split_vid, cur_filename, cur_clusterid)
+            
+            try: 
+                #checks to see if a category with this cluster_id exist,
+                #if it exist, 
+                new_category = Category.objects.get(category = cur_clusterid)
+                print('yes', new_category)
+            except Exception as e:
+                new_category = Category()
+                new_category.category = cur_clusterid
+                new_category.save()
+
+            
+            cur_vid = Videos(video=vid, checked_by='', file_name=cur_filename)
+            cur_vid.category = new_category
+            cur_vid.project = new_project
+            cur_vid.group = groups[idx]
+            cur_vid.save()
+        min_idx = max_idx
+        max_idx += quota
 
 
 def display_categories(request=None):
