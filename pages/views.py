@@ -10,22 +10,21 @@ from .utils import display_categories, get_rem_and_total,  get_video_list, check
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse
 
-from django.contrib.auth.models import Group
-
 
 
 
 def index(request):
-    avaliable_groups = Group.objects.all()
+    # avaliable_groups = Group.objects.all()
     # print('request.user', request.user.is_anonymous)
     video_upload_form = VideoUploadForm()
     categories = display_categories()
+    # print('available groups', avaliable_groups)
     
     if not request.user.is_anonymous:
         user = request.user
-        user_group = list(user.groups.all())[0]
+        # user_group = list(user.groups.all())[0]
         
-        print('user_group', user_group)
+        # print('user_group', user_group)
         user_processed_videos = Videos.objects.all().filter(checked_by=user)
         user_processed_videos = len(user_processed_videos)
         print('user procesed video', user_processed_videos)
@@ -48,7 +47,9 @@ def index(request):
         else:
             video_upload_form = VideoUploadForm(request.POST, request.FILES)
             uploaded_videos = request.FILES.getlist('video')
-            handle_upload_videos(request, uploaded_videos, video_upload_form)
+            num_annotators = int(request.POST.get('annotators'))
+            project_name = request.POST.get('project_name')
+            handle_upload_videos(request, num_annotators, project_name, uploaded_videos, video_upload_form)
             return redirect('/')
 
     else:
