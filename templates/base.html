@@ -28,7 +28,7 @@
                                 
                             </div>
                             <div> <button  class="nist-button" id="upload_videos"> click to upload videos </button></div>
-                            <div style="font-weight: 800;"> Processed - <i style="color: darkred;">{{total_processed}}</i> </div>
+                            <div style="font-weight: 800;"> Processed - <i style="color: darkred;">{{total_processed}}%</i> </div>
                         {% else %}
                             <p id="tm-login"> login - to use the application</p>
                             <span style="font-size: small; cursor: pointer;"> <a href="{% url 'signup' %}" > not a user? - sign-up </a></span>
@@ -52,7 +52,7 @@
     {% endblock header %}
     {% block section %}
         <div class="section">
-            <h1 class="tm_headings">NIST Automatic Video Anotation Application</h1>
+            <h1 class="tm_headings">NIST Automatic Video Anotation Application <span style="font-size: small;"> total processed {{percentage_process_all_vids}}%</span></h1> 
             <div class="display-none" id="video_upload">
                 <form  action="" method="POST" enctype="multipart/form-data">{% csrf_token %}
                     <div class="form-column">

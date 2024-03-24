@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.shortcuts import render, redirect, get_list_or_404
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from .upload_form import VideoUploadForm
@@ -10,26 +10,36 @@ from .utils import display_categories, get_rem_and_total,  get_video_list, check
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse
 
+from django.db.models import Q # allows us to perform != in django filter
+
 
 
 
 def index(request):
+    
     # avaliable_groups = Group.objects.all()
     # print('request.user', request.user.is_anonymous)
     video_upload_form = VideoUploadForm()
-    categories = display_categories()
+    categories = display_categories(request)
     # print('available groups', avaliable_groups)
     
     if not request.user.is_anonymous:
         user = request.user
-        # user_group = list(user.groups.all())[0]
+        all_videos = Videos.objects.all()
+        all_processed_videos = Videos.objects.all().filter(~Q(checked_by=''))
+        percentage_process_all_vids = round(len(all_processed_videos)/ len(all_videos) * 100)
+        print('percentage_process_all_vids', percentage_process_all_vids)
+        groups = user.groups.all()
+        cur_category = Category.objects.all().filter(group = groups[0])
+        user_assigned_videos = Videos.objects.all().filter(group=groups[0])
+        # print('groups', str(groups[0]), cur_category, len(user_assigned_videos))
         
-        # print('user_group', user_group)
         user_processed_videos = Videos.objects.all().filter(checked_by=user)
-        user_processed_videos = len(user_processed_videos)
-        print('user procesed video', user_processed_videos)
+        percentage_remaining = round(len(user_processed_videos)/len(user_assigned_videos) *100)
+        # print('user procesed video', user_processed_videos)
     else:
-        user_processed_videos = None
+        percentage_remaining = None
+        percentage_process_all_vids = None
     
     # print(type(categories))
     if request.method == 'POST':
@@ -53,11 +63,12 @@ def index(request):
             return redirect('/')
 
     else:
-        if len(categories) == 0:
-            if user_processed_videos != None:
+        if categories == None or len(categories) == 0 :
+            if percentage_remaining != None:
                 context = {
                     'video_upload': video_upload_form,
-                    'total_processed': user_processed_videos,
+                    'total_processed': percentage_remaining,
+                    'percentage_process_all_vids': percentage_process_all_vids
                     # 'categories': categories
                 }
             else:
@@ -66,11 +77,12 @@ def index(request):
                     # 'categories': categories
                 }
         else:
-            if user_processed_videos != None:
+            if percentage_remaining!= None:
                 context = {
                     'video_upload': video_upload_form,
                     'categories': categories,
-                    'total_processed': user_processed_videos,
+                    'total_processed': percentage_remaining,
+                    'percentage_process_all_vids': percentage_process_all_vids
                 }
             else:
                 context = {

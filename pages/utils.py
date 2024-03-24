@@ -82,6 +82,7 @@ def handle_upload_videos(request, num_annotators, project_name, uploaded_videos,
             except Exception as e:
                 new_category = Category()
                 new_category.category = cur_clusterid
+                new_category.group = groups[idx]
                 new_category.save()
 
             
@@ -95,8 +96,17 @@ def handle_upload_videos(request, num_annotators, project_name, uploaded_videos,
 
 
 def display_categories(request=None):
-    # videos = get_list_or_404(Videos, che=False)
-    categories = Category.objects.all()
+    if not request.user.is_anonymous:
+        user = request.user
+        try:
+            cur_group = Group.objects.get(user=user)
+            categories = Category.objects.all().filter(group=cur_group)
+        except Exception as e:
+            print('e', e=='Group matching query does not exist.')
+            categories = None
+    else:
+        # videos = get_list_or_404(Videos, che=False)
+        categories = Category.objects.all()
     return categories
 
 

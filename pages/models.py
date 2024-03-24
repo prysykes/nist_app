@@ -6,6 +6,7 @@ from django.core.validators import MinValueValidator
 
 class Category(models.Model):
     category = models.CharField(max_length=30)
+    group = models.ForeignKey(Group, on_delete=models.SET_NULL, null=True)
 
     def __str__(self):
         return self.category
