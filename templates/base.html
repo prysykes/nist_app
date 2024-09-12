@@ -28,7 +28,7 @@
                                 
                             </div>
                             <div> <button  class="nist-button" id="upload_videos"> click to upload videos </button></div>
-                            <div style="font-weight: 800;"> Processed - <i style="color: darkred;">{{total_processed}}%</i> </div>
+                            <div style="font-weight: 800;"> Processed - <i style="color: darkred;">{{user_processed_videos}}/{{total_user_assigned_vids}}</i> </div>
                         {% else %}
                             <p id="tm-login"> login - to use the application</p>
                             <span style="font-size: small; cursor: pointer;"> <a href="{% url 'signup' %}" > not a user? - sign-up </a></span>
@@ -52,17 +52,19 @@
     {% endblock header %}
     {% block section %}
         <div class="section">
-            <h1 class="tm_headings">NIST Automatic Video Anotation Application <span style="font-size: small;"> total processed {{percentage_process_all_vids}}%</span></h1> 
+            <h1 class="tm_headings">NIST Automatic Video Annotation Application {% if request.user.is_authenticated %} <i style="font-size:small;">Total accepted  - </i> <span class="label_hint">{{percentage_process_all_vids}}/{{total_videos}}</span> {% endif %}</h1> 
             <div class="display-none" id="video_upload">
                 <form  action="" method="POST" enctype="multipart/form-data">{% csrf_token %}
                     <div class="form-column">
                         <div class="form-row">
-                            <h3> Multiple Video Upload </h3>
+                            <h3> Upload Videos and Corresponding Cluster Information CSV </h3>
                             <hr>
                         </div>
                         <div class="form-row">
                             <div class="row-align" > 
-                                <div> {{video_upload}} </div> <br> <input name="upload_videos" class="nist-button" type="submit" value="upload_videos"/> 
+                                <div> {{project_details}}</div> <br>
+                                <div> {{video_upload}} </div> <br> 
+                                <input name="upload_videos" class="nist-button" type="submit" value="upload_videos"/> 
                             </div>
                         </div>
                        
@@ -85,13 +87,20 @@
                     <h3 class="tm_headings">
                         Video Categories 
                     </h3>
-                    {% for category in categories %}
-                    <div style="padding-left: 10px; padding-right: 10px;" class="categories">
-                        <h3 class="cat_headings">
-                            {{category.category}} <i class="progress">|{{category.get_unprocessed_videos|length}}/{{category.get_total_videos|length}}</i> <span>  - explore</span> 
-                        </h3>
+                    <div id="vid_cat_list">
+                        
+                        {% for category in categories %}
+                        <div style="padding-left: 10px; padding-right: 10px;" class="categories">
+                            <h3 class="cat_headings">
+                                {{category.cluster_keywords}} <i class="progress">|{{category.get_unprocessed_videos|length}}/{{category.get_total_videos|length}}</i> <span>  - explore</span> 
+                                <span class="cluster_id visibility_hidden" >{{category.cluster_id}}</span>
+                                <span class="cluster_group visibility_hidden" >{{category.group}}</span>
+                            </h3>
+                        </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
+                
+
                 </div>
                 {% endblock aside %}
 
@@ -118,6 +127,7 @@
                             Video Preview
                         </h3>
                         <h4 style="text-align: center;" id="video_name"></h4>
+                        <h4 style="text-align: center;" id="video_description"></h4>
                         <div  id="vid_preview">
                             <div id="vid_tag">
                                 

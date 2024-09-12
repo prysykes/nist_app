@@ -8,3 +8,6 @@ nist_app/settings.py
 trial_vids
 __pycache__
 scratch.js
+media/cluster_csv
+vids_clusters_keywords.csv
+2025_vids

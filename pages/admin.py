@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Videos, Category
+from .models import Videos, Category, ProjectTitle
 
 
 class VideosAdmin(admin.ModelAdmin):
@@ -12,13 +12,23 @@ admin.site.register(Videos, VideosAdmin)
 
 
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ['category']
-    search_fields = ['category']
+    list_display = ['cluster_keywords']
+    search_fields = ['cluster_keywords']
 
 
 admin.site.register(Category, CategoryAdmin)
 
+class ProjectTitleAdmin(admin.ModelAdmin):
+    list_display = ['project_name', 'number_of_annotators']
+    search_fields = ('project_name',)
 
+admin.site.register(ProjectTitle, ProjectTitleAdmin)
+
+# class AnnotationGroupAdmin(admin.ModelAdmin):
+#     list_display = ("name",)
+#     search_fields = ['name']
+
+# admin.site.register(AnnotationGroup, AnnotationGroupAdmin)
 
 # from django.contrib import admin
 # from .models import Userreg

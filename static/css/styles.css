@@ -38,6 +38,12 @@ html,body {
     width: 20%;
     border-right: 1px solid black;
     padding: 0 5px 5px 5px;
+   
+}
+
+#vid_cat_list{
+    overflow: scroll;
+    height: 20%;
 }
 
 
@@ -115,6 +121,16 @@ html,body {
     font-weight: 400;
 }
 
+.label_hint {
+    display: inline-block;
+    background-color: white;
+    color: brown; 
+    border-radius: 20px; 
+    font-size:small; 
+    padding: 5px;
+    width: fit-content;
+    height: fit-content;
+}
 #video_upload{
     width: 40%;
     justify-content: center;
@@ -133,6 +149,7 @@ html,body {
     border-radius: 8px;
     padding: 2px 0 2px 8px;
     cursor: pointer;
+
 }
 
 .categories :hover {
@@ -141,7 +158,8 @@ html,body {
 }
 
 .cat_headings span{
-    font-size:x-small;
+    font-size:small;
+    color: rgb(98, 128, 238);
 }
 
 #upload_videos{
@@ -218,4 +236,8 @@ html,body {
 
  .active {
     border: 2px solid rgb(31, 31, 64);;
+ }
+
+ .visibility_hidden {
+    visibility: hidden;
  }
