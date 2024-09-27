@@ -43,10 +43,8 @@ function create_video_tag(){
     return video
 }
 
-let fetch_paginated_vid = function fetch_paginated_vids(category, full_paginated_vid_url=null, get_all_vids=null, class_name=null){
-    console.log("category", category);
-    
-    // console.log("taco", `full_paginated_vid_url ${full_paginated_vid_url}, get_all_vids ${get_all_vids}, class_name ${class_name}`);
+let fetch_paginated_vid = function fetch_paginated_vids(category, full_paginated_vid_url=null, get_all_vids=null, file_name=null){
+ 
     let vid_preview = document.querySelector('#vid_preview')
     let video = document.querySelector('video')
     let vid_tag = document.querySelector('#vid_tag')
@@ -56,12 +54,11 @@ let fetch_paginated_vid = function fetch_paginated_vids(category, full_paginated
    
     let video_name = document.querySelector('#video_name')
     video_name.innerHTML = ""
-    span_heading = document.createElement('span')
-    br_elem = document.createElement('br')
-    span_category = document.createElement('span')
-    span_category.textContent = "Cluster Keyword:  " + category
-    // vid_preview.classList.toggle('display-none')
-    if (class_name == null){
+    const[span_heading, br_elem, span_category] = create_vidname_category_spans(category)
+   
+
+    if (file_name == null){
+        
         // console.log("full_paginated_vid_url", full_paginated_vid_url);
         
         // console.log('yes null');
@@ -80,6 +77,9 @@ let fetch_paginated_vid = function fetch_paginated_vids(category, full_paginated
             let cur_vid_obj_url = cur_vid_obj['vid_url']
             let cur_vid_obj_checked_by = cur_vid_obj['checked_by']
             let full_vid_src = base_vid_src+cur_vid_obj_url
+
+            console.log("cur_vid_obj_filename", cur_vid_obj_filename);
+            
             
             
             span_heading.textContent = cur_vid_obj_filename
@@ -92,12 +92,33 @@ let fetch_paginated_vid = function fetch_paginated_vids(category, full_paginated
             vid_tag.appendChild(video)
             vid_tag.appendChild(appr_rej_btn)
             let vid_spans = document.querySelectorAll('.vid_name')
+
+            let cur_span = null
+            
             vid_spans.forEach((span)=>{
                 span.classList.remove('active')
+                let cur_vid_filename = span.id
+                // console.log("cur_vid_filename ", cur_vid_filename );
+                
+                if (cur_vid_filename == cur_vid_obj_filename) {
+                    console.log("yes it s");
+                    cur_span = span
+                    try {
+                        cur_span.classList.add('active')
+                        cur_span.focus()
+                    }catch (error){
+                        console.error("An error occured:", error.message)
+                    }
+                    
+                }
+                
+                
+                
             })
-            let cur_span = document.querySelector(`[data-name=${CSS.escape(cur_vid_obj_filename)}]`)
-            cur_span.classList.add('active')
-            cur_span.focus()
+            // cur_span = document.getElementById(`${cur_vid_obj_filename}`)
+           
+       
+            
             return cur_span
         })
     }
@@ -119,19 +140,12 @@ let fetch_paginated_vid = function fetch_paginated_vids(category, full_paginated
 
             vid_obj_arr.forEach((vid)=> {
                 // console.log(vid);
-                if (vid['file_name']==class_name){
+                if (vid['file_name']==file_name){
                     let cur_vid_name = vid['file_name']
                     let cur_vid_url = vid['vid_url']
                     let cur_vid_checked_by = vid['checked_by']
                     let full_vidsrc = base_vid_src+cur_vid_url 
-                    // reset the inner HTML of the video_name tag
-                    // video_name.innerHTML = ""
-                    // video_name.style.display = 'block'
-                    // console.log('full_vidsrc ', full_vidsrc );
-                    // console.log("category not null", category);
-                    // video_name.textContent = cur_vid_name
-                    // span_heading = document.createElement('span')
-                    // br_elem = document.createElement('br')
+ 
                     span_heading.textContent = cur_vid_name
                     // span_category = document.createElement('span')
                     // span_category.textContent = "Cluster Keyword:  " + category
@@ -142,7 +156,7 @@ let fetch_paginated_vid = function fetch_paginated_vids(category, full_paginated
                     
                     // console.log(('vid tag', vid_tag));
                     vid_tag.appendChild(video)
-                    if (cur_vid_checked_by == ''){
+                    if (cur_vid_checked_by == null){
                         let appr_rej_btn = create_apr_rej()
                         vid_tag.appendChild(appr_rej_btn)
                     }
@@ -177,6 +191,7 @@ cat_headings.forEach((elem)=>{
     //cluster_id
     cluster_id = elem.querySelector('.cluster_id').textContent
     cluster_group = elem.querySelector('.cluster_group').textContent
+    // elem.classList.remove('active')
     // console.log("cluster_group", cluster_group);
     
 
@@ -188,7 +203,7 @@ cat_headings.forEach((elem)=>{
     // let term = category.trim().split('|')[0]
     let term = cluster_id
     // console.log('termo', term);
-    // const paginated_vid_url = base_url+'/paginated_vid_list?term='
+
     let full_paginated_vid_url = paginated_vid_url+term
     // console.log("1st full_paginated_vid_url", full_paginated_vid_url);
     
@@ -197,6 +212,10 @@ cat_headings.forEach((elem)=>{
     // console.log("2nd full_paginated_vid_url", full_paginated_vid_url);
     elem.addEventListener('click', ()=>{
         let assoc_category = category.split('|')[0].trim()
+        cat_headings.forEach((elem)=>{
+            elem.classList.remove('active')
+        })
+        elem.classList.add('active')
         // console.log("default loaded: ", assoc_category);
         
         // console.log("cluster_group", cluster_group);
@@ -214,12 +233,7 @@ cat_headings.forEach((elem)=>{
         
         cat_name.classList.add('tm_headings')
         fetch_vids(video_file_name=null, category=category, cluster_group=cluster_group)
-        // delay_run(fetch_vids, category).then(
-        //     // check_last_checked runs after the promise has been resolved
-        //     // hence only runs after func1 (aft)
-        //     // check_last_timeout = setTimeout(()=> {
-        //     //     check_last(category=category, caller='delay_run')}, 2000)
-        //     )
+        
    
     })
     
@@ -274,17 +288,42 @@ function create_inline_elemets() {
     
 }
 
-var process_appr_rej = function proc_appr_rej(endpoint, category=null){
-    // console.log("process_appr_rej, endpoint", endpoint);
-    
-    // console.log('vid cataa', category);
+function create_vidname_category_spans(category=null) {
+    let span_heading = document.createElement("span")
+    span_heading.id = "video_name_value"
+    let br_elem = document.createElement("br")
+    let span_category = document.createElement("span")
+    span_category.id = "cluster_keyword"
+    if (category){
+        span_category.textContent = "Cluster Keyword: " + category
+    }
+
+
+    return [span_heading, br_elem, span_category]
+}
+
+var process_appr_rej = function proc_appr_rej(endpoint, class_name=null, category=null){
+    /**
+     * 
+     * Processes approve or reject button when clicked by the user
+     * @param {string} endpoint - the url called by fetch api to process the user decision
+     * @param {string} class_name = the name of the video file the user selected
+     * @param {string} category - the category the video belongs to
+     * @returns {boolean} true or false depending on if the function is request is successfully processed
+     * 
+     */
+
     let vid_tag = document.getElementById('vid_tag')
+    vid_tag .innerHTML = ""
     let video_name = document.getElementById('video_name')
+    const[span_heading, br_elem, span_category] = create_vidname_category_spans(category)
+
+    console.log("endpoint", endpoint);
+    
     
     let appr_rej_div = create_apr_rej()
-    vid_tag.innerHTML = ""
-    // console.log('vid_tag', vid_tag, video, appr_rej_div);
-    // console.log('ennd', endpoint);
+    video_name.innerHTML = ""
+
     response = fetch(endpoint, {
         method: 'GET'
     })
@@ -294,7 +333,10 @@ var process_appr_rej = function proc_appr_rej(endpoint, category=null){
         let rem_total = data['rem_total']
         let serialized_rem_total = data['serialized_rem_total']
         let serialized_rem =JSON.parse(serialized_rem_total[0])
+        
+        
         serialized_rem = vid_obj_to_array(serialized_rem)
+        // console.log("serialized_rem", serialized_rem);
         let serialized_total = JSON.parse(serialized_rem_total[1])
         serialized_total = vid_obj_to_array(serialized_total)
         
@@ -304,32 +346,22 @@ var process_appr_rej = function proc_appr_rej(endpoint, category=null){
         let first_vid = serialized_rem[0]
         let next_vid = serialized_rem[1]
         let next_vid_name = next_vid['file_name']
-        video_name.textContent = next_vid_name
         let next_vid_url = base_vid_src+next_vid['vid_url']
         video.src = next_vid_url
         vid_tag.appendChild(video)
         vid_tag.appendChild(appr_rej_div)
-        // console.log('serialized_rem', serialized_rem[0]['vid_url']);
-        // serialized_rem.forEach((obj)=>{
-        //     console.log('obj', obj);
-        // })
 
         let cat_name = document.querySelector('#cat_name');
         cluster_group = document.querySelector('.cluster_group').textContent
-        // console.log("cluster_group", cluster_group);
-        
-        
-        // console.log('cat_name', cat_name);
         c_cur_cat = cat_name.textContent
-     
         cur_cat = cat_name.textContent.trim().split(' ')[0]
-        console.log("cur_cat", cur_cat)
-        // console.log('cat_name', cur_cat);
-        // let video_file_name = document.querySelector('#video_name').textContent
-        // console.log("video__file_name", video_file_name);
-        // console.log("next_vid_name", next_vid_name, "video_file_name", video_file_name);
-        //TODO: pass category and cluster group the fetch_vids call
-        // fetch_vids(video_file_name=null, category=category, cluster_group=cluster_group)
+
+        span_category.textContent = "Cluster Keyword: " + cur_cat 
+        span_heading.textContent = next_vid_name
+        video_name.appendChild(span_heading)
+        video_name.appendChild(br_elem)
+        video_name.appendChild(span_category)
+
         fetch_vids(next_vid_name, cur_cat, cluster_group)
         let remaining = rem_total[0]
         let total = rem_total[1]
@@ -340,7 +372,7 @@ var process_appr_rej = function proc_appr_rej(endpoint, category=null){
         cat_headings.forEach((elem)=>{
             let cat_inner_text = elem.innerText
             cat_inner_text = cat_inner_text.split('|')[0].trim()
-            if(category == String(cat_inner_text)){
+            if(class_name == String(cat_inner_text)){
                 let progress = elem.children[0]
                 console.log('elem', elem.children[0]);
                 progress.innerText = "|"+remaining+"/"+total
@@ -363,9 +395,16 @@ var create_apr_rej = function appr_rej(){
     // create approve button and add and event listener to it
     let video_name_tag = document.querySelector('#video_name')
     // console.log("video_name_tag", video_name_tag);
+  
+    let video_name = document.querySelector('#video_name_value')
+    let category = document.querySelector("#cluster_keyword")
+    if (category){
+        category = category.textContent
+    }else{
+        category = null
+    }
     
-    let video_name_tag_children = video_name_tag.children
-    let video_name = video_name_tag_children[0]
+    
     if (video_name === undefined){
         video_name = video_name_tag.textContent
     }else {
@@ -374,9 +413,6 @@ var create_apr_rej = function appr_rej(){
     }
 
     
-    
-    // let video_name_category = video_name_tag_children[2].textContent.split(':').at(-1).trim()
-    // console.log("apr_rej clicked", video_name_tag);
     let approve_input = document.createElement('input')
     approve_input.type = 'button'
     approve_input.value = 'approve'
@@ -388,16 +424,14 @@ var create_apr_rej = function appr_rej(){
         
         cur_selection_load = video_name+'_'+'approve'
         let endpoint = get_unprocessed_vids+cur_selection_load
-        // full_url_path_term_p, http://127.0.0.1:8000/display_videos?category=standing_walking_people_car &cluster_group=Trevec2025_grp_3
-                // console.log(">>", category, file_name);
-                
-                
-        // fetch_paginated_vid(category, get_all_vids=full_url_path_term_p, class_name=file_name)
+        let is_processed = process_appr_rej(endpoint,  class_name=video_name, category=category)
         
-        let is_processed = process_appr_rej(endpoint, category=video_name)
 
         // takes the cursor to the next span once the current span has been processed
         let cur_span = document.querySelector(`[data-name=${CSS.escape(video_name)}]`)
+        // console.log("cur_span", cur_span);
+        
+        
         cur_span.classList.toggle('active')
         cur_span.focus()
 
@@ -406,7 +440,8 @@ var create_apr_rej = function appr_rej(){
             let inlines = create_inline_elemets()
             let inline_good = inlines[0]
             cur_span.appendChild(inline_good )
-            console.log('approved clicked', cur_span);
+            // reload the video display here to add the next video
+            // console.log('approved clicked', cur_span);
         }
         
     })
@@ -422,9 +457,7 @@ var create_apr_rej = function appr_rej(){
 
         cur_selection_load = video_name+'_'+'reject'
         let endpoint = get_unprocessed_vids+cur_selection_load 
-        
-        // endpoint = `${endpoint}&class_name=${vid_file_name}&apr_rej='approve'`
-       let is_processed = process_appr_rej(endpoint, category=video_name)
+        let is_processed = process_appr_rej(endpoint, category=video_name)
         // console.log("endpoint", endpoint);
         
         let cur_span = document.querySelector(`[data-name=${CSS.escape(video_name)}]`)
@@ -435,7 +468,7 @@ var create_apr_rej = function appr_rej(){
             let inlines = create_inline_elemets()
             let inline_bad = inlines[1]
             cur_span.appendChild(inline_bad)
-            console.log('approved clicked', cur_span);
+            // console.log('reject clicked', cur_span);
         }
       
     })
@@ -470,34 +503,8 @@ var fetch_vids = function fetch_videos(video_file_name=null, category=null, clus
     let full_url_path_term_p = base_url+'/display_videos'
     category = category.split('|')[0]
     full_url_path_term_p = `${full_url_path_term_p}?category=${category}&cluster_group=${cluster_group}`
-    console.log(" clicked full_url_path_term_p>> ", full_url_path_term_p );
-    // console.log("catee", category, "cs group", cluster_group);
-    // full_url_path_term_p>>  http://127.0.0.1:8000/display_videos?category=standing_sitting_people_microphone &cluster_group=Trevec2025_grp_3
-    
-    // if (video_file_name){
-    //     console.log(">>>", video_file_name, category, cluster_group);
-        
-    //     // full_url_path_term_p http://127.0.0.1:8000/display_videos?term=19670
-    //     // full_url_path_term_p = full_url_path_term_p + `?term=${video_file_name}`
 
-    //     full_url_path_term_p = `${full_url_path_term_p}?category=${category}&cluster_group=${cluster_group}`
-        
-    // }
-    // else {
-    //     category = category.split('|')[0]
-    //     // console.log("catee", category, "cs group", cluster_group);
-    //     // full_url_path_term_p>>  http://127.0.0.1:8000/display_videos?category=standing_sitting_people_microphone &cluster_group=Trevec2025_grp_3
-    //     full_url_path_term_p = `${full_url_path_term_p}?category=${category}&cluster_group=${cluster_group}`
-    //     console.log("full_url_path_term_p>> ", full_url_path_term_p );
-        
-    // }
-    
-    // console.log("full_url_path_term_p", full_url_path_term_p);
-    
-    // full_url_path_term_p = full_url_path_term_p
-    // console.log('full_paginated_vid_url', full_paginated_vid_url);
-    // console.log("full_url_path_term_pddd", full_url_path_term_p);
-    
+   
     const response =  fetch(full_url_path_term_p, {
         method: 'GET'
     })
@@ -513,21 +520,21 @@ var fetch_vids = function fetch_videos(video_file_name=null, category=null, clus
             let vid_url = elem['vid_url']
             let checked_by = elem['checked_by']
             let status = elem['status']
-            // console.log('checked_by', checked_by=='');
+            // console.log('checked_by', checked_by);
 
             let inlines = create_inline_elemets()
 
             // console.log(inline_i);
             let span = document.createElement('span')
             span.innerText = file_name
-            span.dataset.name = file_name
-            if (checked_by != '' && status == true) {
+            span.id= file_name
+            if (checked_by != null && status == true) {
                 // console.log('yes', status);
                 inline_good = inlines[0]
                 span.appendChild(inline_good)
                 // span.appendChild(inline_good)
             }
-            else if (checked_by != '' && status == false) {
+            else if (checked_by != null && status == false) {
                 // console.log('no');
                 inline_bad = inlines[1]
                 span.appendChild(inline_bad)
@@ -535,16 +542,9 @@ var fetch_vids = function fetch_videos(video_file_name=null, category=null, clus
             span.classList.add('vid_name')
             span.addEventListener('click', (e)=>{
                 
-                
-                // let apr_rej_btn_div = document.querySelector('apr_rej_btn_div')
-                // apr_rej_btn_div.remove()
-                // function fetch_paginated_vids(category, full_paginated_vid_url=null, get_all_vids=null, class_name=null)
-                // console.log("full_url_path_term_p,", full_url_path_term_p);
-                // full_url_path_term_p, http://127.0.0.1:8000/display_videos?category=standing_walking_people_car &cluster_group=Trevec2025_grp_3
-                // console.log(">>", category, file_name);
-                
-                
-                fetch_paginated_vid(category, get_all_vids=full_url_path_term_p, class_name=file_name)
+                console.log("file_name", file_name);
+              
+                fetch_paginated_vid(category, full_paginated_vid_url=null, get_all_vids=full_url_path_term_p, file_name=file_name)
 
                
             })

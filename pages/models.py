@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import Group, User
 from django.core.validators import MinValueValidator
 from django.db.models import Case, When, Value, BooleanField
 
@@ -16,8 +16,9 @@ class Category(models.Model):
     def get_total_videos(self):
         return self.videos_set.all()
     
-    def get_unprocessed_videos(self):
-        assoc_videos = self.videos_set.filter(checked_by='').order_by('id')
+    def get_unprocessed_videos(self, user):
+        # assoc_videos = self.videos_set.exclude(checked_by=user).order_by('id')
+        assoc_videos = self.videos_set.exclude(checked_by=user).order_by('id')
         return assoc_videos
     
     def get_confidence_level(self):
@@ -41,15 +42,16 @@ class ProjectTitle(models.Model):
         This helps in group management
     """
     project_name = models.CharField(max_length=100)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     cluster_csv = models.FileField(upload_to='cluster_csv', verbose_name='Trec Videos Cluster Info', null=True, blank=True)
-    number_of_annotators = models.CharField(max_length=2, null=True, blank=True)
+    number_of_annotators = models.IntegerField(null=True, blank=True)
 
     def __str__(self):
         return self.project_name
 
 class Videos(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
-    checked_by = models.CharField(max_length=50, null=True, blank=True)
+    checked_by = models.ForeignKey(User, on_delete=models.DO_NOTHING, blank=True, null=True)
     # sets the group associated with the video instance to null
     # group = models.ForeignKey(Group, on_delete=models.SET_NULL, null=True)
     project = models.ForeignKey(ProjectTitle, default='', on_delete=models.CASCADE)

@@ -16,7 +16,7 @@ class ProjectTitleForm(forms.ModelForm):
         "class": "upload_form",
     }), label="Upload clustered videos csv")
 
-    annotators = forms.CharField(widget=forms.TextInput(attrs={
+    annotators = forms.IntegerField(widget=forms.NumberInput(attrs={
         "name": "num_annotators",
         "type": "text",
         "class": "uplod_form",

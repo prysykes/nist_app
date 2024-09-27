@@ -84,6 +84,57 @@
     
 }
 
+#upload_videos_form{
+    padding: 10px;
+    font-size: x-large;
+    font-family: sans-serif;
+}
+
+input[type="text"]{
+    width: 100%;
+    height: 40px;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+
+    background-color: #f9f9f9;
+    color: #333;
+
+    border-color: #aaa;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+
+input[type="text"]:focus{
+    border-color: #aaa;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+
+[name="upload_videos"] {
+  background-color: rgb(14, 4, 46);;
+  color: #fff;
+  font-weight: 700;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+input[type="file"]:hover{
+    border-color: #999;
+}
+
+input[type="file"]{
+  width: 100%;
+  height: 40px;
+  padding: 10px;
+  margin: 10px 0;
+  border: none;
+  border-radius: 5px;
+  background-color: rgb(14, 4, 46);
+  color: #fff;
+  cursor: pointer;
+}
 
 
 .form-column-sign_up {
