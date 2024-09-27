@@ -16,12 +16,14 @@ from django.db.models import Q # allows us to perform != in django filter
 
 
 def index(request):
+    from pages.utils import prepare_processed_data
     
     # avaliable_groups = Group.objects.all()
     # print('request.user', request.user.is_anonymous)
     video_upload_form = VideoUploadForm()
     project_title_form = ProjectTitleForm()
     categories = display_categories(request)
+    print("categories", categories)
     # print('available groups', avaliable_groups)
     user = request.user
     if not user.is_anonymous:
@@ -41,6 +43,7 @@ def index(request):
                 handle_upload_videos(request, num_annotators, project_name, uploaded_videos, cluster_csv)
                 return redirect('/')
             else:
+                prepare_processed_data(request=None)
                 context = {
                         'project_details': project_title_form,
                         'video_upload': video_upload_form,
@@ -48,16 +51,18 @@ def index(request):
                 return render(request, 'index.html', context)
     
     if not request.user.is_anonymous:
+        
         user = request.user
         #TODO: redo logic for all processed videos
         # all_processed_videos = len(Videos.objects.all().filter(status=True, checked_by=str(user)))
-        percentage_process_all_vids = len(Videos.objects.exclude(checked_by=""))
+        percentage_process_all_vids = len(Videos.objects.exclude(checked_by=None))
         total_videos = len(get_list_or_404(Videos))
         user_group = user.groups.all()[0]
         try:
             user_assigned_videos = []
             total_user_assigned_vids = 0
             user_categories = get_list_or_404(Category, group=user_group)
+            
             for cat in user_categories:
                 cur_cat_videos = get_list_or_404(Videos, category=cat)
                 len_vids = len(cur_cat_videos)
@@ -67,7 +72,7 @@ def index(request):
         except IndexError:
             user_assigned_videos = []
 
-        user_processed_videos = Videos.objects.all().filter(checked_by=str(user))
+        user_processed_videos = Videos.objects.all().filter(checked_by=user)
         print("len_user_processed_videos", len(user_processed_videos))
         try:
             percentage_remaining = (len(user_processed_videos)/total_user_assigned_vids) *100
@@ -168,12 +173,23 @@ def get_unprocessed_vids(request):
         assoc_video = get_object_or_404(Videos, file_name=file_name)
         assoc_category = assoc_video.category
         
-        context = get_rem_and_total(assoc_category)
+        context = get_rem_and_total(assoc_category, cur_user)
         # return HttpResponse(videos, content_type='application/json')
         
         check_user_decision(file_name, cur_user, appr_or_rej=apr_rej)
         # print('context', context)
     return JsonResponse(context, safe=False)
+
+def reject_all(request, *args, **kwargs):
+    # get request.user
+    # get the user group
+    # get the cluster keyword
+    # pull all videos from the database matching this cluster
+    # set checkedby == request.user
+    # set status == False
+    # to reject all the videos
+    pass
+
 
 
    

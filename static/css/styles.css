@@ -43,7 +43,7 @@ html,body {
 
 #vid_cat_list{
     overflow: scroll;
-    height: 20%;
+    height: 50%;
 }
 
 
@@ -235,7 +235,8 @@ html,body {
  }
 
  .active {
-    border: 2px solid rgb(31, 31, 64);;
+    background-color: rgb(31, 31, 64) !important;
+    color: white;
  }
 
  .visibility_hidden {

@@ -80,7 +80,7 @@ def create_categories(num_annotators, groups, cluster_keyword_id_pair):
         return categories
 
 def handle_upload_videos(request, num_annotators, project_name, uploaded_videos, cluster_csv):
-    new_project = ProjectTitle(cluster_csv=cluster_csv, project_name=project_name, number_of_annotators=num_annotators)
+    new_project = ProjectTitle(cluster_csv=cluster_csv, project_name=project_name, number_of_annotators=num_annotators, user=request.user)
     new_project.save()
 
     groups = create_groups(num_annotators, project_name)
@@ -109,7 +109,7 @@ def handle_upload_videos(request, num_annotators, project_name, uploaded_videos,
         #retrieve category
         assoc_category = get_object_or_404(Category, cluster_keywords=cluster_keywords, cluster_id=cluster_id)
         
-        cur_vid = Videos(video=video, checked_by='', file_name=vid_name)
+        cur_vid = Videos(video=video, checked_by=None, file_name=vid_name)
         cur_vid.category = assoc_category
         cur_vid.project = new_project
         cur_vid.keywords = keywords
@@ -117,6 +117,10 @@ def handle_upload_videos(request, num_annotators, project_name, uploaded_videos,
         cur_vid.save()
 
 
+def prepare_processed_data(request=None):
+    # unique_categories = Video.objects.values_list('category', flat=True).distinct()
+    unique_categories = Videos.objects.values_list('category', flat=True).distinct()
+    print("unique_categories", len(unique_categories))
 
 def display_categories(request=None):
     """
@@ -159,7 +163,7 @@ def  get_video_list(term=None, category=None, cluster_group=None):
         assoc_category = get_object_or_404(Category, cluster_keywords=cluster_keywords, group=assoc_group)
         videos = assoc_category.videos_set.annotate(
             checked=Case(
-                When(checked_by='', then=Value(False)),
+                When(checked_by=None, then=Value(False)),
                 default=Value(True),
                 output_field=BooleanField(),
             )
@@ -178,7 +182,7 @@ def get_paginated_video_list(term, group):
     assoc_grp = Group.objects.get(name=group)
     # print("assoc_grp", assoc_grp)
     category = Category.objects.get(cluster_id=int(term), group=assoc_grp)
-    qs = Videos.objects.all().filter(category=category).filter(checked_by='')
+    qs = Videos.objects.all().filter(category=category).filter(checked_by=None)
 
     videos = serialize('json', qs, fields=('file_name', 'video', 'checked_by', 'status'))
     
@@ -191,22 +195,23 @@ def check_user_decision(file_name, cur_user, appr_or_rej=None):
     # print(video)
     
     if appr_or_rej == 'approve':
-        video.checked_by = str(cur_user)
+        video.checked_by = cur_user
         video.status = True
         video.save()
     elif appr_or_rej == 'reject':
-        video.checked_by = str(cur_user)
+        video.checked_by = cur_user
         video.status = False
         video.save()
 
-def get_rem_and_total(category):
+def get_rem_and_total(category, cur_user):
     # Category.objects.all().filter(category=category)
     # cur_category = get_object_or_404(Category, category=category)
-    remaining = category.get_unprocessed_videos()
+    remaining = category.get_unprocessed_videos(cur_user)
     total = category.get_total_videos()
 
     # serialize rem and total videos
     serialized_rem = serialize('json', remaining, fields=('file_name', 'video', 'checked_by', 'status'))
+    print()
     serialized_total = serialize('json', total, fields=('file_name', 'video', 'checked_by', 'status'))
     serialized_rem_total = (serialized_rem, serialized_total)
     rem_total = (len(remaining), len(total))
