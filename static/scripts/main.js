@@ -16,6 +16,8 @@ let video_name = document.querySelector('#video_name')
 
 var app_rej_btn_div = null
 
+var VIDEO_TYPE = "video/webm"
+
 
 //http://127.0.0.1:8000/display_videos?term=sports
 const base_url = window.location.origin
@@ -38,7 +40,7 @@ function create_video_tag(){
     video.width = 600
     video.height = 500
     video.setAttribute("controls", "controls")
-    video.type = "video/webm"
+    video.type = VIDEO_TYPE
 
     return video
 }
@@ -317,8 +319,6 @@ var process_appr_rej = function proc_appr_rej(endpoint, class_name=null, categor
     vid_tag .innerHTML = ""
     let video_name = document.getElementById('video_name')
     const[span_heading, br_elem, span_category] = create_vidname_category_spans(category)
-
-    console.log("endpoint", endpoint);
     
     
     let appr_rej_div = create_apr_rej()

@@ -32,9 +32,10 @@
                                 <a href="{% url 'user_logout' %}"> <input class="nist-button" type="button" value="logout"></a>
                                 
                             </div>
-                            <div> <button  class="nist-button" id="upload_videos"> click to upload videos </button></div>
+                            
                             {% if request.user.is_authenticated and request.user|has_group:"admin" %}
-                                <div style="font-weight: 800;"> Total Processed - <i style="color: darkred;">{{user_processed_videos}}/{{total_user_assigned_vids}}</i> </div>
+                                <div> <button  class="nist-button" id="upload_videos"> click to upload videos </button></div>
+                                <div style="font-weight: 800;"> Total Processed - <i style="color: darkred;">{{all_processed_videos}}/{{total_videos}}</i> </div>
                             {% else %}
                                 <div style="font-weight: 800;"> Processed - <i style="color: darkred;">{{user_processed_videos}}/{{total_user_assigned_vids}}</i> </div>
                             {% endif %}
@@ -61,7 +62,7 @@
     {% endblock header %}
     {% block section %}
         <div class="section">
-            <h1 class="tm_headings">NIST Automatic Video Annotation Application {% if request.user.is_authenticated and not request.user|has_group:"admin" %} <i style="font-size:small;">Total accepted  - </i> <span class="label_hint">{{percentage_process_all_vids}}/{{total_videos}}</span> {% endif %}</h1> 
+            <h1 class="tm_headings">NIST Automated Video Annotation Application {% if request.user.is_authenticated and not request.user|has_group:"admin" %} <i style="font-size:small;">Total accepted  - </i> <span class="label_hint">{{percentage_process_all_vids}}/{{total_videos}}</span> {% endif %}</h1> 
             <div class="display-none" id="video_upload">
                 <form  action="" method="POST" enctype="multipart/form-data">{% csrf_token %}
                     <div class="form-column">
@@ -122,18 +123,12 @@
                 {% if request.user.is_authenticated and request.user|has_group:"admin" %}
                 
                     <div class="row-align">
-                        <h2> Summary of Selected Video by Users</h2>
+                        {% include "admin.html" %}
 
                     </div>
                 {% else %}
                     <div class="tm_main_body">
-                        {% comment %} {% block uploadVid %}
-                            <div class="upload_vid">
-                                <form  action="" method="POST" enctype="multipart/form-data">{% csrf_token %}
-                                    
-                                </form>
-                            </div>
-                        {% endblock uploadVid %} {% endcomment %}
+                        
                         {% block aside %}
                         <div id="tm_aside">
                             <h3 class="tm_headings">
@@ -247,6 +242,7 @@
 
 {% block scripts %}
 <script src="{% static '/scripts/main.js' %}"></script>
+<script src="{% static '/scripts/admin.js' %}"> </script>
 {% endblock scripts %}
 </body>
 </html>

@@ -9,23 +9,23 @@ class Category(models.Model):
     cluster_keywords = models.CharField(max_length=250)
     cluster_id = models.IntegerField()
     group = models.ForeignKey(Group, on_delete=models.SET_NULL, null=True)
+    admin_approved = models.BooleanField(default=False)
 
     def __str__(self):
         return self.cluster_keywords
     
     def get_total_videos(self):
-        return self.videos_set.all()
+        return self.video_categories.all()
     
     def get_unprocessed_videos(self, user):
-        # assoc_videos = self.videos_set.exclude(checked_by=user).order_by('id')
-        assoc_videos = self.videos_set.exclude(checked_by=user).order_by('id')
+        assoc_videos = self.video_categories.exclude(checked_by=user).order_by('id')
         return assoc_videos
     
     def get_confidence_level(self):
         confidence = 0
         low = 60
         high = 100
-        total_vids_cluster = len(self.videos_set.all())
+        total_vids_cluster = len(self.video_categories.all())
         if total_vids_cluster < low:
             confidence = 80
         elif low < confidence < high:
@@ -50,7 +50,7 @@ class ProjectTitle(models.Model):
         return self.project_name
 
 class Videos(models.Model):
-    category = models.ForeignKey(Category, on_delete=models.CASCADE)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="video_categories")
     checked_by = models.ForeignKey(User, on_delete=models.DO_NOTHING, blank=True, null=True)
     # sets the group associated with the video instance to null
     # group = models.ForeignKey(Group, on_delete=models.SET_NULL, null=True)

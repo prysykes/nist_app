@@ -60,7 +60,7 @@ html,body {
  .tm_headings{
     background-color: rgb(239, 239, 242);
     text-align: center;
-    padding: 3px;
+    padding: 20px;
     border-radius: 10px;
  }
 
@@ -105,6 +105,86 @@ html,body {
  .sign_up_div{
     text-align: center;
  }
+
+/**
+Admin Page styles Begins
+*/
+
+.video_categories h3 {
+   background-color: rgb(31, 31, 64);
+   color: white;
+   padding: 10px;
+   border-radius: 15px;
+}
+
+.video_categories h3 span {
+    background-color: rgb(244, 244, 249);
+    color: rgb(33, 107, 33);
+    font-weight: 700;
+}
+
+.admin-dashboard {
+    margin-left: 5%;
+    margin-right: 5%;
+    width: 100%;
+    padding: 20px;
+    font-size:large;
+    font-family: sans-serif;
+}
+
+.row-align_base{
+    display: flex;
+    justify-content: space-between;
+    margin-top: 2px;
+    padding: 2px;
+    width: 100%;
+}
+
+.user-processed-categories {
+    margin-bottom: 2px;
+}
+#video_inspection {
+    width: 85%;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 5px;
+    padding: 8px;
+}
+#video_inspection h2 {
+    background-color: rgb(31, 31, 64);
+    color: white;
+    border-radius: 15px;
+    padding: 5px;
+}
+
+#video_list_admin{
+    width: 30%;
+    padding: 8px;
+}
+
+#video_preview_admin {
+    width: 70%;
+    padding: 8px;
+}
+
+#video_preview_admin h2 {
+    text-align: center;
+}
+
+.btn_accept_videos{
+    font-size: small;
+    background-color: rgb(31, 31, 64);
+    color: white;
+    border-radius: 15px;
+    cursor: pointer;
+    padding: 8px;
+    
+}
+
+/**
+
+Admin page styles end
+*/
 
  .nist-button{
     background-color: rgb(31, 31, 64);
@@ -188,6 +268,27 @@ html,body {
     cursor: pointer;
 }
 
+ul{
+    list-style: none;
+    padding: 8px;
+    font-size: large;
+}
+
+ul li {
+    color: rgb(31, 31, 64);
+    background-color: rgb(239, 239, 242);
+    margin-bottom: 2px;
+    padding: 5px;
+    height: 30px;
+    border-radius: 10px;
+    font-size: large;
+    cursor: pointer;
+}
+
+ul li:hover {
+    background-color: rgb(31, 31, 64);
+    color: white;
+}
 
 #video_list_disp :hover {
     background-color: rgb(31, 31, 64);

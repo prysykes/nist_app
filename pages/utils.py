@@ -3,6 +3,7 @@ from django.shortcuts import get_list_or_404, get_object_or_404
 from django.core.serializers import serialize
 from django.http import HttpResponse
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.auth.models import User
 import math
 import json
 import pandas as pd
@@ -117,10 +118,36 @@ def handle_upload_videos(request, num_annotators, project_name, uploaded_videos,
         cur_vid.save()
 
 
-def prepare_processed_data(request=None):
-    # unique_categories = Video.objects.values_list('category', flat=True).distinct()
-    unique_categories = Videos.objects.values_list('category', flat=True).distinct()
-    print("unique_categories", len(unique_categories))
+def prepare_processed_videos(request=None, user=None):
+    from pages.models import ProjectTitle
+    from django.db.models import Count, Q, F
+    pay_load = {}
+
+    cur_project = ProjectTitle.objects.get(user=user)
+    all_groups = Group.objects.filter(name__icontains=cur_project)
+    assoc_grp_users = []
+    for group in all_groups:
+        assoc_user = group.user_set.all()[0]
+        assoc_grp_users.append(assoc_user)
+
+  
+    
+    for user in assoc_grp_users:
+        # retrieve user processed videos
+        try:
+            assoc_categories = Category.objects.filter(group__user__id=user.id).annotate(
+                # count the num of associated videos where status=True
+                true_status_videos=Count('video_categories', filter=Q(video_categories__status=True))
+            ).filter(true_status_videos__gt=0)
+            
+            
+        except:
+            assoc_categories = None
+        
+ 
+        pay_load[user] = assoc_categories
+    
+    return pay_load
 
 def display_categories(request=None):
     """
@@ -142,7 +169,7 @@ def display_categories(request=None):
     return categories
 
 
-def  get_video_list(term=None, category=None, cluster_group=None):
+def  get_video_list(term=None, category=None, cluster_group=None, annotator=None):
     from django.db.models import Case, When, Value, BooleanField
     #  videos = get_video_list(term=None, category=category, cluster_group=cluster_group)
     # print("term", term, "group", group)
@@ -155,25 +182,36 @@ def  get_video_list(term=None, category=None, cluster_group=None):
         
         # cur_category = Category.objects.get(cluster_keywords=cluster_keywords, group=assoc_group)
         videos = Videos.objects.filter(category=assoc_category)
-    else:
+    elif cluster_group:
         cluster_keywords = category.strip()
-        print("else else", cluster_keywords)
         assoc_group = Group.objects.get(name=cluster_group)
-        print("assoc group", assoc_group)
+        
         assoc_category = get_object_or_404(Category, cluster_keywords=cluster_keywords, group=assoc_group)
-        videos = assoc_category.videos_set.annotate(
+        videos = assoc_category.video_categories.annotate(
             checked=Case(
                 When(checked_by=None, then=Value(False)),
                 default=Value(True),
                 output_field=BooleanField(),
             )
         ).order_by('-checked', 'id')
+    else:
+        # select all videos that as approved = True and belongs 
+        # to the request.user
+        cluster_keywords = category.strip()
+        assoc_category = get_object_or_404(Category, cluster_keywords=cluster_keywords)
+        annotator = get_object_or_404(User, username=annotator)
+        # print("no", annotator, assoc_category.group)
+        videos = Videos.objects.filter(category=assoc_category, checked_by__username=annotator, status=True)
+        
+
 
     # print('videos', videos)
     # print('cur_cat', cur_category)
+    # for video in videos:
+    #         print("yipee", video.checked_by, video.status)
     qs = videos
     # print('a qs', qs)
-    videos = serialize('json', qs, fields=('file_name', 'video', 'checked_by', 'status'))
+    videos = serialize('json', qs, fields=('file_name', 'video', 'checked_by', 'status', 'keywords'))
     
     return HttpResponse(videos, content_type='application/json')
 
@@ -191,7 +229,6 @@ def get_paginated_video_list(term, group):
 def check_user_decision(file_name, cur_user, appr_or_rej=None):
     # print('appr_or_rej', appr_or_rej, appr_or_rej=='approve')
     video = get_object_or_404(Videos, file_name=file_name)
-    print('video.checked_by', video.file_name, appr_or_rej=='approve')
     # print(video)
     
     if appr_or_rej == 'approve':
@@ -211,7 +248,7 @@ def get_rem_and_total(category, cur_user):
 
     # serialize rem and total videos
     serialized_rem = serialize('json', remaining, fields=('file_name', 'video', 'checked_by', 'status'))
-    print()
+ 
     serialized_total = serialize('json', total, fields=('file_name', 'video', 'checked_by', 'status'))
     serialized_rem_total = (serialized_rem, serialized_total)
     rem_total = (len(remaining), len(total))

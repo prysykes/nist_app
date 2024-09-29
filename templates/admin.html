@@ -1,0 +1,39 @@
+<div class="admin-dashboard">
+    <h2 style="text-align: center;"> Summary of Selected Video by Users</h2>
+    <div class="row-align_base">
+        <!-- <div> haha</div>
+        <div>hana</div>
+        <div>hagi</div> -->
+        {% for user, categories in users_processed_videos.items %}
+            <div class="video_categories"> 
+                <h3> Video Categories - {{user}} <span class="btn_accept_videos display-none"> Accept Videos </span></h3>
+                <ul>
+                    {% for category in categories %} 
+                    <li class="user-processed-categories">
+                        {{category}}
+                    </li>
+                    {% endfor %}
+
+                </ul>
+                
+            </div>
+        {% endfor %}
+    </div>
+    <div id="video_inspection" class="display-none">
+        <div class="row-align_base">
+            <div id="video_list_admin">
+                <h2> Video List </h2>
+                
+            </div>
+
+            <div id="video_preview_admin">
+                <h2> Video Preview </h2>
+                <div style="display: flex; justify-content: center;" id="video_player">
+
+                </div>
+            </div>
+        </div>
+    </div>
+    
+</div>
+

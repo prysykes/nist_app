@@ -8,7 +8,7 @@ from .models import Category, Videos
 from .utils import handle_upload_videos
 from .utils import display_categories, get_rem_and_total,  get_video_list, check_user_decision, get_paginated_video_list
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 
 from django.db.models import Q # allows us to perform != in django filter
 
@@ -16,20 +16,22 @@ from django.db.models import Q # allows us to perform != in django filter
 
 
 def index(request):
-    from pages.utils import prepare_processed_data
+    from pages.utils import prepare_processed_videos
     
     # avaliable_groups = Group.objects.all()
     # print('request.user', request.user.is_anonymous)
     video_upload_form = VideoUploadForm()
     project_title_form = ProjectTitleForm()
     categories = display_categories(request)
-    print("categories", categories)
+    # print("categories", categories)
     # print('available groups', avaliable_groups)
     user = request.user
     if not user.is_anonymous:
         user_groups = str(user.groups.all())
         #ensures that only admin can upload videos
         if "admin" in user_groups:
+            total_videos = Videos.objects.all().count()
+            all_processed_videos = Videos.objects.exclude(checked_by=None).count()
             if request.method == "POST":
                 print("re req", request)
 
@@ -43,10 +45,13 @@ def index(request):
                 handle_upload_videos(request, num_annotators, project_name, uploaded_videos, cluster_csv)
                 return redirect('/')
             else:
-                prepare_processed_data(request=None)
+                users_processed_videos = prepare_processed_videos(request=None, user=user)
                 context = {
                         'project_details': project_title_form,
                         'video_upload': video_upload_form,
+                        'total_videos': total_videos,
+                        'all_processed_videos': all_processed_videos,
+                        'users_processed_videos': users_processed_videos
                     }
                 return render(request, 'index.html', context)
     
@@ -137,17 +142,38 @@ def sign_up(request):
     context = {}
     return render(request, 'sign_up.html', context)
 
+def admin_approve(request):
+    user_catergories = request.GET.get('user_catergories').split('-')
+    user = user_catergories[0]
+    categories = user_catergories[1:]
+    
+    # set admin_approved in the category as True
+    for category in categories:
+        assoc_category = Category.objects.get(cluster_keywords=category)
+        assoc_category.admin_approved = True
+        assoc_category.save()
+       
+    # print("user_catergories", user_catergories)
+
+    return JsonResponse({"info": f"Accepted {user} videos"})
+
 def display_videos(request):
     if request.method == 'GET':
         request_dict_keys = dict(request.GET).keys()
         if "term" in request_dict_keys:
             term = request.GET.get('term')
             videos = get_video_list(term=term)
-        else:
+        elif "cluster_group" in request_dict_keys:
             category = request.GET.get('category')
             cluster_group = request.GET.get('cluster_group')
             print("cat", category, "cluster_group", cluster_group)
             videos = get_video_list(category=category, cluster_group=cluster_group)
+        else:
+            print("hit")
+            category = request.GET.get('category')
+            annotator = request.GET.get('annotator')
+            print("hit", category, annotator)
+            videos = get_video_list(category=category, annotator=annotator)
 
     return videos
 
