@@ -6,13 +6,16 @@ from django.contrib import messages
 from .upload_form import VideoUploadForm, ProjectTitleForm
 from .models import Category, Videos
 from .utils import handle_upload_videos
-from .utils import display_categories, get_rem_and_total,  get_video_list, check_user_decision, get_paginated_video_list
+from .utils import display_categories, get_rem_and_total,  get_video_list, check_user_decision, get_paginated_video_list, serialize_videos
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse, HttpResponse
 
 from django.db.models import Q # allows us to perform != in django filter
 
 
+# def health_check(request):
+#     # disable SSL redirect only for this health check view
+#     return JsonResponse({'status': 'ok'}, status=200)
 
 
 def index(request):
@@ -33,7 +36,6 @@ def index(request):
             total_videos = Videos.objects.all().count()
             all_processed_videos = Videos.objects.exclude(checked_by=None).count()
             if request.method == "POST":
-                print("re req", request)
 
                 project_title_form = ProjectTitleForm(request.POST, request.FILES)
                 video_upload_form = VideoUploadForm(request.POST, request.FILES)
@@ -45,7 +47,10 @@ def index(request):
                 handle_upload_videos(request, num_annotators, project_name, uploaded_videos, cluster_csv)
                 return redirect('/')
             else:
-                users_processed_videos = prepare_processed_videos(request=None, user=user)
+                try:
+                    users_processed_videos = prepare_processed_videos(request=None, user=user)
+                except:
+                    users_processed_videos = None
                 context = {
                         'project_details': project_title_form,
                         'video_upload': video_upload_form,
@@ -62,8 +67,10 @@ def index(request):
         # all_processed_videos = len(Videos.objects.all().filter(status=True, checked_by=str(user)))
         percentage_process_all_vids = len(Videos.objects.exclude(checked_by=None))
         total_videos = len(get_list_or_404(Videos))
-        user_group = user.groups.all()[0]
+
+        
         try:
+            user_group = user.groups.all()[0]
             user_assigned_videos = []
             total_user_assigned_vids = 0
             user_categories = get_list_or_404(Category, group=user_group)
@@ -73,12 +80,10 @@ def index(request):
                 len_vids = len(cur_cat_videos)
                 total_user_assigned_vids += len_vids
                 user_assigned_videos.append(cur_cat_videos)
-            print("total_user_assigned_vids",total_user_assigned_vids)
         except IndexError:
             user_assigned_videos = []
 
         user_processed_videos = Videos.objects.all().filter(checked_by=user)
-        print("len_user_processed_videos", len(user_processed_videos))
         try:
             percentage_remaining = (len(user_processed_videos)/total_user_assigned_vids) *100
             percentage_remaining = round(percentage_remaining, 2)
@@ -143,19 +148,34 @@ def sign_up(request):
     return render(request, 'sign_up.html', context)
 
 def admin_approve(request):
+    from registration.models import Userreg
     user_catergories = request.GET.get('user_catergories').split('-')
-    user = user_catergories[0]
+    user = user_catergories[0].strip()
+    print("user", user)
     categories = user_catergories[1:]
+
+    user_object = User.objects.get(username=user)
+    print("user_object", user_object)
+    userreg_object = Userreg.objects.get(user=user_object)
+    print("userreg_object", userreg_object)
     
     # set admin_approved in the category as True
     for category in categories:
         assoc_category = Category.objects.get(cluster_keywords=category)
-        assoc_category.admin_approved = True
+        assoc_category.admin_approved = False
         assoc_category.save()
-       
-    # print("user_catergories", user_catergories)
+    userreg_object.admin_approved = False
+    userreg_object.save()
+ 
 
     return JsonResponse({"info": f"Accepted {user} videos"})
+
+def end_annotation(request):
+    user = request.GET.get('user')
+    assoc_user = User.objects.get(username=user)
+    assoc_user.userreg.finished_job = True
+    assoc_user.userreg.save()
+    return JsonResponse({'infor': 'annotation ended'})
 
 def display_videos(request):
     if request.method == 'GET':
@@ -166,24 +186,26 @@ def display_videos(request):
         elif "cluster_group" in request_dict_keys:
             category = request.GET.get('category')
             cluster_group = request.GET.get('cluster_group')
-            print("cat", category, "cluster_group", cluster_group)
             videos = get_video_list(category=category, cluster_group=cluster_group)
         else:
-            print("hit")
             category = request.GET.get('category')
             annotator = request.GET.get('annotator')
-            print("hit", category, annotator)
             videos = get_video_list(category=category, annotator=annotator)
 
     return videos
 
-def paginated_vid_list(request):
+def get_videos_per_category(request):
     if request.method == 'GET':
         term = request.GET.get('term')
-        group = request.GET.get('group')
-        videos = get_paginated_video_list(term, group)
-    print('videos.get_unprocessed_videos()', videos)
-    return videos
+        assoc_category = get_object_or_404(Category, cluster_keywords=term)
+        videos = assoc_category.video_categories.all().order_by('id')
+        serialized_videos = serialize_videos(videos)
+        print("serialized_videos", serialized_videos)
+        print('termaaaa', term)
+        # group = request.GET.get('group')
+        # videos = get_paginated_video_list(term, group)
+    # print('videos.get_unprocessed_videos()', videos)
+    return serialized_videos
 
 def get_unprocessed_vids(request):
     """
@@ -192,19 +214,55 @@ def get_unprocessed_vids(request):
     """
     cur_user = request.user
     if request.method == "GET":
-        selection = request.GET.get('selection')
-        split_selection = selection.split('_')
-        file_name = split_selection[0]
-        apr_rej = split_selection[1]
+        file_name = request.GET.get('file_name')
+        print('file_name>>', file_name)
+        # split_selection = selection.split('_')
+        # file_name = split_selection[0]
+        # apr_rej = split_selection[1]
         assoc_video = get_object_or_404(Videos, file_name=file_name)
         assoc_category = assoc_video.category
+        videos = assoc_category.get_unprocessed_videos(cur_user)
+        serialized_videos = serialize_videos(videos)
         
-        context = get_rem_and_total(assoc_category, cur_user)
+
+        # check_user_decision(file_name, cur_user, appr_or_rej=apr_rej)
+        
+        context = {}
         # return HttpResponse(videos, content_type='application/json')
         
-        check_user_decision(file_name, cur_user, appr_or_rej=apr_rej)
+       
         # print('context', context)
-    return JsonResponse(context, safe=False)
+    return serialized_videos
+
+def process_user_decision(request):
+    if request.method == 'GET':
+        cur_user = request.user
+        selection = request.GET.get('selection').split('_')
+        appr_rej = selection[1]
+        print('appr_rej', appr_rej)
+        file_name = selection[0]
+        check_user_decision(file_name, cur_user, appr_rej)
+
+        if appr_rej == 'approve':
+            return JsonResponse({'info': f"Approved {file_name}"}) 
+        elif appr_rej == 'reject':
+            return JsonResponse({'info': f"Rejected {file_name}"}) 
+
+def get_next_video(request):
+    cur_user = request.user
+    if request.method == 'GET':
+        file_name = request.GET.get('file_name')
+        print("file_name", file_name)
+        appr_rej = request.GET.get('appr_rej')
+        check_user_decision(file_name, cur_user, appr_rej)
+        assoc_video = get_object_or_404(Videos, file_name=file_name)
+        assoc_category = assoc_video.category
+        #self.video_categories.filter(status=None).earliest('id')
+        next_video = assoc_category.video_categories.filter(status__isnull=True).order_by('id').first()
+        print("next_video", next_video)
+        serialized_next_video = serialize_videos([next_video])
+    return serialized_next_video
+
 
 def reject_all(request, *args, **kwargs):
     # get request.user
