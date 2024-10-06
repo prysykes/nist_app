@@ -226,6 +226,12 @@ def get_paginated_video_list(term, group):
     
     return HttpResponse(videos, content_type='application/json')
 
+def serialize_videos(videos):
+    serialized_videos = serialize('json', videos, fields=('file_name', 'video', 'checked_by', 'status'))
+
+    return HttpResponse(serialized_videos, content_type='application/json')
+
+
 def check_user_decision(file_name, cur_user, appr_or_rej=None):
     # print('appr_or_rej', appr_or_rej, appr_or_rej=='approve')
     video = get_object_or_404(Videos, file_name=file_name)

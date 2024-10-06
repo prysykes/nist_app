@@ -17,9 +17,22 @@ class Category(models.Model):
     def get_total_videos(self):
         return self.video_categories.all()
     
+    #TODO: change the id later to similarity score
+        # compute the keyword similarity score for each video
+        # while uploading it.
     def get_unprocessed_videos(self, user):
-        assoc_videos = self.video_categories.exclude(checked_by=user).order_by('id')
+        # get all videos belonging to a user
+        assoc_videos = self.video_categories.exclude(status__isnull=False).order_by('id')
         return assoc_videos
+    def get_next_video(self):
+        try:
+            next_video = self.video_categories.filter(status=None).earliest('id')
+            # print('pre next_video', next_video)
+            # next_video = next_video[0]
+            # print('post next_video', next_video)
+        except:
+            next_video = None
+        return next_video
     
     def get_confidence_level(self):
         confidence = 0
@@ -59,7 +72,7 @@ class Videos(models.Model):
     file_name = models.CharField(max_length=50, null=True, blank=True)
     description = models.CharField(max_length=500, null=True, blank=True)
     keywords = models.CharField(max_length=250, null=True, blank=True)
-    status = models.BooleanField(default=False)
+    status = models.BooleanField(default=None, blank=True, null=True)
     date_uploaded = models.DateField(auto_now_add=True)
 
     def __str__(self):

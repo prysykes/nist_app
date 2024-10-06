@@ -35,9 +35,10 @@
                             
                             {% if request.user.is_authenticated and request.user|has_group:"admin" %}
                                 <div> <button  class="nist-button" id="upload_videos"> click to upload videos </button></div>
-                                <div style="font-weight: 800;"> Total Processed - <i style="color: darkred;">{{all_processed_videos}}/{{total_videos}}</i> </div>
+                                <div style="font-weight: 800;"> Processed by All - <i style="color: darkred;">{{all_processed_videos}}/{{total_videos}}</i> </div>
                             {% else %}
-                                <div style="font-weight: 800;"> Processed - <i style="color: darkred;">{{user_processed_videos}}/{{total_user_assigned_vids}}</i> </div>
+                                <div style="font-weight: 800;"> Processed by All - <span style="color: darkred;" class="">{{percentage_process_all_vids}}/{{total_videos}}</span>  </div>
+                                <div style="font-weight: 800;"> Proccessed by User - <i style="color: darkred;">{{user_processed_videos}}/{{total_user_assigned_vids}}</i> </div>
                             {% endif %}
                         {% else %}
                             <p id="tm-login"> login - to use the application</p>
@@ -62,7 +63,7 @@
     {% endblock header %}
     {% block section %}
         <div class="section">
-            <h1 class="tm_headings">NIST Automated Video Annotation Application {% if request.user.is_authenticated and not request.user|has_group:"admin" %} <i style="font-size:small;">Total accepted  - </i> <span class="label_hint">{{percentage_process_all_vids}}/{{total_videos}}</span> {% endif %}</h1> 
+            <h1 class="tm_headings">NIST Automated Video Annotation Application {% if request.user.is_authenticated and not request.user|has_group:"admin" %} <span id="end-annotation">{% if not request.user.userreg.finished_job %} <i> End Annotation</i> {% else %} <i id="annotation-ended"> Annotation Ended </i> {% endif %} </span> {% endif %}</h1> 
             <div class="display-none" id="video_upload">
                 <form  action="" method="POST" enctype="multipart/form-data">{% csrf_token %}
                     <div class="form-column">
@@ -241,8 +242,8 @@
     
 
 {% block scripts %}
-<script src="{% static '/scripts/main.js' %}"></script>
-<script src="{% static '/scripts/admin.js' %}"> </script>
+<script type="module" src="{% static '/scripts/main.js' %}"></script>
+<script type="module" src="{% static '/scripts/admin.js' %}"> </script>
 {% endblock scripts %}
 </body>
 </html>

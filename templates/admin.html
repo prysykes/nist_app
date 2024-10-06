@@ -1,4 +1,12 @@
+{% if users_processed_videos == None %}
 <div class="admin-dashboard">
+    
+    <h2 style="text-align: center;"> Please click upload Videos button above to begin...</h2>
+</div>
+
+{% else %}
+<div class="admin-dashboard">
+    
     <h2 style="text-align: center;"> Summary of Selected Video by Users</h2>
     <div class="row-align_base">
         <!-- <div> haha</div>
@@ -6,7 +14,7 @@
         <div>hagi</div> -->
         {% for user, categories in users_processed_videos.items %}
             <div class="video_categories"> 
-                <h3> Video Categories - {{user}} <span class="btn_accept_videos display-none"> Accept Videos </span></h3>
+                <h3> Video Categories - {{user}}  <span class="btn_accept_videos display-none"> {% if user.userreg.admin_approved %} Approved {% else %} Approve Videos {% endif %} </span></h3>
                 <ul>
                     {% for category in categories %} 
                     <li class="user-processed-categories">
@@ -28,7 +36,10 @@
 
             <div id="video_preview_admin">
                 <h2> Video Preview </h2>
-                <div style="display: flex; justify-content: center;" id="video_player">
+                <div style="display: flex; justify-content: center;" id="video_player_admin">
+
+                </div>
+                <div id="app_rej_btn_admin">
 
                 </div>
             </div>
@@ -36,4 +47,6 @@
     </div>
     
 </div>
+
+{% endif %}
 

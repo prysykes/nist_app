@@ -7,9 +7,12 @@ from . import views
 urlpatterns = [
     path('', views.index, name='index'), 
     path('display_videos', views.display_videos, name='display_videos'),
-    path('paginated_vid_list', views.paginated_vid_list, name='paginated_vid_list'),
+    path('get_videos_per_category', views.get_videos_per_category, name='get_videos_per_category'),
+    path('get_next_video', views.get_next_video, name='get_next_video'),
     path('get_unprocessed_vids', views.get_unprocessed_vids, name='get_unprocessed_vids'),
+    path('process_user_decision', views.process_user_decision, name='process_user_decision'),
     path('admin_approve', views.admin_approve, name='admin_approve'),
-    path('reject_all', views.reject_all, name="reject_all")
+    path('reject_all', views.reject_all, name="reject_all"),
+    path('end_annotation', views.end_annotation, name='end_annotation')
     
 ]

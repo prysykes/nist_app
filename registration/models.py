@@ -9,6 +9,7 @@ class Userreg(models.Model):
     title = models.CharField(max_length=5)
     date_created = models.DateField(auto_now_add=True)
     finished_job = models.BooleanField(default=False)
+    admin_approved = models.BooleanField(default=False)
 
     def __str__(self):
         return self.user.username

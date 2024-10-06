@@ -110,6 +110,28 @@ html,body {
 Admin Page styles Begins
 */
 
+#video_player_admin {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+
+}
+
+#app_rej_btn_admin {
+    display: flex;
+    flex-direction: row;
+    margin-top: 2px;
+ 
+    /* width: px; */
+
+  
+}
+
+#app_rej_btn_admin input {
+    margin-right: 30%;
+}
+
+
 .video_categories h3 {
    background-color: rgb(31, 31, 64);
    color: white;
@@ -121,6 +143,23 @@ Admin Page styles Begins
     background-color: rgb(244, 244, 249);
     color: rgb(33, 107, 33);
     font-weight: 700;
+}
+
+#end-annotation{
+    font-size: medium;
+    background-color: rgb(244, 244, 249);
+    padding: 8px;
+    border-radius: 10px;
+    cursor: pointer;
+    color: rgb(115, 0, 0);
+}
+
+#annotation-ended{
+    font-size: medium;
+    background-color: rgb(244, 244, 249);
+    padding: 8px;
+    border-radius: 10px;
+    color: rgb(115, 0, 0);
 }
 
 .admin-dashboard {
