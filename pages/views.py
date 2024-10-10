@@ -6,9 +6,10 @@ from django.contrib import messages
 from .upload_form import VideoUploadForm, ProjectTitleForm
 from .models import Category, Videos
 from .utils import handle_upload_videos
-from .utils import display_categories, get_rem_and_total,  get_video_list, check_user_decision, get_paginated_video_list, serialize_videos
+from .utils import display_categories, get_rem_total_per_category, get_video_list, check_user_decision, get_user_all_processed, get_paginated_video_list, serialize_videos
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse, HttpResponse
+import json
 
 from django.db.models import Q # allows us to perform != in django filter
 
@@ -172,10 +173,20 @@ def admin_approve(request):
 
 def end_annotation(request):
     user = request.GET.get('user')
-    assoc_user = User.objects.get(username=user)
-    assoc_user.userreg.finished_job = True
-    assoc_user.userreg.save()
-    return JsonResponse({'infor': 'annotation ended'})
+    restart_end = request.GET.get('restart_end')
+    if restart_end == 'true':
+        assoc_user = User.objects.get(username=user)
+        assoc_user.userreg.finished_job = False
+        assoc_user.userreg.save()
+        context = {'restarted': True}
+    else:
+        assoc_user = User.objects.get(username=user)
+        assoc_user.userreg.finished_job = True
+        assoc_user.userreg.save()
+        context = {'restarted': False}
+        
+    
+    return JsonResponse(context)
 
 def display_videos(request):
     if request.method == 'GET':
@@ -200,8 +211,8 @@ def get_videos_per_category(request):
         assoc_category = get_object_or_404(Category, cluster_keywords=term)
         videos = assoc_category.video_categories.all().order_by('id')
         serialized_videos = serialize_videos(videos)
-        print("serialized_videos", serialized_videos)
-        print('termaaaa', term)
+        serialized_videos = HttpResponse(serialized_videos, content_type='application/json')
+      
         # group = request.GET.get('group')
         # videos = get_paginated_video_list(term, group)
     # print('videos.get_unprocessed_videos()', videos)
@@ -215,23 +226,12 @@ def get_unprocessed_vids(request):
     cur_user = request.user
     if request.method == "GET":
         file_name = request.GET.get('file_name')
-        print('file_name>>', file_name)
-        # split_selection = selection.split('_')
-        # file_name = split_selection[0]
-        # apr_rej = split_selection[1]
         assoc_video = get_object_or_404(Videos, file_name=file_name)
         assoc_category = assoc_video.category
         videos = assoc_category.get_unprocessed_videos(cur_user)
         serialized_videos = serialize_videos(videos)
-        
+        serialized_videos = HttpResponse(serialized_videos, content_type='application/json')
 
-        # check_user_decision(file_name, cur_user, appr_or_rej=apr_rej)
-        
-        context = {}
-        # return HttpResponse(videos, content_type='application/json')
-        
-       
-        # print('context', context)
     return serialized_videos
 
 def process_user_decision(request):
@@ -257,11 +257,25 @@ def get_next_video(request):
         check_user_decision(file_name, cur_user, appr_rej)
         assoc_video = get_object_or_404(Videos, file_name=file_name)
         assoc_category = assoc_video.category
-        #self.video_categories.filter(status=None).earliest('id')
+      
         next_video = assoc_category.video_categories.filter(status__isnull=True).order_by('id').first()
-        print("next_video", next_video)
+        
         serialized_next_video = serialize_videos([next_video])
-    return serialized_next_video
+        serialized_next_video = json.loads(serialized_next_video)
+        
+        rem_total_per_category = get_rem_total_per_category(assoc_category)
+
+        user_all_processed = get_user_all_processed(cur_user)
+
+        context = {"serialized_next_video": serialized_next_video,
+                   "rem_total_per_category": rem_total_per_category,
+                   "user_all_processed": user_all_processed}
+        # # context = {"rem_total_per_category":rem_total_per_category}
+        context = JsonResponse(context)
+        # context = HttpResponse(context, content_type='application/json')
+        
+        
+    return context
 
 
 def reject_all(request, *args, **kwargs):

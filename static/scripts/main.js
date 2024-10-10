@@ -19,6 +19,7 @@ let video_name = document.querySelector('#video_name')
 var app_rej_btn_div = null
 
 var VIDEO_TYPE = "video/webm"
+var ANNOTATION_ENDED = false
 
 
 
@@ -31,6 +32,7 @@ const base_vid_src = "media/"
 
 // let full_url_path = base_url+'/display_videos?term='
 let process_user_sel_url = base_url+'/process_user_selection?selection='
+
 
 
 
@@ -49,6 +51,66 @@ if (end_annotation == null){
     })
 }
 
+// Beging function to allow a user end annotation
+
+function handle_confirm_yes_or_no(caller, value, target_elem){
+    if (caller == 'end_annotaion'){
+        if (value){
+            // mark job_finished in user model to false
+            // change the annotation ended text to end-annotation 
+            let user = document.getElementById('last_name').innerText.split(' ')[1]
+            let end_annotation_endpoint = `${base_url}/end_annotation?user=${user}&restart_end=true`
+                let response = fetch(end_annotation_endpoint, {
+                    method: 'GET'
+                })
+                .then(response => response.json()) 
+                .then((data)=>{
+                    console.log(data['restarted']);
+                    if (data['restarted']){
+                        ANNOTATION_ENDED = false
+                        target_elem.textContent = 'End Annotation'
+                    }
+                    
+                    
+                })
+    
+        }else{
+            // handle end
+        }
+    }else{
+        if (value){
+
+        }
+    }
+    
+  
+    
+}
+function customConfirm(message, target_elem, callback) {
+    const confirm_overlay = document.getElementById('custom-confirm')
+    confirm_overlay.style.display = 'flex' // removes the display none
+
+    const restartButton = document.getElementById('confirm-restart');
+    const cancelButton = document.getElementById('confirm-cancel');
+
+    confirm_overlay.querySelector('p').textContent = message;
+
+    // Handle OK button click
+    restartButton.addEventListener('click', ()=>{
+        confirm_overlay.style.display = 'none';  // Hide dialog
+        let caller = 'end_annotaion'
+        callback(caller, true, target_elem);  // Pass true to callback (OK pressed)
+    });
+
+    // Handle Cancel button click
+    cancelButton.addEventListener('click', ()=> {
+        confirm_overlay.style.display = 'none';  // Hide dialog
+        let caller = 'end_annotaion'
+        callback(caller, false, target_elem);  // Pass false to callback (Cancel pressed)
+    });
+
+}
+
 if (btn_vid_upload == null){
     // checks if the displayed page is for admin
     let end_annotation = document.querySelector('#end-annotation')
@@ -56,19 +118,24 @@ if (btn_vid_upload == null){
         let target_elem = e.target
         
     
-        if (target_elem.innerText.trim().includes('Annotation Ended')){
-            console.log("annotation ended");
+        if (target_elem.innerText.trim().includes('Restart Annotation')){
+            let message =  "You already finished annotation. Do you want to restart?" 
+            customConfirm(message, target_elem, handle_confirm_yes_or_no) ;
             
             
         }else{
             let user = document.getElementById('last_name').innerText.split(' ')[1]
-            let end_annotation_endpoint = `${base_url}/end_annotation?user=${user}`
+            let end_annotation_endpoint = `${base_url}/end_annotation?user=${user}&restart_end=false`
             let response = fetch(end_annotation_endpoint, {
                 method: 'GET'
             })
             .then(response => response.json()) 
             .then((data)=>{
                 console.log(data);
+                if (!data['restarted']){
+                    ANNOTATION_ENDED = true
+                    target_elem.textContent = 'Restart Annotation'
+                }
                 
             })
         }
@@ -132,12 +199,6 @@ function create_vidlist_disp_span(file_name, checked_by, status, video_url, asso
         let video_name = document.querySelector('#video_name')
         video_name.innerHTML = ""
         vid_tag.innerHTML = ""
-        
-        
-
-        
-        
-        
         
         const video = create_video_tag()
         video.src =  base_vid_src+video_url
@@ -220,11 +281,6 @@ cat_headings.forEach((elem)=>{
             elem.classList.remove('active')
         })
         elem.classList.add('active')
-        // console.log("default loaded: ", assoc_category);
-        
-        // console.log("cluster_group", cluster_group);
-        
-        // fetch_paginated_vid(assoc_category, full_get_videos_per_category=full_get_videos_per_category)
         let cluster_id_i = document.createElement('i')
        
         cluster_id_i.textContent = cluster_id
@@ -263,6 +319,32 @@ function mark_good_bad(file_name, appr_rej) {
     return cur_span
 }
 
+function replace_rem_total_per_category(unprocessed_vids, total_vids, html_node){
+    let text_content = html_node.textContent
+    let cluster_keywords = text_content.split('|')[0]
+    let rem_total = `|${unprocessed_vids}/${total_vids}`
+    let new_text_content = cluster_keywords+rem_total
+    html_node.textContent = new_text_content
+    
+}
+
+function replace_processed_by_all_and_user(user_processed, all_processed, html_node_user, html_node_all, is_admin){
+    if (is_admin){
+
+    }else{
+        let text_content_user_node = html_node_user.textContent
+        let total_vids_category = text_content_user_node.split('/')[1]
+        let new_text_content_user_node = user_processed+"/"+total_vids_category
+        html_node_user.textContent = new_text_content_user_node
+
+        let text_content_all = html_node_all.textContent
+        let total_vids = text_content_all.split('/')[1]
+        let new_text_content_all = all_processed+"/"+total_vids
+        html_node_all.textContent = new_text_content_all   
+    }
+
+}
+
 
 function get_next_video(file_name, assoc_category, appr_rej){
     // console.log('filename', file_name);
@@ -278,14 +360,38 @@ function get_next_video(file_name, assoc_category, appr_rej){
     .then(response => response.json())
     .then((data)=>{
         
+        let is_admin = false
+        
         const[span_heading, br_elem, span_category] = create_vidname_category_spans(assoc_category)
         let vid_preview = document.getElementById('vid_preview')
         let vid_tag = document.getElementById('vid_tag')
         let video_name = document.querySelector('#video_name')
         video_name.innerHTML = ""
         vid_tag.innerHTML = ""
+        
+        let next_video = data["serialized_next_video"][0]
+        let rem_total_per_category = data["rem_total_per_category"]
+        let user_all_processed = data["user_all_processed"]
 
-        let next_video = data[0]
+       
+        
+        let unprocessed_vids = rem_total_per_category[0]
+        let total_vids = rem_total_per_category[1]
+        let html_node_vid_list = document.getElementById('cat_name')
+
+        // replace the progress  span on video_list_disp div
+        replace_rem_total_per_category(unprocessed_vids, total_vids , html_node_vid_list)
+        let html_node_category = document.getElementsByClassName('cat_headings active')[0]
+        replace_rem_total_per_category(unprocessed_vids, total_vids , html_node_category)
+
+        // replace user_processed value and processed by all value
+        let user_processed = user_all_processed[0]
+        let all_processed = user_all_processed[1]
+        
+        let processed_by_user = document.getElementById('processed_by_user')
+        let processed_by_all = document.getElementById('processed_by_all')
+        replace_processed_by_all_and_user(user_processed, all_processed, processed_by_user, processed_by_all, is_admin)
+        
        
         let video_fields = next_video['fields']
         let file_name = video_fields['file_name']
@@ -355,8 +461,15 @@ var create_apr_rej = function appr_rej(file_name, assoc_category){
     approve_input.className = 'nist-button btn_apr_rej'
 
     approve_input.addEventListener('click', ()=>{
+        if (ANNOTATION_ENDED){
+            let annotation_ended = document.getElementById('annotation-ended')
+            let message =  "You already finished annotation. Do you want to restart?" 
+            customConfirm(message, annotation_ended, handle_confirm_yes_or_no) ;
+        }else{
+            get_next_video(file_name, assoc_category, 'approve')
+        }
         
-        get_next_video(file_name, assoc_category, 'approve')
+        
    
         
     })
@@ -369,8 +482,14 @@ var create_apr_rej = function appr_rej(file_name, assoc_category){
     reject_input.className = 'nist-button btn_apr_rej'
 
     reject_input.addEventListener('click', ()=>{
+        if (ANNOTATION_ENDED){
+            let annotation_ended = document.getElementById('annotation-ended')
+            let message =  "You already finished annotation. Do you want to restart?" 
+            customConfirm(message, annotation_ended, handle_confirm_yes_or_no) ;
+        }else{
+            get_next_video(file_name, assoc_category, 'reject')
+        }
         
-        get_next_video(file_name, assoc_category, 'reject')
    
       
     })

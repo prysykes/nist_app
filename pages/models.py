@@ -20,10 +20,11 @@ class Category(models.Model):
     #TODO: change the id later to similarity score
         # compute the keyword similarity score for each video
         # while uploading it.
-    def get_unprocessed_videos(self, user):
+    def get_unprocessed_videos(self, user=None):
         # get all videos belonging to a user
         assoc_videos = self.video_categories.exclude(status__isnull=False).order_by('id')
         return assoc_videos
+    
     def get_next_video(self):
         try:
             next_video = self.video_categories.filter(status=None).earliest('id')
