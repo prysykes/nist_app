@@ -221,6 +221,37 @@ Admin Page styles Begins
 }
 
 /**
+    Begin Styling for confirm box
+*/
+
+.confirm-overlay {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+}
+
+.confirm-box {
+    background-color: white;
+    padding: 20px;
+    border-radius: 5px;
+   
+    text-align: center;
+}
+
+.confirm-btn{
+    margin: 10px;
+    padding: 10px, 20px;
+    cursor: pointer;
+}
+
+/**
 
 Admin page styles end
 */

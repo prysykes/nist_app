@@ -228,8 +228,26 @@ def get_paginated_video_list(term, group):
 
 def serialize_videos(videos):
     serialized_videos = serialize('json', videos, fields=('file_name', 'video', 'checked_by', 'status'))
+    # print("serialized_videos", type(serialized_videos))
 
-    return HttpResponse(serialized_videos, content_type='application/json')
+    return serialized_videos 
+
+def get_rem_total_per_category(category):
+    uprocessed_videos = category.get_unprocessed_videos()
+    total_videos = category.get_total_videos()
+    rem_total_per_category = (len(uprocessed_videos), len(total_videos))
+
+    # context = {"rem_total_per_category": rem_total_per_category}
+    return rem_total_per_category
+
+def get_user_all_processed(user):
+    user_processed = len(get_list_or_404(Videos, checked_by=user))
+  
+    all_processed = len(get_list_or_404(Videos, checked_by__isnull=False))
+    context = (user_processed, all_processed)
+ 
+    return context
+
 
 
 def check_user_decision(file_name, cur_user, appr_or_rej=None):
