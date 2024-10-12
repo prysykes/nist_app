@@ -162,8 +162,8 @@ function create_video_tag(){
     return video
 }
 
-function create_vidlist_disp_span(file_name, checked_by, status, video_url, assoc_category){
-    
+function create_vidlist_disp_span(file_name, checked_by, status, video_url, video_similarity_score, assoc_category){
+    // add video similarity confidence here.
     
     
     var inlines = create_inline_elemets()
@@ -242,7 +242,8 @@ function fecth_all_videos_in_category(endpoint, assoc_category){
             let file_name = video_fields['file_name']
             let status = video_fields['status'] //normall null
             let video_url = video_fields['video']
-            let cur_span = create_vidlist_disp_span(file_name, checked_by, status, video_url, assoc_category)
+            let video_similarity_score = video_fields['video_similarity_score']
+            let cur_span = create_vidlist_disp_span(file_name, checked_by, status, video_url, video_similarity_score, assoc_category)
             video_list_disp.appendChild(cur_span)
             // console.log(checked_by, file_name, status, video_url);
             
