@@ -149,7 +149,7 @@
                                 {% for category in categories %}
                                 <div style="padding-left: 10px; padding-right: 10px;" class="categories">
                                     <h3 class="cat_headings">
-                                        {{category.cluster_keywords}} <i class="progress">|{{category|get_unprocessed_videos:request.user}}/{{category|get_total_videos}}</i> <span>  - explore</span> 
+                                        {{category.cluster_keywords}} <i class="progress">|{{category|get_unprocessed_videos:request.user}}/{{category|get_total_videos}}</i>   <span>  - explore <i class="confidence"> Confidence {{category.cluster_similarity_score}} </i></span> 
                                         <span class="cluster_id visibility_hidden" >{{category.cluster_id}}</span>
                                         <span class="cluster_group visibility_hidden" >{{category.group}}</span>
                                     </h3>

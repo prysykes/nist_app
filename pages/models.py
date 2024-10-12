@@ -10,6 +10,7 @@ class Category(models.Model):
     cluster_id = models.IntegerField()
     group = models.ForeignKey(Group, on_delete=models.SET_NULL, null=True)
     admin_approved = models.BooleanField(default=False)
+    cluster_similarity_score = models.FloatField(default=0.0)
 
     def __str__(self):
         return self.cluster_keywords
@@ -47,6 +48,8 @@ class Category(models.Model):
         else:
             confidence = 30
         return confidence
+    class Meta:
+        ordering = ['-cluster_similarity_score']
    
 
 class ProjectTitle(models.Model):
@@ -74,6 +77,8 @@ class Videos(models.Model):
     description = models.CharField(max_length=500, null=True, blank=True)
     keywords = models.CharField(max_length=250, null=True, blank=True)
     status = models.BooleanField(default=None, blank=True, null=True)
+    video_similarity_score = models.FloatField(default=0.0)
+
     date_uploaded = models.DateField(auto_now_add=True)
 
     def __str__(self):
@@ -81,5 +86,8 @@ class Videos(models.Model):
     
     def get_unprocessed_videos(self):
         return self.objects.all().filter(checked_by='')
+    
+    class Meta:
+        ordering = ['-video_similarity_score'] 
     
     

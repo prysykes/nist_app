@@ -126,6 +126,16 @@ Admin Page styles Begins
 
   
 }
+.confidence{
+    color: rgb(31, 31, 64);
+   font-size: medium;
+}
+
+.confidence:hover{
+    background-color: rgb(31, 31, 64);;
+    color: white;
+   font-size: medium;
+}
 
 #app_rej_btn_admin input {
     margin-right: 30%;

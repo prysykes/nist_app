@@ -13,7 +13,7 @@ import os
 
 from django.contrib.auth.models import Group, Permission
 
-cluster_csv_file = 'media/cluster_csv/vids_clusters_keywords.csv'
+cluster_csv_file = 'media/cluster_csv/full_cluster_csv.csv'
 
 
 APP_LABEL = 'pages'
@@ -48,16 +48,17 @@ def create_groups(num_annotators, project_name):
    
     return groups
 
-def create_categories(num_annotators, groups, cluster_keyword_id_pair):
+def create_categories(num_annotators, groups, cluster_keyword_id_similarity_pair):
         """
             creates video clusters/category objects based on user provided cluster_csv files
             Params: num_annotators: int number of annotators for the current job
                     groups: array a list of groups to assign each category to
-                    cluster_keyword_id_pair: array an array of a tupple of cluster_keyword, cluster_id
+                    cluster_keyword_id_similarity_pair: array an array of a tupple of cluster_keyword, cluster_id,
+                                                        cluster_similarity_score
             Returns: an array of catergories
         """
         categories = []
-        total_categories = len(cluster_keyword_id_pair)
+        total_categories = len(cluster_keyword_id_similarity_pair)
         range_total_categories = range(total_categories)
         quota = math.ceil(total_categories/num_annotators)
         min_idx = 0
@@ -67,12 +68,15 @@ def create_categories(num_annotators, groups, cluster_keyword_id_pair):
             cur_group = groups[idx]
             assoc_category_keyword_idx = range_total_categories[min_idx:max_idx]
             for idx_cat in assoc_category_keyword_idx:
-                assoc_cluster_keyword_id = cluster_keyword_id_pair[idx_cat]
-                assoc_keyword = assoc_cluster_keyword_id[0]
-                assoc_cluster_id = int(assoc_cluster_keyword_id[1])
+                assoc_cluster_keyword_id_similarity = cluster_keyword_id_similarity_pair[idx_cat]
+                assoc_keyword = assoc_cluster_keyword_id_similarity[0]
+                assoc_cluster_id = int(assoc_cluster_keyword_id_similarity[1])
+                assoc_cluster_similarity_score = round(float(assoc_cluster_keyword_id_similarity[2]), 2)
+                # print("assoc_cluster_similarity_score", assoc_cluster_similarity_score)
                 new_category = Category()
                 new_category.cluster_keywords = assoc_keyword
                 new_category.cluster_id = assoc_cluster_id
+                new_category.cluster_similarity_score = assoc_cluster_similarity_score
                 new_category.group = cur_group
                 new_category.save()
                 categories.append(new_category)
@@ -88,16 +92,19 @@ def handle_upload_videos(request, num_annotators, project_name, uploaded_videos,
 
     cluster_csv_df = pd.read_csv(cluster_csv_file, index_col=0)
     cluster_keywords = np.unique(cluster_csv_df['cluster_keywords'])
-    cluster_keyword_id_pair = []
+    cluster_keyword_id_similarity_pair = []
 
     for keyword in cluster_keywords:
         assoc_cluster_id = cluster_csv_df.loc[cluster_csv_df['cluster_keywords']==keyword, 'cluster_ids']
         assoc_cluster_id = assoc_cluster_id.iloc[0]
-        cur_pair = (keyword, assoc_cluster_id)
-        cluster_keyword_id_pair.append(cur_pair)
+        assoc_cluster_similarity_score = cluster_csv_df.loc[cluster_csv_df['cluster_keywords']==keyword, 'cluster_similarity_score']
+        assoc_cluster_similarity_score  = assoc_cluster_similarity_score.iloc[0]
+        
+        cur_pair = (keyword, assoc_cluster_id, assoc_cluster_similarity_score)
+        cluster_keyword_id_similarity_pair.append(cur_pair)
     
     #create categories for videos
-    create_categories(num_annotators, groups, cluster_keyword_id_pair)
+    create_categories(num_annotators, groups, cluster_keyword_id_similarity_pair)
 
     #create videos and assign to categories
     for video in uploaded_videos:
@@ -105,6 +112,7 @@ def handle_upload_videos(request, num_annotators, project_name, uploaded_videos,
         assoc_df_row = cluster_csv_df[cluster_csv_df['filename'] == vid_name]
         cluster_id  = int(assoc_df_row['cluster_ids'].values[0])
         cluster_keywords = assoc_df_row['cluster_keywords'].values[0]
+        video_similarity_score = round(float(assoc_df_row['video_similarity_score'].values[0]), 2)
         description = assoc_df_row['captions'].values[0]
         keywords = assoc_df_row['keywords'].values[0]
         #retrieve category
@@ -114,6 +122,8 @@ def handle_upload_videos(request, num_annotators, project_name, uploaded_videos,
         cur_vid.category = assoc_category
         cur_vid.project = new_project
         cur_vid.keywords = keywords
+        cur_vid.video_similarity_score = video_similarity_score
+        print("video_similarity_score", video_similarity_score)
         cur_vid.description = description
         cur_vid.save()
 
@@ -227,7 +237,7 @@ def get_paginated_video_list(term, group):
     return HttpResponse(videos, content_type='application/json')
 
 def serialize_videos(videos):
-    serialized_videos = serialize('json', videos, fields=('file_name', 'video', 'checked_by', 'status'))
+    serialized_videos = serialize('json', videos, fields=('file_name', 'video', 'checked_by', 'status', 'video_similarity_score'))
     # print("serialized_videos", type(serialized_videos))
 
     return serialized_videos 
