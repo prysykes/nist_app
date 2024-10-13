@@ -137,6 +137,11 @@ Admin Page styles Begins
    font-size: medium;
 }
 
+.confidence-value{
+    font-size: larger;
+    font-weight: 700;
+}
+
 #app_rej_btn_admin input {
     margin-right: 30%;
 }
@@ -319,7 +324,14 @@ Admin page styles end
 
 .cat_headings span{
     font-size:small;
-    color: rgb(98, 128, 238);
+
+}
+.tm-explore{
+    background-color: rgb(244, 244, 249);
+    color: rgb(115, 0, 0);
+    padding: 2px;
+    border-radius: 8px;
+    font-size: large;
 }
 
 #upload_videos{

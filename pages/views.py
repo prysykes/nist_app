@@ -209,7 +209,7 @@ def get_videos_per_category(request):
     if request.method == 'GET':
         term = request.GET.get('term')
         assoc_category = get_object_or_404(Category, cluster_keywords=term)
-        videos = assoc_category.video_categories.all().order_by('id')
+        videos = assoc_category.video_categories.all().order_by('-video_similarity_score')
         serialized_videos = serialize_videos(videos)
         serialized_videos = HttpResponse(serialized_videos, content_type='application/json')
       
@@ -251,27 +251,36 @@ def process_user_decision(request):
 def get_next_video(request):
     cur_user = request.user
     if request.method == 'GET':
-        file_name = request.GET.get('file_name')
-        print("file_name", file_name)
-        appr_rej = request.GET.get('appr_rej')
-        check_user_decision(file_name, cur_user, appr_rej)
-        assoc_video = get_object_or_404(Videos, file_name=file_name)
-        assoc_category = assoc_video.category
-      
-        next_video = assoc_category.video_categories.filter(status__isnull=True).order_by('id').first()
+        if request.GET.get('category'):
+            cluster_keywords = request.GET.get('category')
+            assoc_category = Category.objects.get(cluster_keywords=cluster_keywords)
+            next_video = assoc_category.video_categories.filter(status__isnull=True).order_by('-video_similarity_score').first()
+            serialized_next_video = serialize_videos([next_video])
+            serialized_next_video = json.loads(serialized_next_video)
+            context = {"serialized_next_video": serialized_next_video}
+            context = JsonResponse(context)
+        else:
+            file_name = request.GET.get('file_name')
+            print("file_name", file_name)
+            appr_rej = request.GET.get('appr_rej')
+            check_user_decision(file_name, cur_user, appr_rej)
+            assoc_video = get_object_or_404(Videos, file_name=file_name)
+            assoc_category = assoc_video.category
         
-        serialized_next_video = serialize_videos([next_video])
-        serialized_next_video = json.loads(serialized_next_video)
-        
-        rem_total_per_category = get_rem_total_per_category(assoc_category)
+            next_video = assoc_category.video_categories.filter(status__isnull=True).order_by('-video_similarity_score').first()
+            
+            serialized_next_video = serialize_videos([next_video])
+            serialized_next_video = json.loads(serialized_next_video)
+            
+            rem_total_per_category = get_rem_total_per_category(assoc_category)
 
-        user_all_processed = get_user_all_processed(cur_user)
+            user_all_processed = get_user_all_processed(cur_user)
 
-        context = {"serialized_next_video": serialized_next_video,
-                   "rem_total_per_category": rem_total_per_category,
-                   "user_all_processed": user_all_processed}
-        # # context = {"rem_total_per_category":rem_total_per_category}
-        context = JsonResponse(context)
+            context = {"serialized_next_video": serialized_next_video,
+                    "rem_total_per_category": rem_total_per_category,
+                    "user_all_processed": user_all_processed}
+            # # context = {"rem_total_per_category":rem_total_per_category}
+            context = JsonResponse(context)
         # context = HttpResponse(context, content_type='application/json')
         
         
