@@ -162,7 +162,7 @@ function create_video_tag(){
     return video
 }
 
-function create_vidlist_disp_span(file_name, checked_by, status, video_url, video_similarity_score, assoc_category){
+function create_vidlist_disp_span(file_name, checked_by, status, video_url, video_similarity_score, keywords, assoc_category){
     // add video similarity confidence here.
     
     
@@ -185,6 +185,7 @@ function create_vidlist_disp_span(file_name, checked_by, status, video_url, vide
         let cur_span = e.target
         
         if ((cur_span.textContent == 'done') || (cur_span.textContent == 'close')){
+            //checks if the span has inline element, hence the parent elem changes
             let parent_elem = cur_span.parentNode
             var file_name = parent_elem.id.split('_')[1]    
         }
@@ -203,12 +204,17 @@ function create_vidlist_disp_span(file_name, checked_by, status, video_url, vide
         const video = create_video_tag()
         video.src =  base_vid_src+video_url
         vid_tag.appendChild(video)
-        if (checked_by==null){
-            let apr_rej_btn = create_apr_rej(file_name, assoc_category) 
-            vid_tag.appendChild(apr_rej_btn)
-        }else{
+        // console.log("cur_span.textContent", cur_span.textContent );
+        // console.log("file_name", file_name);
+        
+        const conditions = [`${file_name}done`, 'done', `${file_name}close`, 'close']
+        
+        if (conditions.includes(cur_span.textContent)){
             let edit_btn_div = create_edit_btn()
             vid_tag.appendChild(edit_btn_div)
+        }else{
+            let apr_rej_btn = create_apr_rej(file_name, assoc_category) 
+            vid_tag.appendChild(apr_rej_btn)
         }
         
         
@@ -216,6 +222,9 @@ function create_vidlist_disp_span(file_name, checked_by, status, video_url, vide
         video_name.appendChild(span_heading)
         video_name.appendChild(br_elem)
         video_name.appendChild(span_category)
+        let keyword_tag = document.getElementById('video_keywords')
+        
+        keyword_tag.textContent = `Video Keywords: ${keywords}`
     })
 
     return span
@@ -225,6 +234,7 @@ function create_vidlist_disp_span(file_name, checked_by, status, video_url, vide
 
 
 function fecth_all_videos_in_category(endpoint, assoc_category){
+    
     endpoint = endpoint+assoc_category
     let video_list_disp = document.getElementById('video_list_disp')
     video_list_disp.innerHTML = ""
@@ -243,13 +253,18 @@ function fecth_all_videos_in_category(endpoint, assoc_category){
             let status = video_fields['status'] //normall null
             let video_url = video_fields['video']
             let video_similarity_score = video_fields['video_similarity_score']
-            let cur_span = create_vidlist_disp_span(file_name, checked_by, status, video_url, video_similarity_score, assoc_category)
+            let keywords = video_fields['keywords']
+            let cur_span = create_vidlist_disp_span(file_name, checked_by, status, video_url, video_similarity_score, keywords, assoc_category)
             video_list_disp.appendChild(cur_span)
             // console.log(checked_by, file_name, status, video_url);
+           
+            
             
         })   
         
     })  
+
+    get_next_video({assoc_category:assoc_category})
 
 }
 
@@ -302,6 +317,29 @@ cat_headings.forEach((elem)=>{
     
 })
 
+function add_active_to_span(span_id, caller=''){
+    function add_active(){
+        let cur_span_id = 'li_'+span_id
+        let cur_span_tag = document.getElementById(cur_span_id)
+        // get parent of cur_span_tag, get her children and remove active class
+        let cur_span_tag_siblings = cur_span_tag.parentElement.childNodes
+        cur_span_tag_siblings.forEach(elem => {
+            // console.log('elem', elem);
+            elem.classList.remove('active')
+            
+        })
+
+        cur_span_tag.classList.add('active')
+        // console.log('cur_span_tag', cur_span_tag.parentElement.childNodes);
+    }
+    if (caller=='default'){
+        setTimeout(add_active, 1000)
+    }else{
+        add_active()
+    }
+    
+    
+}
 
 function mark_good_bad(file_name, appr_rej) {
     let inlines = create_inline_elemets()
@@ -346,39 +384,63 @@ function replace_processed_by_all_and_user(user_processed, all_processed, html_n
 
 }
 
+function show_video_in_preview({is_admin_=false, prev_file_name=null, assoc_category = null, data=null, appr_rej=null, caller=''}){
+    const[span_heading, br_elem, span_category] = create_vidname_category_spans(assoc_category)
+    let vid_preview = document.getElementById('vid_preview')
+    let vid_tag = document.getElementById('vid_tag')
+    let video_name = document.querySelector('#video_name')
+    video_name.innerHTML = ""
+    vid_tag.innerHTML = ""
 
-function get_next_video(file_name, assoc_category, appr_rej){
-    // console.log('filename', file_name);
-   var prev_file_name = file_name
-    
-    
+    let next_video = data["serialized_next_video"][0]
 
+    let video_fields = next_video['fields']
+    let file_name = video_fields['file_name']
+    let video_url = video_fields['video'] 
+    let vid_keywords = video_fields['keywords']
+    let keyword_tag = document.getElementById('video_keywords')
+    keyword_tag.textContent = `Video Keywords: ${vid_keywords}`
+
+    span_heading.textContent = file_name
+    video_name.appendChild(span_heading)
+    video_name.appendChild(br_elem)
+    video_name.appendChild(span_category)
+
+    const video = create_video_tag()
+    video.src =  base_vid_src+video_url
+    vid_tag.appendChild(video)
+    let apr_rej_btn = create_apr_rej(file_name, assoc_category) 
+    vid_tag.appendChild(apr_rej_btn)
+    vid_preview.appendChild(vid_tag)
+
+
+    if (caller=='appr_rej'){
+        mark_good_bad(prev_file_name, appr_rej)
+        let rem_total_per_category = data["rem_total_per_category"]
+        let user_all_processed = data["user_all_processed"]
+        let unprocessed_vids = rem_total_per_category[0]
+        let total_vids = rem_total_per_category[1]
+        let html_node_vid_list = document.getElementById('cat_name')
+        return [is_admin_, file_name, unprocessed_vids, total_vids, html_node_vid_list, user_all_processed]
+    }
+    
+   return file_name 
+}
+
+
+function get_next_video_appr_rej(file_name, assoc_category, appr_rej, add_active_to_span){
+    var prev_file_name = file_name
     let get_next_video_endpoint = base_url+`/get_next_video?file_name=${file_name}&appr_rej=${appr_rej}`
     // get_next_video_endpoint = get_next_video_endpoint+file_name
-    let response = fetch(get_next_video_endpoint, {
+    return fetch(get_next_video_endpoint, {
         method: 'GET'
     })
     .then(response => response.json())
     .then((data)=>{
         
-        let is_admin = false
+        let is_admin_ = false
+        const[is_admin, file_name_, unprocessed_vids, total_vids, html_node_vid_list, user_all_processed] = show_video_in_preview({is_admin:is_admin_, prev_file_name:prev_file_name,  assoc_category:assoc_category, data:data, appr_rej:appr_rej, caller:'appr_rej'})
         
-        const[span_heading, br_elem, span_category] = create_vidname_category_spans(assoc_category)
-        let vid_preview = document.getElementById('vid_preview')
-        let vid_tag = document.getElementById('vid_tag')
-        let video_name = document.querySelector('#video_name')
-        video_name.innerHTML = ""
-        vid_tag.innerHTML = ""
-        
-        let next_video = data["serialized_next_video"][0]
-        let rem_total_per_category = data["rem_total_per_category"]
-        let user_all_processed = data["user_all_processed"]
-
-       
-        
-        let unprocessed_vids = rem_total_per_category[0]
-        let total_vids = rem_total_per_category[1]
-        let html_node_vid_list = document.getElementById('cat_name')
 
         // replace the progress  span on video_list_disp div
         replace_rem_total_per_category(unprocessed_vids, total_vids , html_node_vid_list)
@@ -392,28 +454,45 @@ function get_next_video(file_name, assoc_category, appr_rej){
         let processed_by_user = document.getElementById('processed_by_user')
         let processed_by_all = document.getElementById('processed_by_all')
         replace_processed_by_all_and_user(user_processed, all_processed, processed_by_user, processed_by_all, is_admin)
-        
-       
-        let video_fields = next_video['fields']
-        let file_name = video_fields['file_name']
-        let video_url = video_fields['video'] 
 
-        span_heading.textContent = file_name
-        video_name.appendChild(span_heading)
-        video_name.appendChild(br_elem)
-        video_name.appendChild(span_category)
-        
+        add_active_to_span(file_name_)
+    })
+    
+}
 
-        const video = create_video_tag()
-        video.src =  base_vid_src+video_url
-        vid_tag.appendChild(video)
-        let apr_rej_btn = create_apr_rej(file_name, assoc_category) 
-        vid_tag.appendChild(apr_rej_btn)
-        vid_preview.appendChild(vid_tag)
-        mark_good_bad(prev_file_name, appr_rej)
+ function get_next_video_defualt(assoc_category, add_active_to_span){
+    let get_next_video_endpoint = base_url+`/get_next_video?category=${assoc_category}`
+    
+    let response = fetch(get_next_video_endpoint, {
+        method: 'GET'
+    })
+    .then(response => response.json())
+    .then((data)=>{
+        let is_admin_ = false
+        
+        
+        let file_name_ = show_video_in_preview({is_admin:is_admin_, data:data,})
+        add_active_to_span(file_name_,'default')
 
         
     })
+    
+
+}
+
+function get_next_video({file_name=null, assoc_category=null, appr_rej=null}){
+    // console.log('filename', file_name);
+    // var prev_file_name = file_name
+    
+    if (appr_rej){
+        let file_name_ = get_next_video_appr_rej(file_name, assoc_category, appr_rej, add_active_to_span)
+    }
+    else{
+ 
+        let file_name_ = get_next_video_defualt(assoc_category, add_active_to_span)
+       
+        
+    }
     
 
 }
@@ -467,7 +546,7 @@ var create_apr_rej = function appr_rej(file_name, assoc_category){
             let message =  "You already finished annotation. Do you want to restart?" 
             customConfirm(message, annotation_ended, handle_confirm_yes_or_no) ;
         }else{
-            get_next_video(file_name, assoc_category, 'approve')
+            get_next_video({file_name: file_name, assoc_category: assoc_category, appr_rej: 'approve'})
         }
         
         
@@ -488,7 +567,7 @@ var create_apr_rej = function appr_rej(file_name, assoc_category){
             let message =  "You already finished annotation. Do you want to restart?" 
             customConfirm(message, annotation_ended, handle_confirm_yes_or_no) ;
         }else{
-            get_next_video(file_name, assoc_category, 'reject')
+            get_next_video({file_name: file_name, assoc_category: assoc_category, appr_rej: 'reject'})
         }
         
    

@@ -237,7 +237,7 @@ def get_paginated_video_list(term, group):
     return HttpResponse(videos, content_type='application/json')
 
 def serialize_videos(videos):
-    serialized_videos = serialize('json', videos, fields=('file_name', 'video', 'checked_by', 'status', 'video_similarity_score'))
+    serialized_videos = serialize('json', videos, fields=('file_name', 'video', 'checked_by', 'status', 'video_similarity_score', 'keywords'))
     # print("serialized_videos", type(serialized_videos))
 
     return serialized_videos 
