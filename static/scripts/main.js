@@ -10,6 +10,7 @@ let end_annotation = document.querySelector('#end-annotation')
 let approve_btn = document.querySelector('#approve_btn')
 let video_name = document.querySelector('#video_name')
 
+
 // let progress = document.querySelectorAll('.cat_headings .progress')
 
 
@@ -53,8 +54,8 @@ if (end_annotation == null){
 
 // Beging function to allow a user end annotation
 
-function handle_confirm_yes_or_no(caller, value, target_elem){
-    if (caller == 'end_annotaion'){
+function handle_confirm_yes_or_no({caller1=null, caller2=null, value=null, target_elem=null}){
+    if (caller1 == 'end_annotaion'){
         if (value){
             // mark job_finished in user model to false
             // change the annotation ended text to end-annotation 
@@ -86,7 +87,9 @@ function handle_confirm_yes_or_no(caller, value, target_elem){
   
     
 }
-function customConfirm(message, target_elem, callback) {
+
+// customConfirm({message:message, target_elem:end_annotation, callback:handle_confirm_yes_or_no, appr_rej:appr_rej, file_name:file_name, assoc_category:assoc_category, callback2:add_active_to_span}
+function customConfirm({message=null, target_elem=null, callback=null, appr_rej=null, file_name=null, assoc_category=null, callback2=null}) {
     const confirm_overlay = document.getElementById('custom-confirm')
     confirm_overlay.style.display = 'flex' // removes the display none
 
@@ -98,8 +101,17 @@ function customConfirm(message, target_elem, callback) {
     // Handle OK button click
     restartButton.addEventListener('click', ()=>{
         confirm_overlay.style.display = 'none';  // Hide dialog
-        let caller = 'end_annotaion'
-        callback(caller, true, target_elem);  // Pass true to callback (OK pressed)
+        let caller1 = 'end_annotaion'
+        
+        callback({caller1:caller1, value:true, target_elem:target_elem});  // Pass true to callback (OK pressed)
+        // handle when restart is called by appr or rej button
+        if (appr_rej){
+            // add logic to mark the video as approved or denied
+            get_next_video_appr_rej(file_name, assoc_category, appr_rej, callback2)
+            callback({caller1:caller1, caller2:appr_rej, value:true, target_elem:target_elem}); 
+            
+            
+        }
     });
 
     // Handle Cancel button click
@@ -113,6 +125,7 @@ function customConfirm(message, target_elem, callback) {
 
 if (btn_vid_upload == null){
     // checks if the displayed page is for admin
+    // btn_vid_upload  is only in the admin page
     let end_annotation = document.querySelector('#end-annotation')
     end_annotation.addEventListener('click', (e)=> {
         let target_elem = e.target
@@ -120,7 +133,9 @@ if (btn_vid_upload == null){
     
         if (target_elem.innerText.trim().includes('Restart Annotation')){
             let message =  "You already finished annotation. Do you want to restart?" 
-            customConfirm(message, target_elem, handle_confirm_yes_or_no) ;
+            // {is_admin:is_admin_, prev_file_name:prev_file_name,  assoc_category:assoc_category, data:data, appr_rej:appr_rej, caller:'appr_rej'}
+            
+            customConfirm({message:message, target_elem:target_elem, callback:handle_confirm_yes_or_no}) ;
             
             
         }else{
@@ -333,7 +348,7 @@ function add_active_to_span(span_id, caller=''){
         // console.log('cur_span_tag', cur_span_tag.parentElement.childNodes);
     }
     if (caller=='default'){
-        setTimeout(add_active, 1000)
+        setTimeout(add_active, 600)
     }else{
         add_active()
     }
@@ -541,13 +556,27 @@ var create_apr_rej = function appr_rej(file_name, assoc_category){
     approve_input.className = 'nist-button btn_apr_rej'
 
     approve_input.addEventListener('click', ()=>{
-        if (ANNOTATION_ENDED){
-            let annotation_ended = document.getElementById('annotation-ended')
-            let message =  "You already finished annotation. Do you want to restart?" 
-            customConfirm(message, annotation_ended, handle_confirm_yes_or_no) ;
-        }else{
+        try {
+            let end_annotation = document.getElementById('end-annotation')
+            let end_annotation_inner_text = end_annotation.innerText.trim()
+            if (end_annotation_inner_text == 'Restart Annotation' ){
+                const appr_rej = 'approve'
+                let end_annotation = document.getElementById('end-annotation')
+                // console.log('annotation_ended', end_annotation);
+                
+                let message =  "You already finished annotation. Do you want to restart?" 
+                // get_next_video_appr_rej(file_name, assoc_category, appr_rej, add_active_to_span)
+                customConfirm({message:message, target_elem:end_annotation, callback:handle_confirm_yes_or_no, appr_rej:appr_rej, file_name:file_name, assoc_category:assoc_category, callback2:add_active_to_span}) ;
+            }else{
+                get_next_video({file_name: file_name, assoc_category: assoc_category, appr_rej: 'approve'})
+            }
+        } catch (error){
+            console.log(error);
             get_next_video({file_name: file_name, assoc_category: assoc_category, appr_rej: 'approve'})
+            
         }
+        
+        
         
         
    
@@ -562,12 +591,23 @@ var create_apr_rej = function appr_rej(file_name, assoc_category){
     reject_input.className = 'nist-button btn_apr_rej'
 
     reject_input.addEventListener('click', ()=>{
-        if (ANNOTATION_ENDED){
-            let annotation_ended = document.getElementById('annotation-ended')
-            let message =  "You already finished annotation. Do you want to restart?" 
-            customConfirm(message, annotation_ended, handle_confirm_yes_or_no) ;
-        }else{
+        try {
+            let end_annotation = document.getElementById('end-annotation')
+            let end_annotation_inner_text = end_annotation.innerText.trim()
+            if (end_annotation_inner_text == 'Restart Annotation' ){
+                const appr_rej = 'reject'
+                let end_annotation = document.getElementById('end-annotation')
+                // console.log('annotation_ended', end_annotation);
+                
+                let message =  "You already finished annotation. Do you want to restart?" 
+                customConfirm({message:message, target_elem:end_annotation, callback:handle_confirm_yes_or_no, appr_rej:appr_rej, file_name:file_name, assoc_category:assoc_category, callback2:add_active_to_span}) ;
+            }else{
+                get_next_video({file_name: file_name, assoc_category: assoc_category, appr_rej: 'reject'})
+            }
+        } catch (error){
+            console.log(error);
             get_next_video({file_name: file_name, assoc_category: assoc_category, appr_rej: 'reject'})
+            
         }
         
    

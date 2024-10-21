@@ -13,9 +13,7 @@
 
                     {% block video_preview %}
                     <div id="tm_preview">
-                        <h3 class="tm_headings">
-                            Sign-up to use the application
-                        </h3>
+                        
                         <div id="p-signup-form">
                             <form  action="" method="POST" enctype="multipart/form-data">{% csrf_token %}
                               <div class="form-column">
@@ -54,7 +52,6 @@
                                   </div>
                                 </div>
                                 <div class="form-row row-align">
-                                  <label style="font-size:x-small;"  for="signup"> Create Account</label>
                                   <input name="signup" class="nist-button" type="submit" value="Sign-Up"> 
                                  
                                 </div>

@@ -10,7 +10,7 @@
 }
 
 
-
+/* 
 #p-login-form{   
     
     background-color: rgb(134, 168, 185);
@@ -29,7 +29,7 @@
     margin: 10% auto;
     border-radius: 20px;
     
-}
+} */
 .row-align{
     display: flex;
     justify-content: space-between;
@@ -39,7 +39,7 @@
     
 }
 
-.login-header{
+/* .login-header{
     color: rgb(78, 3, 3);
     background-color: white;
     font-weight: 800;
@@ -68,10 +68,6 @@
 
 
 
-.form-row div > span {
-    font-size:x-small;
-}
-
 
 .login-form {
     
@@ -89,9 +85,13 @@
     padding: 10px;
     font-size: x-large;
     font-family: sans-serif;
+} */
+
+.form-row div > span {
+    font-size:x-small;
 }
 
-input[type="text"]{
+input[type="text"], input[type="password"], input[type="email"]{
     width: 100%;
     height: 40px;
     padding: 10px;
@@ -106,12 +106,12 @@ input[type="text"]{
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
 }
 
-input[type="text"]:focus{
+input[type="text"], input[type="password"], input[type="email"]:focus{
     border-color: #aaa;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
 }
 
-[name="upload_videos"] {
+[name="upload_videos"], input[type="submit"] {
   background-color: rgb(14, 4, 46);;
   color: #fff;
   font-weight: 700;
@@ -138,17 +138,24 @@ input[type="file"]{
 }
 
 
-.form-column-sign_up {
+.form-column {
     display: flex;
     flex-direction: column;
     padding: 8px;
     margin-top: 3px;
+    align-items: center;
+    text-align: center;
+    justify-content: space-around;
+  }
+
+  .form-column > * {
+    flex-grow: 1;
+    margin: 10px 0;
+  
+  }
+
+  .row-align * {
+    padding: 5px;
   }
   
-  .form-row-sign_up {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    padding: 8px;
-    
-  }
+  
