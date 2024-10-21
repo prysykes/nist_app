@@ -151,21 +151,18 @@ def sign_up(request):
 def admin_approve(request):
     from registration.models import Userreg
     user_catergories = request.GET.get('user_catergories').split('-')
-    user = user_catergories[0].strip()
-    print("user", user)
+    user = user_catergories[0].strip() # user is the first item in the user_categories list
     categories = user_catergories[1:]
 
     user_object = User.objects.get(username=user)
-    print("user_object", user_object)
-    userreg_object = Userreg.objects.get(user=user_object)
-    print("userreg_object", userreg_object)
+    userreg_object = Userreg.objects.get(user=user_object) # userreg_object has a one-to-one to user_object
     
     # set admin_approved in the category as True
     for category in categories:
         assoc_category = Category.objects.get(cluster_keywords=category)
-        assoc_category.admin_approved = False
+        assoc_category.admin_approved = True
         assoc_category.save()
-    userreg_object.admin_approved = False
+    userreg_object.admin_approved = True
     userreg_object.save()
  
 

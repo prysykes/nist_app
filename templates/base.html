@@ -72,7 +72,7 @@
                     </div>
                 </div>
             {% endif %}
-            <h1 class="tm_headings">NIST Automated Video Annotation Application {% if request.user.is_authenticated and not request.user|has_group:"admin" %} <span id="end-annotation">{% if not request.user.userreg.finished_job %} <i>End Annotation</i> {% else %} <i id="annotation-ended"> Restart Annotation </i> {% endif %} </span> {% endif %}</h1> 
+            <h1 class="tm_headings">NIST Automated Video Annotation Application {% if request.user.is_authenticated and not request.user|has_group:"admin" %} <span id="end-annotation">{% if not request.user.userreg.finished_job %} <i>End Annotation</i> {% else %} <i id="end-annotation"> Restart Annotation </i> {% endif %} </span> {% endif %}</h1> 
             <div class="display-none" id="video_upload">
                 <form  action="" method="POST" enctype="multipart/form-data">{% csrf_token %}
                     <div class="form-column">
@@ -202,7 +202,7 @@
                     </div>
                 {% endif %}
             {% else %}
-                <div style="width: max-content;" class="cf">
+                <div style="width: max-content;" class="login_form">
                     <form  action="" method="POST" enctype="multipart/form-data">{% csrf_token %}
                         <div class="form-column">
                         <div class="form-row">
@@ -220,8 +220,8 @@
                             </div>
                             
                         <div class="form-row row-align">
-                            <label for="login"> Login to your account</label>
-                            <input name="login" class="nist-button" type="submit" value="Login"> 
+                            <div><input name="login" class="nist-button" type="submit" value="Login"> </div>
+                            
                         
                         </div>
                         

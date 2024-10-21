@@ -30,18 +30,19 @@ video_categories.forEach((cat_elem)=>{
             }else {
             // admin_approve
                 let user_categories_div = approve_all_videos_btn.parentNode.parentNode
-                let user_categories_lis =  user_categories_div.childNodes[3].children
-                let li_array = Array.from(user_categories_lis )
+                let user_categories_list =  user_categories_div.childNodes[3].children
+                // retrieve all video categories for the user
+                let li_array = Array.from(user_categories_list)
 
-                let set_of_categories = new Set()
+                let set_of_categories = new Set() // used to store unique categories
                 li_array.forEach((li_ele)=>{
                     let category_text_value = li_ele.innerText
                     set_of_categories.add(category_text_value) 
                     
                 })
-                let set_of_categories_array = Array.from(set_of_categories)
-                let set_of_categories_array_str = set_of_categories_array.join('-')
-                let full_load = annotator+"-"+set_of_categories_array_str
+                let set_of_categories_array = Array.from(set_of_categories) // convert the set to an array
+                let set_of_categories_array_str = set_of_categories_array.join('-') // make it a string split by _ at the backend
+                let full_load = annotator+"-"+set_of_categories_array_str // send the annotator alongside the category list payload
 
                 let endpoint = `${root_url}/admin_approve?user_catergories=${full_load}`
 
@@ -55,6 +56,7 @@ video_categories.forEach((cat_elem)=>{
         
                     })
                 }
+                approve_all_videos_btn.innerText = "Approved"
                 
             }
     

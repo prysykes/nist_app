@@ -31,17 +31,17 @@ def signup(request):
     userreg_form = UserregForm()
 
     if request.method == "POST":
-        print('post hit')
+        
         registration_form = RegistrationForm(request.POST)
         userreg_form = UserregForm(request.POST)
         if registration_form.is_valid and userreg_form.is_valid:
             user = registration_form.save()
             userreg = userreg_form.save(commit=False)
-            print('form valid')
+            
             # print('cleaned data', registration_form.cleaned_data)
             username = registration_form.cleaned_data.get('username')
             user_email = registration_form.cleaned_data.get('email')
-            print(username, user_email)
+       
             
             
             userreg.user = user
@@ -106,7 +106,7 @@ def user_login(request):
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
-        print(username, password, 'tinti')
+        
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
@@ -116,7 +116,7 @@ def user_login(request):
     return redirect('/')
 
 def user_logout(request):
-    print('logout called')
+   
     logout(request)
     return redirect('/')
 
