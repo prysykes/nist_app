@@ -1,3 +1,6 @@
+import os
+import pandas as pd
+
 from django.shortcuts import render
 from django.shortcuts import render, redirect, get_list_or_404, get_object_or_404
 from django.contrib.auth.models import User, Group
@@ -5,18 +8,24 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from .upload_form import VideoUploadForm, ProjectTitleForm
 from .models import Category, Videos
+from registration.models import Userreg
 from .utils import handle_upload_videos
-from .utils import display_categories, get_rem_total_per_category, get_video_list, check_user_decision, get_user_all_processed, get_paginated_video_list, serialize_videos
+from .utils import (display_categories, get_rem_total_per_category, 
+                    get_video_list, check_user_decision, get_user_all_processed, 
+                    get_paginated_video_list, serialize_videos,
+                    move_selected_videos)
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse, HttpResponse
 import json
+from pages.utils import serialize_objects
 
-from django.db.models import Q # allows us to perform != in django filter
+from django.db.models import Q, Count 
 
 
-# def health_check(request):
-#     # disable SSL redirect only for this health check view
-#     return JsonResponse({'status': 'ok'}, status=200)
+
+parent_dir = os.getcwd()
+media_dir = os.path.join(parent_dir, 'media')
+finished_jobs_dir = os.path.join(media_dir, "finished_jobs")
 
 
 def index(request):
@@ -167,6 +176,108 @@ def admin_approve(request):
  
 
     return JsonResponse({"info": f"Accepted {user} videos"})
+
+def export_job(request):
+
+    # user_fields = ['id', 'finished_job', 'admin_approved']
+    try:
+        all_approved_users = Userreg.objects.filter(admin_approved=True)
+        assoc_categories = None
+        assoc_videos = None
+        top_category = None
+        payload = []
+        for userreg_instance in all_approved_users:
+            cur_payload = {}
+            user = userreg_instance.user
+            assoc_group = user.groups.all().first()
+            assoc_categories = Category.objects.filter(group=assoc_group) 
+            assoc_videos = get_list_or_404(Videos, status=True, checked_by=user)
+            top_category = assoc_categories.annotate(
+                video_count=Count('video_categories', filter=Q(video_categories__status=True))
+            ).order_by('-video_count').first()
+            top_category_name = top_category.cluster_keywords
+            num_vids_tc = top_category.video_count
+            total_accepted_vids = len(assoc_videos)
+        
+            cur_payload['user'] = user.username
+            cur_payload["top_category"] = top_category_name
+            cur_payload["num_vids_tc"] = num_vids_tc
+            cur_payload["total_accepted_vids"] = total_accepted_vids
+            payload.append(cur_payload)
+
+        # all_approved_users = serialize_objects(all_approved_users, *user_fields)
+    except Exception as e:
+        print(e)
+        all_approved_users = None
+   
+    return JsonResponse(payload, safe=False)
+
+def export_all_videos(request):
+    usernames = request.GET.get("usernames")
+    FIELDS = ["Users", "Video Categories", "Filenames"]
+    username_col_vals = []
+    category_col_vals = []
+    file_name_col_vals = []
+    videos = [FIELDS]
+    users_categories_videos = {}
+    data = {}
+    if usernames:
+        usernames_list = usernames.split('_')
+        # print("usernames_list", usernames_list)
+        
+        for user in usernames_list:
+            users_categories_videos.setdefault(user, {})
+
+            user_object = User.objects.get(username=user)
+            assoc_group = user_object.groups.all().first()
+            assoc_categories = Category.objects.filter(group=assoc_group, admin_approved=True)
+            for assoc_cat in assoc_categories:
+                assoc_cluster_keywords = assoc_cat.cluster_keywords
+                
+
+                assoc_videos = list(Videos.objects.filter(category=assoc_cat, checked_by=user_object, status=True).values_list('file_name', flat=True))
+                assoc_total_videos = len(assoc_videos)
+
+                users_list = [user]
+                assoc_cluster_keywords_list = [assoc_cluster_keywords]
+                users_list *=assoc_total_videos
+                assoc_cluster_keywords_list *= assoc_total_videos
+                # print("users_list", users_list, assoc_cluster_keywords_list)
+                username_col_vals.extend(users_list)
+                category_col_vals.extend(assoc_cluster_keywords_list)
+                file_name_col_vals.extend(assoc_videos)
+                
+                # users_categories_videos[user].setdefault(assoc_cluster_keywords, None)
+                # users_categories_videos[user][assoc_cluster_keywords] = assoc_videos
+                # videos.append(list(assoc_videos))
+        
+
+    data["Users"] = username_col_vals
+    data["Video Categories"] = category_col_vals
+    data["Filenames"] = file_name_col_vals
+
+    df = pd.DataFrame(data)
+    finished_jobs_csv = os.path.join(finished_jobs_dir, "finished_jobs.csv")
+    df.to_csv(finished_jobs_csv, index=False)
+   
+    finished_jobs_csv = "media/finished_jobs/finished_jobs.csv"
+    destination_dir = os.path.join(finished_jobs_dir, "selected_videos")
+    source_dir = os.path.join(media_dir, "videos")
+    # print("is dir", os.path.isdir(destination_dir), os.path.isdir(source_dir))
+    if len(destination_dir) < 2:
+        zip_file_name = move_selected_videos(destination_dir, source_dir, finished_jobs_csv)
+        zip_file_path = f"media/finished_jobs/{zip_file_name}"
+    else:
+        zip_file_path = f"media/finished_jobs/compressed_videos.zip"
+   
+
+    # print("data", data)
+        
+        # print("assoc cat", len(assoc_categories))
+    # print("users_categories_videos", users_categories_videos)
+    
+    return JsonResponse({"finished_job_csv": finished_jobs_csv,
+                         "zip_file_path":zip_file_path})
 
 def end_annotation(request):
     user = request.GET.get('user')

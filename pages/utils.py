@@ -9,11 +9,16 @@ import json
 import pandas as pd
 import numpy as np
 import os
+import shutil
 
 
 from django.contrib.auth.models import Group, Permission
 
 cluster_csv_file = 'media/cluster_csv/full_cluster_csv.csv'
+
+parent_dir = os.getcwd()
+media_dir = os.path.join(parent_dir, 'media')
+finished_jobs_dir = os.path.join(media_dir, "finished_jobs")
 
 
 APP_LABEL = 'pages'
@@ -242,6 +247,10 @@ def serialize_videos(videos):
 
     return serialized_videos 
 
+def serialize_objects(obj, *args):
+    serialized_objects = serialize('json', obj, fields=args)
+    return serialized_objects
+
 def get_rem_total_per_category(category):
     uprocessed_videos = category.get_unprocessed_videos()
     total_videos = category.get_total_videos()
@@ -258,7 +267,27 @@ def get_user_all_processed(user):
  
     return context
 
+def move_selected_videos(destination_dir, source_dir, finished_jobs_csv):
+    finished_job_df = pd.read_csv(finished_jobs_csv)
+    all_videos = os.listdir(source_dir)
+    sample_video_file_ext = all_videos[2].split('.')[1]
+    # print(sample_video_file_ext)
 
+    for idx, row in finished_job_df.iterrows():
+        assoc_filename = row['Filenames']
+        assoc_filename = str(assoc_filename) + "." + sample_video_file_ext
+        
+        assoc_file_index = all_videos.index(assoc_filename)
+        assoc_video = all_videos[assoc_file_index]
+        source_video_full_path = os.path.join(source_dir, assoc_video)
+        destination_video_full_path = os.path.join(destination_dir, assoc_video)
+        # copy video
+        shutil.copyfile(source_video_full_path, destination_video_full_path)
+
+        # print("checks", os.path.isfile(source_video_full_path), os.path.isfile(destination_video_full_path))
+    zip_file_name = "compressed_videos"
+    shutil.make_archive(os.path.join(finished_jobs_dir, zip_file_name), 'zip', destination_dir)
+    return f"{zip_file_name}.zip"
 
 def check_user_decision(file_name, cur_user, appr_or_rej=None):
     # print('appr_or_rej', appr_or_rej, appr_or_rej=='approve')
