@@ -8,6 +8,35 @@
 <div class="admin-dashboard">
     
     <h2 style="text-align: center;"> Summary of Selected Video by Users</h2>
+    <div id="annotation-stats" class="display-none">
+        <h3 class="text-align-center">Annotation Statistics Across Categories</h3>
+        <div class="annotation-stats-display">
+            <table id="annotation-stats-table">
+                <tr>
+                    <th>Annotator</th>
+                    <th>Top Category (TC)</th>
+                    <th>Number of Video in TC</th>
+                    <th>Total Accepted Videos </th>
+                </tr>
+                
+            </table>
+            
+        </div>
+        
+        <button id="export-all-videos" class="nist-button "> Export All Videos</button>
+        <div id="download-jobs" class="display-none">
+            <p id="csv-file"></p>
+            <p id="videos-zip"></p>
+        </div>
+    </div>
+    <div id="custom-confirm" class="confirm-overlay">
+        <div class="confirm-box">
+            <p> Are you sure you want to export all videos?</p>
+            <button  id="confirm-yes" class="confirm-btn nist-button">Yes</button>
+            <button id="confirm-cancel" class="confirm-btn nist-button">No</button>
+        </div>
+    </div>
+
     <div class="row-align_base">
         <!-- <div> haha</div>
         <div>hana</div>

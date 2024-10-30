@@ -106,10 +106,27 @@ html,body {
     text-align: center;
  }
 
+ .subheader{
+    font-size: x-large;
+    font-weight: 800;
+ }
+ .text-align-center{
+    text-align: center;
+ }
+
+ .align-items-center{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+ }
+
 /**
 Admin Page styles Begins
 */
-
+/* .annotation-stats-display div{
+ 
+} */
 #video_player_admin {
     display: flex;
     align-items: center;
@@ -160,7 +177,7 @@ Admin Page styles Begins
     font-weight: 700;
 }
 
-#end-annotation{
+.job-action-btn{
     font-size: medium;
     background-color: rgb(244, 244, 249);
     padding: 8px;

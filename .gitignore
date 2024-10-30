@@ -1,5 +1,5 @@
 venv
-media/videos
+media/
 testy.py
 .DS_Store
 trial_videos

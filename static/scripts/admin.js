@@ -1,6 +1,8 @@
 var user_processed_categories = document.querySelectorAll('.user-processed-categories')
 var video_categories = document.querySelectorAll('.video_categories')
 var btn_accept_videos = document.querySelectorAll('.btn_accept_videos')
+var export_jobs = document.querySelector('#export-jobs')
+var export_all_videos = document.querySelector('#export-all-videos')
 
 import {create_apr_rej} from './main.js'
 
@@ -11,6 +13,137 @@ import {create_apr_rej} from './main.js'
 const root_url = window.location.origin
 const VIDEO_TYPE_ = "video/webm"
 
+function handle_export_all_videos(){
+    let annotator_usernames = document.querySelectorAll('.tm-users')
+    // console.log("annotator_usernames", annotator_usernames);
+    let usernames_str = ""
+
+    for (let i=0; i<annotator_usernames.length; i++){
+        usernames_str += annotator_usernames[i].innerText
+        if (i == annotator_usernames.length - 1){
+
+        }else {
+            usernames_str += "_"
+        }
+    }
+    console.log("usernames_str", usernames_str);
+    
+    
+    let endpoint = `${root_url}/export_all_videos?usernames=${usernames_str}`
+    let response = fetch(endpoint, {
+        method: 'GET'
+    })
+    .then(response => response.json())
+    .then((data)=> {
+        let data_finished_job_csv = data['finished_job_csv']
+        let data_finished_job_zip = data['zip_file_path']
+
+        let download_jobs_div = document.getElementById('download-jobs') 
+        download_jobs_div.classList.toggle('display-none')
+
+        let videos_zip = document.getElementById('videos-zip')
+        let csv_file = document.getElementById('csv-file')
+        csv_file.innerHTML = ""
+
+        
+        
+        
+        // create a tag
+        let a_tag_csv = document.createElement('a')
+        a_tag_csv.href = data_finished_job_csv 
+        a_tag_csv.innerText = "Download CSV"
+        csv_file.appendChild(a_tag_csv) 
+
+        let a_tag_zip = document.createElement('a')
+        a_tag_zip.href = data_finished_job_zip
+        a_tag_zip.innerText = "Download compressed videos"
+        videos_zip.appendChild(a_tag_zip) 
+        
+        
+    })
+    
+}
+
+export_all_videos.addEventListener('click', ()=>{
+    const confirm_overlay = document.getElementById('custom-confirm')
+    confirm_overlay.style.display = 'flex' // removes the display none
+    
+    const btn_yes = document.querySelector("#confirm-yes")
+    const btn_cancel = document.querySelector("#confirm-cancel")
+
+    btn_yes.addEventListener('click', ()=>{
+        confirm_overlay.style.display = 'none'
+        handle_export_all_videos()
+        
+    })
+
+    btn_cancel.addEventListener('click', ()=>{
+        confirm_overlay.style.display = 'none'
+        console.log("no export");
+        
+    })
+
+
+})
+
+function set_default_th(annotation_stats_table){
+    let default_tr_elem = document.createElement('tr')
+
+    let th_elem1 = document.createElement('th')
+    th_elem1.innerText = "Annotator"
+    default_tr_elem.appendChild(th_elem1)
+
+    let th_elem2 = document.createElement('th')
+    th_elem2.innerText = "Top Category (TC)"
+    default_tr_elem.appendChild(th_elem2)
+
+    let th_elem3 = document.createElement('th')
+    th_elem3.innerText = "Number of Video in TC"
+    default_tr_elem.appendChild(th_elem3)
+
+    let th_elem4 = document.createElement('th')
+    th_elem4.innerText = "Total Accepted Videos"
+    default_tr_elem.appendChild(th_elem4)
+    annotation_stats_table.appendChild(default_tr_elem)
+}
+
+export_jobs.addEventListener('click', ()=>{
+    let annotation_stats = document.querySelector('#annotation-stats')
+    annotation_stats.classList.toggle('align-items-center')
+    let annotation_stats_table = document.getElementById('annotation-stats-table')
+    annotation_stats_table.innerHTML = ""
+    set_default_th(annotation_stats_table)
+
+    let endpoint = `${root_url}/export_job`
+    let response = fetch(endpoint, {
+        method: 'GET'
+    })
+    .then(response => response.json())
+    .then((data)=> {
+        data.forEach((data)=>{
+            
+            let tr_elem = document.createElement('tr')
+            for (const [key, value] of Object.entries(data)){
+                
+                let td_elem = document.createElement('td')
+                if (key == "user"){
+                    td_elem.classList.add("tm-users")
+                    
+                }
+                td_elem.innerText = value
+                tr_elem.appendChild(td_elem)
+                
+            }
+            annotation_stats_table.appendChild(tr_elem)
+            
+         
+            
+        })
+        
+    })
+    
+    
+})
 
 video_categories.forEach((cat_elem)=>{
     let approve_video_fetch_promise = null
