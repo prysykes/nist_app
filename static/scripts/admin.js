@@ -1,8 +1,8 @@
 var user_processed_categories = document.querySelectorAll('.user-processed-categories')
 var video_categories = document.querySelectorAll('.video_categories')
-var btn_accept_videos = document.querySelectorAll('.btn_accept_videos')
 var export_jobs = document.querySelector('#export-jobs')
 var export_all_videos = document.querySelector('#export-all-videos')
+var per_cluster_approve = document.querySelectorAll('.per-cluster-approve')
 
 import {create_apr_rej} from './main.js'
 
@@ -44,9 +44,7 @@ function handle_export_all_videos(){
         let videos_zip = document.getElementById('videos-zip')
         let csv_file = document.getElementById('csv-file')
         csv_file.innerHTML = ""
-
-        
-        
+        videos_zip.innerHTML = ""
         
         // create a tag
         let a_tag_csv = document.createElement('a')
@@ -64,29 +62,98 @@ function handle_export_all_videos(){
     
 }
 
-export_all_videos.addEventListener('click', ()=>{
+// let cat_elem_text = cat_elem.innerText
+//         let cur_elem_parent = cat_elem.parentNode
+//         let cluster_keyword = cur_elem_parent.innerText.trim().split(" ")[0]
+//         let endpoint = `${root_url}/admin_approve?cluster_keyword=${cluster_keyword}&status=approved`
+//         if (cat_elem_text == "approve cluster"){
+//             approve_single_cluster(endpoint)
+//             cat_elem.innerText = "approved"
+//             cat_elem.classList.remove('cat-approve-status-false')
+//             cat_elem.classList.add("cat-approve-status-true")
+            
+//         }else{
+//             let message = "Do wish to cancel approval?"
+//             callback = approve_single_cluster
+//             custom_confirm({message: message, callback: callback, endpoint:endpoint, cat_elem:cat_elem})
+            
+//         }
+
+function custom_confirm({message=null, callback=null, endpoint=null, cat_elem=null}){
     const confirm_overlay = document.getElementById('custom-confirm')
     confirm_overlay.style.display = 'flex' // removes the display none
-    
+    const confirm_message = document.getElementById('confirm-message')
+    confirm_message.innerText = message
+
     const btn_yes = document.querySelector("#confirm-yes")
     const btn_cancel = document.querySelector("#confirm-cancel")
-
-    btn_yes.addEventListener('click', ()=>{
+    if (endpoint){
+        btn_yes.addEventListener('click', ()=>{
+            
+            if (cat_elem.innerText = "approved"){
+                console.log("in reject", cat_elem.innerText);
+                confirm_message.innerText = "Do you want to cancel approval?"
+                confirm_overlay.style.display = 'none'
+                endpoint = endpoint + "&status=reject"
+                callback(endpoint)
+                cat_elem.classList.remove('cat-approve-status-true')
+                cat_elem.classList.add("cat-approve-status-false")
+                cat_elem.innerText = "approve cluster"
+            }else{
+                console.log("in approve", cat_elem.innerText);
+                
+                endpoint = endpoint + "&status=approved"
+                callback(endpoint)
+                cat_elem.classList.remove('cat-approve-status-false')
+                cat_elem.classList.add("cat-approve-status-true")
+                cat_elem.innerText = "approved"
+                // console.log("end", endpoint);
+            }
+            // if (endpoint){
+            //     // let endpoint = `${root_url}/admin_approve?cluster_keyword=${cluster_keyword}&status=approved`
+            //     endpoint = endpoint + "&status=approved"
+            //     console.log("end", endpoint);
+                
+            //     callback(endpoint)
+                
+            //     if (cat_elem.innerText = "approved"){
+            //         cat_elem.classList.remove('cat-approve-status-true')
+            //         cat_elem.classList.add("cat-approve-status-false")
+            //         cat_elem.innerText = "approve cluster"
+            //     }else{
+            //         endpoint = endpoint + "&status=reject"
+            //         callback(endpoint)
+            //     }
+                
+                
+            // }else{
+            //     callback()
+            // }
+            
+            
+        })
+    }else{
         confirm_overlay.style.display = 'none'
-        handle_export_all_videos()
-        
-    })
+        callback()
+    }
+    
 
     btn_cancel.addEventListener('click', ()=>{
         confirm_overlay.style.display = 'none'
         console.log("no export");
         
     })
+}
 
+export_all_videos.addEventListener('click', ()=>{
+    
+    let message = "Are you sure you want to export all videos?"
+    let callback = handle_export_all_videos
+    custom_confirm({message: message, callback: callback})
 
 })
 
-function set_default_th(annotation_stats_table){
+function set_default_th(thead){
     let default_tr_elem = document.createElement('tr')
 
     let th_elem1 = document.createElement('th')
@@ -104,15 +171,21 @@ function set_default_th(annotation_stats_table){
     let th_elem4 = document.createElement('th')
     th_elem4.innerText = "Total Accepted Videos"
     default_tr_elem.appendChild(th_elem4)
-    annotation_stats_table.appendChild(default_tr_elem)
+    thead.appendChild(default_tr_elem)
 }
 
 export_jobs.addEventListener('click', ()=>{
     let annotation_stats = document.querySelector('#annotation-stats')
     annotation_stats.classList.toggle('align-items-center')
     let annotation_stats_table = document.getElementById('annotation-stats-table')
-    annotation_stats_table.innerHTML = ""
-    set_default_th(annotation_stats_table)
+    
+    let thead = document.getElementById('admin-thead')
+    let tbody = document.getElementById('admin-tbody')
+    tbody.innerHTML = ""
+    if (thead.innerHTML == ""){
+        set_default_th(thead)
+    }
+    
 
     let endpoint = `${root_url}/export_job`
     let response = fetch(endpoint, {
@@ -134,11 +207,51 @@ export_jobs.addEventListener('click', ()=>{
                 tr_elem.appendChild(td_elem)
                 
             }
-            annotation_stats_table.appendChild(tr_elem)
+            tbody.appendChild(tr_elem)
             
          
             
         })
+        
+    })
+    
+    
+})
+
+function approve_single_cluster(endpoint){
+    let response = fetch(endpoint, {
+        method: "GET"
+    })
+    .then(response => response.json())
+    .then((data)=>{
+        console.log("data>>", data);
+        
+    })
+}
+
+
+per_cluster_approve.forEach((cat_elem)=>{
+    // console.log("cat_elem", cat_elem);
+    
+    cat_elem.addEventListener("click", ()=>{
+        let cat_elem_text = cat_elem.innerText
+        let cur_elem_parent = cat_elem.parentNode
+        let cluster_keyword = cur_elem_parent.innerText.trim().split(" ")[0]
+        let endpoint = `${root_url}/admin_approve?cluster_keyword=${cluster_keyword}`
+        if (cat_elem_text == "approve cluster"){
+            endpoint = endpoint + "&status=approved"
+            approve_single_cluster(endpoint)
+            cat_elem.innerText = "approved"
+            cat_elem.classList.remove('cat-approve-status-false')
+            cat_elem.classList.add("cat-approve-status-true")
+            
+        }else{
+            let message = "Do wish to cancel approval?"
+            let callback = approve_single_cluster
+            custom_confirm({message: message, callback: callback, endpoint:endpoint, cat_elem:cat_elem})
+            
+        }
+        
         
     })
     
@@ -166,17 +279,19 @@ video_categories.forEach((cat_elem)=>{
                 let user_categories_list =  user_categories_div.childNodes[3].children
                 // retrieve all video categories for the user
                 let li_array = Array.from(user_categories_list)
-
+                
                 let set_of_categories = new Set() // used to store unique categories
                 li_array.forEach((li_ele)=>{
-                    let category_text_value = li_ele.innerText
+                    
+                    let category_text_value = li_ele.innerText.trim().split(" ")[0] // selects the category_keyword
+                    console.log("li_ele", category_text_value)
                     set_of_categories.add(category_text_value) 
                     
                 })
                 let set_of_categories_array = Array.from(set_of_categories) // convert the set to an array
                 let set_of_categories_array_str = set_of_categories_array.join('-') // make it a string split by _ at the backend
                 let full_load = annotator+"-"+set_of_categories_array_str // send the annotator alongside the category list payload
-
+                
                 let endpoint = `${root_url}/admin_approve?user_catergories=${full_load}`
 
                 if (!approve_video_fetch_promise) {
@@ -291,12 +406,14 @@ user_processed_categories.forEach((category)=>{
             
         }else{
         }
-        let category_text = category.innerText
+        // let category_text_value = li_ele.innerText.trim().split(" ")[0]
+        let cluster_keywords = category.innerText.trim()
         
         // select h3 element that holds the user name
-        let h3_elem_text = category.parentElement.parentElement.firstElementChild.innerText
+        let h3_elem_text = category.parentElement.parentElement.parentElement.firstElementChild.innerText
         let annotator = h3_elem_text.trim().split(' - ')[1].split(" ")[0]
-        let get_category_endpoint = `${root_url}/display_videos?category=${category_text}&annotator=${annotator}`
+        
+        let get_category_endpoint = `${root_url}/display_videos?category=${cluster_keywords}&annotator=${annotator}`
         let response = fetch(get_category_endpoint, {
             method: 'GET'
         })

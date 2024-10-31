@@ -84,6 +84,10 @@ html,body {
     right: 2%;
  }
 
+ .info-text{
+    color: green;
+ }
+
  a{
     text-decoration: none;
  }
@@ -127,6 +131,23 @@ Admin Page styles Begins
 /* .annotation-stats-display div{
  
 } */
+
+.cat-approve-status-true{
+    font-size: small;
+    background-color: white;
+    color: green;
+    border: 10px;
+    cursor: pointer;
+}
+
+.cat-approve-status-false{
+    font-size: small;
+    background-color: white;
+    color: rgb(115, 0, 0);
+    border-radius: 10px;
+    cursor: pointer;
+
+}
 #video_player_admin {
     display: flex;
     align-items: center;
@@ -171,11 +192,11 @@ Admin Page styles Begins
    border-radius: 15px;
 }
 
-.video_categories h3 span {
+/* .video_categories h3 span {
     background-color: rgb(244, 244, 249);
     color: rgb(33, 107, 33);
     font-weight: 700;
-}
+} */
 
 .job-action-btn{
     font-size: medium;
