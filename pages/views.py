@@ -53,8 +53,9 @@ def index(request):
                 cluster_csv = request.FILES.get('cluster_csv')
                 num_annotators = int(request.POST.get('annotators'))
                 project_name = request.POST.get('project_name')
+                project_type = request.POST.get('project_type')
                 # print(f"uploaded_videos {uploaded_videos} \n cluster_csv {cluster_csv} \n num_annotators {num_annotators} \n project_name {project_name}")
-                handle_upload_videos(request, num_annotators, project_name, uploaded_videos, cluster_csv)
+                handle_upload_videos(request, project_type, num_annotators, project_name, uploaded_videos, cluster_csv)
                 return redirect('/')
             else:
                 try:
@@ -134,6 +135,10 @@ def index(request):
                     # 'categories': categories
                 }
         else:
+            first_category = categories.first()
+            project_type = first_category.project.project_type
+            # print("project_type", project_type)
+
             if percentage_remaining!= None:
                 context = {
                     'video_upload': video_upload_form,
@@ -143,11 +148,13 @@ def index(request):
                     'total_user_assigned_vids': total_user_assigned_vids,
                     'percentage_process_all_vids': percentage_process_all_vids,
                     'total_videos': total_videos,
+                    'project_type': project_type
                 }
             else:
                 context = {
                     'video_upload': video_upload_form,
                     'categories': categories,
+                    'project_type': project_type 
                     # 'percentage_rem_user': len(user_process_videos),
                 }
 
@@ -165,17 +172,27 @@ def admin_approve(request):
         user_catergories = request.GET.get('user_catergories').split('-')
         user = user_catergories[0].strip() # user is the first item in the user_categories list
         categories = user_catergories[1:]
-
+        status = request.GET.get('status')
+        print(status, "status")
+        # return JsonResponse({"info": f"Accepted {user} videos"})
         user_object = User.objects.get(username=user)
         userreg_object = Userreg.objects.get(user=user_object) # userreg_object has a one-to-one to user_object
         
         # set admin_approved in the category as True
         for category in categories:
             assoc_category = Category.objects.get(cluster_keywords=category)
-            assoc_category.admin_approved = False
-            assoc_category.save()
-        userreg_object.admin_approved = False
-        userreg_object.save()
+            if status == "approved":
+                assoc_category.admin_approved = True
+                assoc_category.save()
+            elif status == "rejected":
+                assoc_category.admin_approved = False
+                assoc_category.save()
+        if status == "approved":
+            userreg_object.admin_approved = True
+            userreg_object.save()
+        elif status == "rejected":
+            userreg_object.admin_approved = False
+            userreg_object.save()
  
 
         return JsonResponse({"info": f"Accepted {user} videos"})
@@ -206,8 +223,8 @@ def export_job(request):
             cur_payload = {}
             user = userreg_instance.user
             assoc_group = user.groups.all().first()
-            assoc_categories = Category.objects.filter(group=assoc_group) 
-            assoc_videos = get_list_or_404(Videos, status=True, checked_by=user)
+            assoc_categories = Category.objects.filter(group=assoc_group, admin_approved=True) 
+            assoc_videos = get_list_or_404(Videos, category__admin_approved=True, checked_by=user)
             top_category = assoc_categories.annotate(
                 video_count=Count('video_categories', filter=Q(video_categories__status=True))
             ).order_by('-video_count').first()

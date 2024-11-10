@@ -10,6 +10,7 @@ class Category(models.Model):
     cluster_id = models.IntegerField()
     group = models.ForeignKey(Group, on_delete=models.SET_NULL, null=True)
     admin_approved = models.BooleanField(default=False)
+    project = models.ForeignKey('ProjectTitle', default=1374, blank=True, null=True, on_delete=models.CASCADE)
     cluster_similarity_score = models.FloatField(default=0.0)
 
     def __str__(self):
@@ -58,6 +59,11 @@ class ProjectTitle(models.Model):
         All videos must belong to a particular project
         This helps in group management
     """
+    PROJECT_TYPE = [
+        ("annotation", "Image Annotation"),
+        ("image_qa", "Image Question Answering")
+    ]
+    project_type = models.CharField(max_length=10, choices=PROJECT_TYPE, default="annotation")
     project_name = models.CharField(max_length=100)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     cluster_csv = models.FileField(upload_to='cluster_csv', verbose_name='Trec Videos Cluster Info', null=True, blank=True)

@@ -3,29 +3,66 @@ from django.forms import ModelForm
 from django import forms
 
 class ProjectTitleForm(forms.ModelForm):
-    project_name = forms.CharField(widget=forms.TextInput(attrs={
-        "name": "project_name",
-        "type": "text",
-        "class": "upload_form",
-        "size": 20
-    }), label="Enter project name")
+    # project_type = forms.Select(attrs={
+    #     "name": "project_type",
+    #     "type": "select",
+    #     "class": "upload_form",
+    #     "size": 20
+    # }, labels={"project_type": "Select projct type"})
 
-    cluster_csv = forms.FileField(widget=forms.FileInput(attrs={
-        "name": "cluster_csv",
-        "type": "File",
-        "class": "upload_form",
-    }), label="Upload clustered videos csv")
+    # project_name = forms.CharField(widget=forms.TextInput(attrs={
+    #     "name": "project_name",
+    #     "type": "text",
+    #     "class": "upload_form",
+    #     "size": 20
+    # }), label="Enter project name")
 
-    annotators = forms.IntegerField(widget=forms.NumberInput(attrs={
-        "name": "num_annotators",
-        "type": "text",
-        "class": "uplod_form",
-        "size": 2,
-    }), label='Enter the number of annotators')
+    # cluster_csv = forms.FileField(widget=forms.FileInput(attrs={
+    #     "name": "cluster_csv",
+    #     "type": "File",
+    #     "class": "upload_form",
+    # }), label="Upload clustered videos csv")
+
+    # annotators = forms.IntegerField(widget=forms.NumberInput(attrs={
+    #     "name": "num_annotators",
+    #     "type": "text",
+    #     "class": "uplod_form",
+    #     "size": 2,
+    # }), label='Enter the number of annotators')
 
     class Meta:
         model = ProjectTitle
-        fields = ['project_name', 'cluster_csv', 'annotators']
+        fields = ['project_type', 'project_name', 'cluster_csv', 'number_of_annotators']
+        widgets = {
+            'project_type': forms.Select(attrs={
+                'name': 'project_type',
+                'class': 'upload_form'
+            }) ,
+            'project_name': forms.TextInput(attrs={
+                "name": "project_name",
+                "type": "text",
+                "class": "upload_form",
+                "size": 20
+            }),
+            'cluster_csv': forms.FileInput(attrs={
+                "name": "cluster_csv",
+                "type": "File",
+                "class": "upload_form"
+            }),
+            'number_of_annotators': forms.NumberInput(attrs={
+                "name": "num_annotators",
+                "type": "text",
+                "class": "uplod_form",
+                "size": 2
+            })
+
+        }
+        labels = {
+            'project_type': 'Select projct type',
+            'project_name': 'Enter project name',
+            'cluster_csv': 'Upload clustered videos csv',
+            'annotators': 'Enter the number of annotators'
+        }
 
 class VideoUploadForm(forms.ModelForm):
     video = forms.FileField(widget=forms.TextInput(attrs={
