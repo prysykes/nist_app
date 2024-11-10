@@ -53,7 +53,7 @@ def create_groups(num_annotators, project_name):
    
     return groups
 
-def create_categories(num_annotators, groups, cluster_keyword_id_similarity_pair):
+def create_categories(new_project, num_annotators, groups, cluster_keyword_id_similarity_pair):
         """
             creates video clusters/category objects based on user provided cluster_csv files
             Params: num_annotators: int number of annotators for the current job
@@ -83,14 +83,15 @@ def create_categories(num_annotators, groups, cluster_keyword_id_similarity_pair
                 new_category.cluster_id = assoc_cluster_id
                 new_category.cluster_similarity_score = assoc_cluster_similarity_score
                 new_category.group = cur_group
+                new_category.project = new_project
                 new_category.save()
                 categories.append(new_category)
             min_idx = max_idx
             max_idx += quota
         return categories
 
-def handle_upload_videos(request, num_annotators, project_name, uploaded_videos, cluster_csv):
-    new_project = ProjectTitle(cluster_csv=cluster_csv, project_name=project_name, number_of_annotators=num_annotators, user=request.user)
+def handle_upload_videos(request, project_type, num_annotators, project_name, uploaded_videos, cluster_csv):
+    new_project = ProjectTitle(project_type=project_type, cluster_csv=cluster_csv, project_name=project_name, number_of_annotators=num_annotators, user=request.user)
     new_project.save()
 
     groups = create_groups(num_annotators, project_name)
@@ -109,7 +110,7 @@ def handle_upload_videos(request, num_annotators, project_name, uploaded_videos,
         cluster_keyword_id_similarity_pair.append(cur_pair)
     
     #create categories for videos
-    create_categories(num_annotators, groups, cluster_keyword_id_similarity_pair)
+    create_categories(new_project, num_annotators, groups, cluster_keyword_id_similarity_pair)
 
     #create videos and assign to categories
     for video in uploaded_videos:

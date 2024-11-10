@@ -72,7 +72,32 @@
                     </div>
                 </div>
             {% endif %}
-            <h1 class="tm_headings">NIST Automated Video Annotation Application {% if request.user.is_authenticated and not request.user|has_group:"admin" %} <span id="end-annotation" class="job-action-btn">{% if not request.user.userreg.finished_job %} <i>End Annotation</i> {% else %} <i id="end-annotation"> Restart Annotation </i> {% endif %} </span> {%elif request.user.is_authenticated and request.user|has_group:"admin"%} <span id="export-jobs" class="job-action-btn"> Export Jobs </span> {% endif %}</h1> 
+            <h1 class="tm_headings">NIST Automated Video Annotation Application 
+                <div class="actions">
+                    {% if request.user.is_authenticated and not request.user|has_group:"admin" %}
+                    
+                        <span id="end-annotation" class="job-action-btn">
+                            {% if not request.user.userreg.finished_job %} 
+                                <i>End Annotation</i> 
+                            {% else %} 
+                                <i id="end-annotation"> Restart Annotation </i> 
+                            {% endif %} 
+                        </span> 
+                       
+
+                            <select id="project_type">
+                                <option value="" selected disabled hidden>Choose Project</option>
+                                <option value="annotation">Annotation</option>
+                                <option value="image_qa">Image Q&A</option>
+
+                            </select>
+                      
+                    
+                        {%elif request.user.is_authenticated and request.user|has_group:"admin"%} 
+                            <span id="export-jobs" class="job-action-btn"> Export Jobs </span> 
+                    {% endif %}
+                </div> 
+            </h1> 
             <div class="display-none" id="video_upload">
                 <form  action="" method="POST" enctype="multipart/form-data">{% csrf_token %}
                     <div class="form-column">
@@ -81,6 +106,14 @@
                             <hr>
                         </div>
                         <div id="upload_videos_form" class="form-row">
+                                <div class="row-align">
+                                    <div class="form-label">
+                                        {{project_details.project_type.label}}
+                                    </div>
+                                    <div >
+                                        {{project_details.project_type}}
+                                    </div>
+                                </div>
                                 <div class="row-align">
                                     <div class="form-label">
                                         {{project_details.project_name.label}}
@@ -137,69 +170,19 @@
 
                     </div>
                 {% else %}
-                    <div class="tm_main_body">
-                        
-                        {% block aside %}
-                        <div id="tm_aside">
-                            <h3 class="tm_headings">
-                                Video Categories 
-                            </h3>
-                            <div id="vid_cat_list">
-                                
-                                {% for category in categories %}
-                                <div style="padding-left: 10px; padding-right: 10px;" class="categories">
-                                    <h3 class="cat_headings">
-                                        {{category.cluster_keywords}} <i class="progress">|{{category|get_unprocessed_videos:request.user}}/{{category|get_total_videos}}</i>   <span> Confidence <i class="confidence-value">{{category.cluster_similarity_score}} </i> - <i class="tm-explore"> explore </i> </span> 
-                                        <span class="cluster_id visibility_hidden" >{{category.cluster_id}}</span>
-                                        <span class="cluster_group visibility_hidden" >{{category.group}}</span>
-                                    </h3>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        
-        
-                        </div>
-                        {% endblock aside %}
-        
-                        {% block main %}
-                        <div class="tm_vid_main">
-                            {% block video_list %}
-                            <div id="tm_video_list">
-                                <h3 id="cat_name" class="tm_headings_temp">
-                                    Click explore to begin...
-                                </h3>
-                                
-                                <div id="video_list_disp">
-                                    
-                                </div>
-                            </div>
-                            
-                            {% endblock video_list %}
-                            
-        
-        
-                            {% block video_preview %}
-                            <div id="tm_preview">
-                                <h3 class="tm_headings">
-                                    Video Preview
-                                </h3>
-                                <h4 style="text-align: center;" id="video_name"></h4>
-                                <h4 style="text-align: center;" id="video_keywords"></h4>
-                                <div  id="vid_preview">
-                                    <div id="vid_tag">
-                                        
-                                    
-                                    </div>
-                                    
-                                    
-                                </div>
-                                
-                            </div>
-                            {% endblock video_preview %}
-                            
-                        </div>
-                        {% endblock main %}
+                    <!-- ADD the logic to switch jobs here, move this to a seperate html file and call with include -->
+                    <!-- {% if project_type == 'annotation' %} 
+                        {% include 'annotation.html' %}
+                    {% elif project_type == 'image_qa' %} 
+                    
+                    {% endif %}   -->
+                    <div id="show-annotation-job" class="display-none">
+                        {% include 'annotation.html' %}
                     </div>
+                    <div id="show-imageqa-job" class="display-none">
+                        {% include 'image-qa.html' %}
+                    </div>
+                    
                 {% endif %}
             {% else %}
                 <div style="width: max-content;" class="login_form">
@@ -252,7 +235,16 @@
 
 {% block scripts %}
 <script type="module" src="{% static '/scripts/main.js' %}"></script>
+
+{% if request.user.is_authenticated and request.user|has_group:"admin" %}
 <script type="module" src="{% static '/scripts/admin.js' %}"> </script>
+{% endif %}
+
+{% if request.user.is_authenticated and not request.user|has_group:"admin" %}
+<script type="module" src="{% static '/scripts/project_manager.js' %}"></script>
+{% endif %}
+
+
 {% endblock scripts %}
 </body>
 </html>
