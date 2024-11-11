@@ -83,14 +83,6 @@
                                 <i id="end-annotation"> Restart Annotation </i> 
                             {% endif %} 
                         </span> 
-                       
-
-                            <select id="project_type">
-                                <option value="" selected disabled hidden>Choose Project</option>
-                                <option value="annotation">Annotation</option>
-                                <option value="image_qa">Image Q&A</option>
-
-                            </select>
                       
                     
                         {%elif request.user.is_authenticated and request.user|has_group:"admin"%} 
@@ -170,18 +162,151 @@
 
                     </div>
                 {% else %}
-                    <!-- ADD the logic to switch jobs here, move this to a seperate html file and call with include -->
-                    <!-- {% if project_type == 'annotation' %} 
-                        {% include 'annotation.html' %}
-                    {% elif project_type == 'image_qa' %} 
+                    <div class="tm_main_body">
+                            
+                        {% block aside %}
+                        <div id="tm_aside">
+                            <h3 class="tm_headings">
+                                Video Categories 
+                            </h3>
+                            <div id="vid_cat_list">
+                                
+                                {% for category in categories %}
+                                <div style="padding-left: 10px; padding-right: 10px;" class="categories">
+                                    <h3 class="cat_headings">
+                                        {{category.cluster_keywords}} <i class="progress">|{{category|get_unprocessed_videos:request.user}}/{{category|get_total_videos}}</i>   <span> Confidence <i class="confidence-value">{{category.cluster_similarity_score}} </i> - <i class="tm-explore"> explore </i> </span> 
+                                        <span class="cluster_id visibility_hidden" >{{category.cluster_id}}</span>
+                                        <span class="cluster_group visibility_hidden" >{{category.group}}</span>
+                                    </h3>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        
                     
-                    {% endif %}   -->
-                    <div id="show-annotation-job" class="display-none">
+                        </div>
+                        {% endblock aside %}
+                    
+                        {% block main %}
+                        <div class="tm_vid_main">
+                            {% block video_list %}
+                            <div id="tm_video_list">
+                                <h3 id="cat_name" class="tm_headings_temp">
+                                    (1) - click explore to begin...
+                                </h3>
+                                
+                                <div id="video_list_disp">
+                                    
+                                </div>
+                            </div>
+                            
+                            {% endblock video_list %}
+                            
+                    
+                    
+                            {% block video_preview %}
+                            <div id="tm_preview">
+                                <h3 class="tm_headings">
+                                   (2) - Video Preview 
+                                    <select id="project_type">
+                                        <option value="" selected disabled hidden>Switch to QandA</option>
+                                        <option value="annotation">Annotation</option>
+                                        <option value="image_qa">Image Q&A</option>
+        
+                                    </select>
+                                </h3>
+                                <h4 style="text-align: center;" id="video_name"></h4>
+                                <h4 style="text-align: center;" id="video_keywords"></h4>
+                                <div  id="vid_preview">
+                                    <div id="vid_tag">
+                                        
+                                    
+                                    </div>
+                                    <div id="question_tag" class="display-none">
+                                        <h3>Enter Questions and Answers</h3>
+                                        
+                                        
+                                        <form action="" method="post">{% csrf_token %}
+                                            <div class="row-align">
+                                                <div class="form-label">
+                                                    <label for="question"> Question: </label>
+                                                </div>
+                                                <div class="form-text-input">
+                                                    <textarea spellcheck="true" name="question" id="question" cols="50" rows="10"></textarea>
+                                                    <!-- <input maxlength="250" type="text" id="question" name="question"> -->
+                                                </div>
+                                            </div>
+
+                                            <div class="row-align">
+                                                <div class="form-label">
+                                                    <label for="answer-one"> Correct Answer: </label>
+                                                </div>
+                                                <div class="form-text-input">
+                                                    <textarea spellcheck="true" name="correct-answer" id="correct-answer" cols="50" rows="20"></textarea>
+                                                    <!-- <input maxlength="250" spellcheck="true" type="textarea" id="correct-answer" name="correct-answer"> -->
+                                                </div>
+                                            </div>
+
+                                            <div class="row-align">
+                                                <div class="form-label">
+                                                    <label for="answer-two"> Answer Option: </label>
+                                                </div>
+                                                <div class="form-text-input">
+                                                    <textarea spellcheck="true" name="answer-two" id="answer-two" cols="50" rows="20"></textarea>
+                                                    <!-- <input maxlength="250" spellcheck="true" type="textarea" id="answer-two" name="answer-two"> -->
+                                                </div>
+                                            </div>
+
+                                            <div class="row-align">
+                                                <div class="form-label">
+                                                    <label for="answer-three"> Answer Option: </label>
+                                                </div>
+                                                <div class="form-text-input">
+                                                    <textarea spellcheck="true" name="answer-three" id="answer-three" cols="50" rows="20"></textarea>
+                                                    <!-- <input maxlength="250" spellcheck="true" type="textarea" id="answer-three" name="answer-three"> -->
+                                                </div>
+                                            </div>
+
+                                            <div class="row-align">
+                                                <div class="form-label">
+                                                    <label for="answer-four"> Answer Option: </label>
+                                                </div>
+                                                <div class="form-text-input">
+                                                    <textarea spellcheck="true" name="answer-four" id="answer-four" cols="50" rows="20"></textarea>
+                                                    <!-- <input maxlength="250" spellcheck="true" type="textarea" id="answer-four" name="answer-four"> -->
+                                                </div>
+                                            </div>
+
+                                            <div class="row-align">
+                                                <div class="form-label">
+                                                    <label for="answer-five"> Answer Option: </label>
+                                                </div>
+                                                <div class="form-text-input">
+                                                    <textarea spellcheck="true" name="answer-five" id="answer-five" cols="50" rows="20"></textarea>
+                                                    <!-- <input maxlength="250" spellcheck="true" type="textarea" id="answer-five" name="answer-five"> -->
+                                                </div>
+                                            </div>
+                                            
+                                           
+                                        </form>
+                                    
+                                    </div>
+                                    
+                                    
+                                </div>
+                                
+                            </div>
+                            {% endblock video_preview %}
+                            
+                        </div>
+                        {% endblock main %}
+                    </div>
+                    
+                    <!-- <div id="show-annotation-job" class="display-none">
                         {% include 'annotation.html' %}
                     </div>
                     <div id="show-imageqa-job" class="display-none">
                         {% include 'image-qa.html' %}
-                    </div>
+                    </div> -->
                     
                 {% endif %}
             {% else %}
