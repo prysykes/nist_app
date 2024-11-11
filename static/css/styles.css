@@ -465,11 +465,20 @@ ul li:hover {
 
 #vid_preview {
     padding: 0px;
+    display: flex;
+    flex-direction: row;
+    margin: auto;
 }
 
 #vid_tag{
     /* display: flex;
     flex-direction: column; */
+    margin: auto;
+    width: fit-content;
+    height: fit-content;
+}
+
+#question_tag{
     margin: auto;
     width: fit-content;
     height: fit-content;

@@ -224,6 +224,7 @@ function create_vidlist_disp_span(file_name, checked_by, status, video_url, vide
         
         const conditions = [`${file_name}done`, 'done', `${file_name}close`, 'close']
         
+        // checks if the video has been approved or rejcted
         if (conditions.includes(cur_span.textContent)){
             let edit_btn_div = create_edit_btn()
             vid_tag.appendChild(edit_btn_div)
@@ -306,6 +307,8 @@ cat_headings.forEach((elem)=>{
     // console.log("full_get_videos_per_category ", full_get_videos_per_category);
     
     elem.addEventListener('click', ()=>{
+      
+        
         let assoc_category = category.split('|')[0].trim()
         // remove active class from all but the current video
         cat_headings.forEach((elem)=>{
@@ -317,6 +320,7 @@ cat_headings.forEach((elem)=>{
         cluster_id_i.textContent = cluster_id
         cluster_id_i.classList.add("visibility_hidden")
         // console.log("cluster_id_i", cluster_id_i);
+        console.log("cat_name", cat_name);
         
        
         cat_name.textContent = category
@@ -400,6 +404,8 @@ function replace_processed_by_all_and_user(user_processed, all_processed, html_n
 }
 
 function show_video_in_preview({is_admin_=false, prev_file_name=null, assoc_category = null, data=null, appr_rej=null, caller=''}){
+    console.log("logic for showing video in vid tag");
+    
     const[span_heading, br_elem, span_category] = create_vidname_category_spans(assoc_category)
     let vid_preview = document.getElementById('vid_preview')
     let vid_tag = document.getElementById('vid_tag')
@@ -426,7 +432,7 @@ function show_video_in_preview({is_admin_=false, prev_file_name=null, assoc_cate
     vid_tag.appendChild(video)
     let apr_rej_btn = create_apr_rej(file_name, assoc_category) 
     vid_tag.appendChild(apr_rej_btn)
-    vid_preview.appendChild(vid_tag)
+    // vid_preview.appendChild(vid_tag)
 
 
     if (caller=='appr_rej'){

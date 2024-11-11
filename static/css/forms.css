@@ -91,14 +91,14 @@
     font-size:x-small;
 }
 
-input[type="text"], input[type="password"], input[type="email"]{
+input[type="text"], textarea, input[type="password"], input[type="email"]{
     width: 100%;
     height: 40px;
     padding: 10px;
     margin: 10px 0;
     border: 1px solid #ccc;
     border-radius: 5px;
-
+    resize:none;
     background-color: #f9f9f9;
     color: #333;
 
@@ -123,6 +123,10 @@ input[type="text"], input[type="password"], input[type="email"]:focus{
 
 input[type="file"]:hover{
     border-color: #999;
+}
+
+label {
+    font-weight: 700;
 }
 
 select {
