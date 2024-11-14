@@ -10,7 +10,7 @@ from .upload_form import VideoUploadForm, ProjectTitleForm
 from .models import Category, Videos
 from registration.models import Userreg
 from .utils import handle_upload_videos
-from .utils import (display_categories, get_rem_total_per_category, 
+from .utils import (export_job, display_categories, get_rem_total_per_category, 
                     get_video_list, check_user_decision, get_user_all_processed, 
                     get_paginated_video_list, serialize_videos,
                     move_selected_videos)
@@ -168,12 +168,14 @@ def admin_approve(request):
     from registration.models import Userreg
     
     if request.GET.get('user_catergories'):
+        # print("user_catergories hit")
 
         user_catergories = request.GET.get('user_catergories').split('-')
         user = user_catergories[0].strip() # user is the first item in the user_categories list
         categories = user_catergories[1:]
+        # print("categories", categories)
         status = request.GET.get('status')
-        print(status, "status")
+        # print(status, "status")
         # return JsonResponse({"info": f"Accepted {user} videos"})
         user_object = User.objects.get(username=user)
         userreg_object = Userreg.objects.get(user=user_object) # userreg_object has a one-to-one to user_object
@@ -182,6 +184,7 @@ def admin_approve(request):
         for category in categories:
             assoc_category = Category.objects.get(cluster_keywords=category)
             if status == "approved":
+                # print("approving all")
                 assoc_category.admin_approved = True
                 assoc_category.save()
             elif status == "rejected":
@@ -195,54 +198,48 @@ def admin_approve(request):
             userreg_object.save()
  
 
-        return JsonResponse({"info": f"Accepted {user} videos"})
-    else:
+        # return JsonResponse({"info": f"Accepted {user} videos"})
+    
+    elif request.GET.get('cluster_keyword'):
+        print("cluster_keywords hit")
         cluster_keyword = request.GET.get("cluster_keyword")
         status = request.GET.get("status")
         assoc_category = Category.objects.get(cluster_keywords=cluster_keyword)
+        assoc_group = assoc_category.group
+        assoc_user = assoc_group.user_set.all()[0]
+        assoc_user = Userreg.objects.filter(user=assoc_user)[0]
+        all_user_approved_category = Category.objects.filter(group=assoc_group, admin_approved=True)
+        # print("len(all_user_approved_category)", len(all_user_approved_category))
+        # print("assoc_users.admin_approved", assoc_users.admin_approved)
+        
+        # print("assoc_users",  assoc_users)
+        # retrieve the user here and make the admin approve = True
         if status == "approved":
-            print("sats", status)
+            print(">> approve per cluster")
+            # print("sats", status)
+            assoc_user.admin_approved = True
+            assoc_user.save()
             assoc_category.admin_approved = True
             assoc_category.save()
-        else:
+        elif status == "rejected":
+            print("unapprove per cluster")
+            if len(all_user_approved_category) == 0:
+                assoc_user.admin_approved = False
+                assoc_user.save()
             assoc_category.admin_approved = False
             assoc_category.save()
         
-        return JsonResponse({"info": f"{cluster_keyword} {status}" })
+        # return JsonResponse({"info": f"{cluster_keyword} {status}" })
+    
+    payload = export_job()
+    # print("payload", payload)
+    return JsonResponse(payload, safe=False)
 
-def export_job(request):
-
-    # user_fields = ['id', 'finished_job', 'admin_approved']
-    try:
-        all_approved_users = Userreg.objects.filter(admin_approved=True)
-        assoc_categories = None
-        assoc_videos = None
-        top_category = None
-        payload = []
-        for userreg_instance in all_approved_users:
-            cur_payload = {}
-            user = userreg_instance.user
-            assoc_group = user.groups.all().first()
-            assoc_categories = Category.objects.filter(group=assoc_group, admin_approved=True) 
-            assoc_videos = get_list_or_404(Videos, category__admin_approved=True, checked_by=user)
-            top_category = assoc_categories.annotate(
-                video_count=Count('video_categories', filter=Q(video_categories__status=True))
-            ).order_by('-video_count').first()
-            top_category_name = top_category.cluster_keywords
-            num_vids_tc = top_category.video_count
-            total_accepted_vids = len(assoc_videos)
-        
-            cur_payload['user'] = user.username
-            cur_payload["top_category"] = top_category_name
-            cur_payload["num_vids_tc"] = num_vids_tc
-            cur_payload["total_accepted_vids"] = total_accepted_vids
-            payload.append(cur_payload)
-
-        # all_approved_users = serialize_objects(all_approved_users, *user_fields)
-    except Exception as e:
-        print(e)
-        all_approved_users = None
-   
+def get_job_summary(request):
+    print("get job sumary called")
+    payload = export_job()
+    print("payload>>", payload)
+    
     return JsonResponse(payload, safe=False)
 
 def export_all_videos(request):
