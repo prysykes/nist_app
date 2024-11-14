@@ -7,9 +7,9 @@
 {% else %}
 <div class="admin-dashboard">
     
-    <h2 style="text-align: center;"> Summary of Selected Video by Users</h2>
+    <!-- <h2 style="text-align: center;"> Summary of Selected Video by Users</h2> -->
     <div id="annotation-stats" class="display-none">
-        <h3 class="text-align-center">Annotation Statistics Across Categories</h3>
+        <h3 class="text-align-center">Summary of Selected Video by Users</h3>
         <div class="annotation-stats-display">
             <table id="annotation-stats-table">
                 <thead id="admin-thead">
@@ -48,14 +48,18 @@
         <div>hana</div>
         <div>hagi</div> -->
         {% for user, categories in users_processed_videos.items %}
+            
             <div class="video_categories"> 
-                <h3> Video Categories - {{user}}  {% if user.userreg.admin_approved %} <span class="cat-approve-status-true display-none">Approved</span> {% else %} <span class="cat-approve-status-false display-none">Approve Videos</span> {% endif %}</h3>
+                <div class="process_all_videos display-none">
+                    <span id="approve_all_videos" class="nist-button">approve all videos </span> <span id="reject_all_videos" class="nist-button"> reject all videos </span>
+                </div>
+                <h3 class="user-videos-list"> Video Categories - {{user}}</h3>
                 <ul>
                     {% for category in categories %} 
                     <li>
                         <span class="user-processed-categories">{{category}}</span>
-                        {% if category.admin_approved%} <span class="cat-approve-status-true per-cluster-approve">approved</span>
-                        {% else %} <span class="cat-approve-status-false per-cluster-approve">approve cluster</span>
+                        {% if category.admin_approved%} <span class="cat-approve-status-true per-cluster-approve">reject</span>
+                        {% else %} <span class="cat-approve-status-false per-cluster-approve">approve</span>
                         {% endif %}
                     </li>
                     {% endfor %}

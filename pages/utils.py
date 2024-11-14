@@ -1,9 +1,12 @@
 from .models import Videos, Category, ProjectTitle
 from django.shortcuts import get_list_or_404, get_object_or_404
 from django.core.serializers import serialize
+from django.db.models import Q, Count 
 from django.http import HttpResponse
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.models import User
+from django.contrib.auth.models import Group, Permission
+from django.http import JsonResponse, HttpResponse
 import math
 import json
 import pandas as pd
@@ -11,8 +14,10 @@ import numpy as np
 import os
 import shutil
 
+from registration.models import Userreg
 
-from django.contrib.auth.models import Group, Permission
+
+
 
 cluster_csv_file = 'media/cluster_csv/full_cluster_csv.csv'
 
@@ -24,18 +29,46 @@ finished_jobs_dir = os.path.join(media_dir, "finished_jobs")
 APP_LABEL = 'pages'
 
 
-# def create_permisions():
-#     all_permisions = []
-#     content_type_v = ContentType.objects.get_for_model(Videos)
-#     content_type_c = ContentType.objects.get_for_model(Category)
-#     video_permisions = Permission.objects.filter(content_type__app_label=APP_LABEL, content_type__model='Vidoes')
-#     category_permisions = Permission.objects.filter(content_type__app_label=APP_LABEL, content_type__model='Category')
-#     all_permisions.extend(video_permisions)
-#     all_permisions.extend(category_permisions)
 
-#     return all_permisions
+def export_job():
+    # print("export job hit")
+    # user_fields = ['id', 'finished_job', 'admin_approved']
+    payload = []
+    try:
+        all_approved_users = Userreg.objects.filter(admin_approved=True)
+        # print("len all_approved_users", len(all_approved_users))
+        assoc_categories = None
+        assoc_videos = None
+        top_category = None
+        
+        for userreg_instance in all_approved_users:
+            cur_payload = {}
+            user = userreg_instance.user
+            assoc_group = user.groups.all().first()
+            print("user", user, '\n', 'assoc_group', assoc_group)
+            assoc_categories = Category.objects.filter(group=assoc_group, admin_approved=True) 
+            assoc_videos = get_list_or_404(Videos, category__admin_approved=True, checked_by=user)
+            top_category = assoc_categories.annotate(
+                video_count=Count('video_categories', filter=Q(video_categories__status=True))
+            ).order_by('-video_count').first()
+            top_category_name = top_category.cluster_keywords
+            num_vids_tc = top_category.video_count
+            total_accepted_vids = len(assoc_videos)
+        
+            cur_payload['user'] = user.username
+            cur_payload["top_category"] = top_category_name
+            cur_payload["num_vids_tc"] = num_vids_tc
+            cur_payload["total_accepted_vids"] = total_accepted_vids
+            payload.append(cur_payload)
 
-
+        # all_approved_users = serialize_objects(all_approved_users, *user_fields)
+    except Exception as e:
+        print("export_job could not find any approved users", e)
+        # print(e)
+        all_approved_users = None
+    # print("payload", payload)
+    return payload
+    return JsonResponse(payload, safe=False)
 
 def create_groups(num_annotators, project_name):
     """

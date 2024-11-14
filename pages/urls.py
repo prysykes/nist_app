@@ -14,7 +14,7 @@ urlpatterns = [
     path('admin_approve', views.admin_approve, name='admin_approve'),
     path('reject_all', views.reject_all, name="reject_all"),
     path('end_annotation', views.end_annotation, name='end_annotation'),
-    path('export_job', views.export_job, name="export_job"),
+    path('get_job_summary', views.get_job_summary, name="get_job_summary"),
     path('export_all_videos', views.export_all_videos, name='export_all_videos')
     
 ]
