@@ -484,13 +484,23 @@ ul li:hover {
     height: fit-content;
 }
 
-.apr_rej_btn_div{
+.apr_rej_btn_div, .submit_qs_btn_div{
     display: flex;
     flex-direction: row;
     justify-content: space-between;
     margin: auto;
    
 
+}
+
+.btn_qa {
+    background-color: rgb(14, 4, 46);;
+  color: #fff;
+  font-weight: 700;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
 }
 
 

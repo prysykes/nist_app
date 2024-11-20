@@ -61,7 +61,7 @@ class ProjectTitleForm(forms.ModelForm):
             'project_type': 'Select projct type',
             'project_name': 'Enter project name',
             'cluster_csv': 'Upload clustered videos csv',
-            'annotators': 'Enter the number of annotators'
+            'number_of_annotators': 'Enter the number of annotators'
         }
 
 class VideoUploadForm(forms.ModelForm):

@@ -121,6 +121,8 @@ input[type="text"], input[type="password"], input[type="email"]:focus{
   cursor: pointer;
 }
 
+
+
 input[type="file"]:hover{
     border-color: #999;
 }

@@ -177,7 +177,7 @@ function create_video_tag(){
     return video
 }
 
-function create_vidlist_disp_span(file_name, checked_by, status, video_url, video_similarity_score, keywords, assoc_category){
+function create_vidlist_disp_span(file_name, checked_by, status, video_url, video_similarity_score, keywords, assoc_category, project_type){
     // add video similarity confidence here.
     
     
@@ -229,8 +229,18 @@ function create_vidlist_disp_span(file_name, checked_by, status, video_url, vide
             let edit_btn_div = create_edit_btn()
             vid_tag.appendChild(edit_btn_div)
         }else{
-            let apr_rej_btn = create_apr_rej(file_name, assoc_category) 
-            vid_tag.appendChild(apr_rej_btn)
+            console.log("project_type", project_type);
+            
+            if (project_type=='image_qa'){
+                var action_div = create_qa_btn_controls()
+                console.log("in qa");
+                
+            }
+            else{
+                var action_div = create_apr_rej(file_name, assoc_category, project_type) 
+            }
+            
+            vid_tag.appendChild(action_div)
         }
         
         
@@ -254,6 +264,8 @@ function fecth_all_videos_in_category(endpoint, assoc_category){
     endpoint = endpoint+assoc_category
     let video_list_disp = document.getElementById('video_list_disp')
     video_list_disp.innerHTML = ""
+    console.log("endpoint", endpoint);
+    
 
 
     const response = fetch(endpoint, {
@@ -261,7 +273,11 @@ function fecth_all_videos_in_category(endpoint, assoc_category){
     })
     .then(response => response.json())
     .then((data)=>{
-        data.forEach((video)=>{
+        console.log("data>>", data);
+        let serialized_videos = data['serialized_videos']
+        var project_type = data['project_type']
+        
+        serialized_videos.forEach((video)=>{
             let video_fields = video['fields']
 
             let checked_by = video_fields['checked_by']
@@ -270,17 +286,17 @@ function fecth_all_videos_in_category(endpoint, assoc_category){
             let video_url = video_fields['video']
             let video_similarity_score = video_fields['video_similarity_score']
             let keywords = video_fields['keywords']
-            let cur_span = create_vidlist_disp_span(file_name, checked_by, status, video_url, video_similarity_score, keywords, assoc_category)
+            let cur_span = create_vidlist_disp_span(file_name, checked_by, status, video_url, video_similarity_score, keywords, assoc_category, project_type)
             video_list_disp.appendChild(cur_span)
             // console.log(checked_by, file_name, status, video_url);
            
-            
+            // question_tag
             
         })   
-        
+        get_next_video({assoc_category:assoc_category, project_type:project_type})
     })  
 
-    get_next_video({assoc_category:assoc_category})
+    
 
 }
 
@@ -320,7 +336,7 @@ cat_headings.forEach((elem)=>{
         cluster_id_i.textContent = cluster_id
         cluster_id_i.classList.add("visibility_hidden")
         // console.log("cluster_id_i", cluster_id_i);
-        console.log("cat_name", cat_name);
+        // console.log("cat_name", cat_name);
         
        
         cat_name.textContent = category
@@ -403,8 +419,10 @@ function replace_processed_by_all_and_user(user_processed, all_processed, html_n
 
 }
 
-function show_video_in_preview({is_admin_=false, prev_file_name=null, assoc_category = null, data=null, appr_rej=null, caller=''}){
-    console.log("logic for showing video in vid tag");
+function show_video_in_preview({is_admin_=false, prev_file_name=null, assoc_category = null, data=null, appr_rej=null, caller='', project_type=null}){
+    // console.log("logic for showing video in vid tag");
+    console.log("!!!!", project_type);
+    
     
     const[span_heading, br_elem, span_category] = create_vidname_category_spans(assoc_category)
     let vid_preview = document.getElementById('vid_preview')
@@ -430,8 +448,26 @@ function show_video_in_preview({is_admin_=false, prev_file_name=null, assoc_cate
     const video = create_video_tag()
     video.src =  base_vid_src+video_url
     vid_tag.appendChild(video)
-    let apr_rej_btn = create_apr_rej(file_name, assoc_category) 
-    vid_tag.appendChild(apr_rej_btn)
+    if (project_type=='image_qa'){
+        var action_div = create_qa_btn_controls()
+        let question_tag = document.querySelector('#question_tag')
+        if (question_tag.classList.contains('display-none')){
+            console.log("class display none");
+            question_tag.classList.remove('display-none')
+            
+        }
+        
+    // console.log("in qa");
+    
+    }
+    else{
+        var action_div = create_apr_rej(file_name, assoc_category, project_type) 
+       
+    }
+
+    vid_tag.appendChild(action_div)
+    // let apr_rej_btn = create_apr_rej(file_name, assoc_category) 
+    // vid_tag.appendChild(apr_rej_btn)
     // vid_preview.appendChild(vid_tag)
 
 
@@ -448,8 +484,11 @@ function show_video_in_preview({is_admin_=false, prev_file_name=null, assoc_cate
    return file_name 
 }
 
-
-function get_next_video_appr_rej(file_name, assoc_category, appr_rej, add_active_to_span){
+// kwargs = {file_name:file_name, assoc_category:assoc_category,
+    // appr_rej:appr_rej, add_active_to_span:add_active_to_span, project_type:project_type}
+function get_next_video_appr_rej({file_name=null, assoc_category=null, appr_rej=null, add_active_to_span=null, project_type=null}){
+    // console.log("project_type!!!", project_type);
+    
     var prev_file_name = file_name
     let get_next_video_endpoint = base_url+`/get_next_video?file_name=${file_name}&appr_rej=${appr_rej}`
     // get_next_video_endpoint = get_next_video_endpoint+file_name
@@ -481,7 +520,8 @@ function get_next_video_appr_rej(file_name, assoc_category, appr_rej, add_active
     
 }
 
- function get_next_video_defualt(assoc_category, add_active_to_span){
+ function get_next_video_defualt(assoc_category, add_active_to_span, project_type){
+    
     let get_next_video_endpoint = base_url+`/get_next_video?category=${assoc_category}`
     
     let response = fetch(get_next_video_endpoint, {
@@ -492,7 +532,7 @@ function get_next_video_appr_rej(file_name, assoc_category, appr_rej, add_active
         let is_admin_ = false
         
         
-        let file_name_ = show_video_in_preview({is_admin:is_admin_, data:data,})
+        let file_name_ = show_video_in_preview({is_admin:is_admin_, data:data,project_type:project_type})
         add_active_to_span(file_name_,'default')
 
         
@@ -501,16 +541,22 @@ function get_next_video_appr_rej(file_name, assoc_category, appr_rej, add_active
 
 }
 
-function get_next_video({file_name=null, assoc_category=null, appr_rej=null}){
+function get_next_video({file_name=null, assoc_category=null, appr_rej=null, project_type=null}){
     // console.log('filename', file_name);
     // var prev_file_name = file_name
     
+    
     if (appr_rej){
-        let file_name_ = get_next_video_appr_rej(file_name, assoc_category, appr_rej, add_active_to_span)
+        let kwargs = {file_name:file_name, assoc_category:assoc_category,
+             appr_rej:appr_rej, add_active_to_span:add_active_to_span, project_type:project_type}
+            //  console.log("!!..", project_type);
+        
+        let file_name_ = get_next_video_appr_rej(kwargs)
     }
     else{
- 
-        let file_name_ = get_next_video_defualt(assoc_category, add_active_to_span)
+        // console.log("!!..", project_type);
+        // console.log("!!!!!", project_type);
+        let file_name_ = get_next_video_defualt(assoc_category, add_active_to_span, project_type)
        
         
     }
@@ -546,7 +592,27 @@ function create_vidname_category_spans(category=null) {
     return [span_heading, br_elem, span_category]
 }
 
+function create_qa_btn_controls(){
+    let div = document.createElement('div')
+    div.id = 'submit_qs_btn_div'
+    div.classList.add('submit_qs_btn_div')
 
+    let skip = document.createElement('input')
+    skip.value = 'skip video'
+    skip.classList =  "nist-button btn_qa"
+    skip.type = 'button'
+    
+    let submit = document.createElement('input')
+    submit.value = 'submit'
+    submit.classList =  "nist-button btn_qa"
+    submit.type = 'submit'
+
+    div.appendChild(submit)
+    div.appendChild(skip)
+
+    return div
+    
+}
 
 var create_apr_rej = function appr_rej(file_name, assoc_category){
     
