@@ -86,7 +86,7 @@
                       
                     
                         {%elif request.user.is_authenticated and request.user|has_group:"admin"%} 
-                            <span id="show_job_summary" class="job-action-btn"> Show Job Summary </span> 
+                            <!-- <span id="show_job_summary" class="job-action-btn"> Show Job Summary </span>  -->
                     {% endif %}
                 </div> 
             </h1> 
@@ -124,10 +124,10 @@
                                 </div>
                                 <div class="row-align">
                                     <div class="form-label">
-                                        {{project_details.annotators.label}}
+                                        {{project_details.number_of_annotators.label}}
                                     </div>
                                     <div class="form-text-input">
-                                        {{project_details.annotators}}
+                                        {{project_details.number_of_annotators}}
                                     </div>
                                 </div>
                                 <div class="row-align">
@@ -207,12 +207,12 @@
                             <div id="tm_preview">
                                 <h3 class="tm_headings">
                                    (2) - Video Preview 
-                                    <select id="project_type">
+                                    <!-- <select id="project_type">
                                         <option value="" selected disabled hidden>Switch to QandA</option>
                                         <option value="annotation">Annotation</option>
                                         <option value="image_qa">Image Q&A</option>
         
-                                    </select>
+                                    </select> -->
                                 </h3>
                                 <h4 style="text-align: center;" id="video_name"></h4>
                                 <h4 style="text-align: center;" id="video_keywords"></h4>

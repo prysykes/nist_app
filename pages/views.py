@@ -39,19 +39,24 @@ def index(request):
     # print("categories", categories)
     # print('available groups', avaliable_groups)
     user = request.user
+    
     if not user.is_anonymous:
         user_groups = str(user.groups.all())
+        # print("user", user)
+        user_object = User.objects.get(username=user)
+        userreg_object = Userreg.objects.get(user=user_object) 
+        assoc_project_type = userreg_object.project
         #ensures that only admin can upload videos
         if "admin" in user_groups:
-            total_videos = Videos.objects.all().count()
-            all_processed_videos = Videos.objects.exclude(checked_by=None).count()
+            total_videos = Videos.objects.filter(project=assoc_project_type).count()
+            all_processed_videos = Videos.objects.filter(project=assoc_project_type).exclude(checked_by=None).count()
             if request.method == "POST":
 
                 project_title_form = ProjectTitleForm(request.POST, request.FILES)
                 video_upload_form = VideoUploadForm(request.POST, request.FILES)
                 uploaded_videos = request.FILES.getlist('video')
                 cluster_csv = request.FILES.get('cluster_csv')
-                num_annotators = int(request.POST.get('annotators'))
+                num_annotators = int(request.POST.get('number_of_annotators'))
                 project_name = request.POST.get('project_name')
                 project_type = request.POST.get('project_type')
                 # print(f"uploaded_videos {uploaded_videos} \n cluster_csv {cluster_csv} \n num_annotators {num_annotators} \n project_name {project_name}")
@@ -59,7 +64,9 @@ def index(request):
                 return redirect('/')
             else:
                 try:
-                    users_processed_videos = prepare_processed_videos(request=None, user=user)
+                    project_type = request.POST.get('project_type')
+                    project_type = "annotation"
+                    users_processed_videos = prepare_processed_videos(request=None, user=user, project_type=project_type)
                 except:
                     users_processed_videos = None
                 context = {
@@ -74,27 +81,30 @@ def index(request):
     if not request.user.is_anonymous:
         
         user = request.user
+        user_object = User.objects.get(username=user)
+        userreg_object = Userreg.objects.get(user=user_object) 
+        assoc_project_type = userreg_object.project
         #TODO: redo logic for all processed videos
         # all_processed_videos = len(Videos.objects.all().filter(status=True, checked_by=str(user)))
-        percentage_process_all_vids = len(Videos.objects.exclude(checked_by=None))
-        total_videos = len(get_list_or_404(Videos))
+        percentage_process_all_vids = len(Videos.objects.filter(project=assoc_project_type).exclude(checked_by=None))
+        total_videos = len(get_list_or_404(Videos, project=assoc_project_type))
 
         
         try:
             user_group = user.groups.all()[0]
             user_assigned_videos = []
             total_user_assigned_vids = 0
-            user_categories = get_list_or_404(Category, group=user_group)
+            user_categories = get_list_or_404(Category, project=assoc_project_type, group=user_group)
             
             for cat in user_categories:
-                cur_cat_videos = get_list_or_404(Videos, category=cat)
+                cur_cat_videos = get_list_or_404(Videos, project=assoc_project_type, category=cat)
                 len_vids = len(cur_cat_videos)
                 total_user_assigned_vids += len_vids
                 user_assigned_videos.append(cur_cat_videos)
         except IndexError:
             user_assigned_videos = []
 
-        user_processed_videos = Videos.objects.all().filter(checked_by=user)
+        user_processed_videos = Videos.objects.filter(project=assoc_project_type, checked_by=user)
         try:
             percentage_remaining = (len(user_processed_videos)/total_user_assigned_vids) *100
             percentage_remaining = round(percentage_remaining, 2)
@@ -208,26 +218,30 @@ def admin_approve(request):
         assoc_group = assoc_category.group
         assoc_user = assoc_group.user_set.all()[0]
         assoc_user = Userreg.objects.filter(user=assoc_user)[0]
-        all_user_approved_category = Category.objects.filter(group=assoc_group, admin_approved=True)
+        
         # print("len(all_user_approved_category)", len(all_user_approved_category))
         # print("assoc_users.admin_approved", assoc_users.admin_approved)
         
         # print("assoc_users",  assoc_users)
         # retrieve the user here and make the admin approve = True
         if status == "approved":
-            print(">> approve per cluster")
+            # print(">> approve per cluster")
             # print("sats", status)
             assoc_user.admin_approved = True
             assoc_user.save()
             assoc_category.admin_approved = True
             assoc_category.save()
         elif status == "rejected":
-            print("unapprove per cluster")
+            # print("unapprove per cluster")
+            assoc_category.admin_approved = False
+            assoc_category.save()
+            all_user_approved_category = Category.objects.filter(group=assoc_group, admin_approved=True)
+            # check if there is no more approved category uder this user
+            # if so, then set the admin approved of this user == 0
             if len(all_user_approved_category) == 0:
                 assoc_user.admin_approved = False
                 assoc_user.save()
-            assoc_category.admin_approved = False
-            assoc_category.save()
+            
         
         # return JsonResponse({"info": f"{cluster_keyword} {status}" })
     
@@ -329,27 +343,44 @@ def end_annotation(request):
 def display_videos(request):
     if request.method == 'GET':
         request_dict_keys = dict(request.GET).keys()
+        user = request.user
+        user_object = User.objects.get(username=user)
+        userreg_object = Userreg.objects.get(user=user_object) 
+        assoc_project = userreg_object.project
         if "term" in request_dict_keys:
             term = request.GET.get('term')
-            videos = get_video_list(term=term)
+            videos = get_video_list(term=term, assoc_project=assoc_project)
         elif "cluster_group" in request_dict_keys:
             category = request.GET.get('category')
             cluster_group = request.GET.get('cluster_group')
-            videos = get_video_list(category=category, cluster_group=cluster_group)
+            videos = get_video_list(category=category, cluster_group=cluster_group, assoc_project=assoc_project)
         else:
             category = request.GET.get('category')
             annotator = request.GET.get('annotator')
-            videos = get_video_list(category=category, annotator=annotator)
+            videos = get_video_list(category=category, annotator=annotator, assoc_project=assoc_project)
 
     return videos
 
 def get_videos_per_category(request):
     if request.method == 'GET':
+        import json
+        print("get videos per category hi")
+        from registration.models import Userreg
         term = request.GET.get('term')
-        assoc_category = get_object_or_404(Category, cluster_keywords=term)
+        user = request.user
+        assoc_usereg_instance = Userreg.objects.get(user=user)
+        assoc_proj = assoc_usereg_instance.project
+        # print("assoc_proj", assoc_proj)
+
+        assoc_category = get_object_or_404(Category, cluster_keywords=term, project=assoc_proj)
         videos = assoc_category.video_categories.all().order_by('-video_similarity_score')
         serialized_videos = serialize_videos(videos)
-        serialized_videos = HttpResponse(serialized_videos, content_type='application/json')
+        serialized_videos_json = json.loads(serialized_videos)
+        # print("serialized_videos", serialized_videos_json)
+        context = {"serialized_videos": serialized_videos_json,
+                   "project_type": assoc_proj.project_type}
+        # print("context", context)
+        serialized_videos = JsonResponse(context, safe=False)
       
         # group = request.GET.get('group')
         # videos = get_paginated_video_list(term, group)
@@ -377,7 +408,7 @@ def process_user_decision(request):
         cur_user = request.user
         selection = request.GET.get('selection').split('_')
         appr_rej = selection[1]
-        print('appr_rej', appr_rej)
+        # print('appr_rej', appr_rej)
         file_name = selection[0]
         check_user_decision(file_name, cur_user, appr_rej)
 
@@ -388,10 +419,13 @@ def process_user_decision(request):
 
 def get_next_video(request):
     cur_user = request.user
+    user_object = User.objects.get(username=cur_user )
+    userreg_object = Userreg.objects.get(user=user_object)
+    assoc_project = userreg_object.project
     if request.method == 'GET':
         if request.GET.get('category'):
             cluster_keywords = request.GET.get('category')
-            assoc_category = Category.objects.get(cluster_keywords=cluster_keywords)
+            assoc_category = Category.objects.get(cluster_keywords=cluster_keywords, project=assoc_project)
             next_video = assoc_category.video_categories.filter(status__isnull=True).order_by('-video_similarity_score').first()
             serialized_next_video = serialize_videos([next_video])
             serialized_next_video = json.loads(serialized_next_video)
@@ -401,8 +435,8 @@ def get_next_video(request):
             file_name = request.GET.get('file_name')
             print("file_name", file_name)
             appr_rej = request.GET.get('appr_rej')
-            check_user_decision(file_name, cur_user, appr_rej)
-            assoc_video = get_object_or_404(Videos, file_name=file_name)
+            check_user_decision(file_name, cur_user, appr_rej, assoc_project)
+            assoc_video = get_object_or_404(Videos, file_name=file_name, project=assoc_project)
             assoc_category = assoc_video.category
         
             next_video = assoc_category.video_categories.filter(status__isnull=True).order_by('-video_similarity_score').first()

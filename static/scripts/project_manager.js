@@ -8,6 +8,21 @@ var appr_rej_btn_appended = false
     <input type="button" value="reject" class="nist-button btn_apr_rej">
 </div> */}
 
+
+// if (project_type=='image_qa'){
+//     var action_div = create_qa_btn_controls()
+//     console.log("in qa");
+    
+// }
+// else{
+//     var action_div = create_apr_rej(file_name, assoc_category, project_type) 
+// }
+
+// vid_tag.appendChild(action_div)
+
+
+
+
 function create_qa_btn_controls(){
     let skip = document.createElement('input')
     skip.value = 'skip'

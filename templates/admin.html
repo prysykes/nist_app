@@ -6,6 +6,7 @@
 
 {% else %}
 <div class="admin-dashboard">
+    <div id="show_job_summary" class="job-action-btn"> Show Job Summary </div> 
     
     <!-- <h2 style="text-align: center;"> Summary of Selected Video by Users</h2> -->
     <div id="annotation-stats" class="display-none">
@@ -49,9 +50,9 @@
         <div>hagi</div> -->
         {% for user, categories in users_processed_videos.items %}
             
-            <div class="video_categories"> 
-                <div class="process_all_videos display-none">
-                    <span id="approve_all_videos" class="nist-button">approve all videos </span> <span id="reject_all_videos" class="nist-button"> reject all videos </span>
+            <div  class="video_categories"> 
+                <div style="text-align: center; margin: auto;" class="process_all_videos display-none">
+                    <span id="approve_all_videos" class="nist-button">approve all</span> <span id="reject_all_videos" class="nist-button"> reject all</span>
                 </div>
                 <h3 class="user-videos-list"> Video Categories - {{user}}</h3>
                 <ul>

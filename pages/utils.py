@@ -14,6 +14,8 @@ import numpy as np
 import os
 import shutil
 
+from django.db.models import F
+
 from registration.models import Userreg
 
 
@@ -33,10 +35,11 @@ APP_LABEL = 'pages'
 def export_job():
     # print("export job hit")
     # user_fields = ['id', 'finished_job', 'admin_approved']
+   
     payload = []
     try:
         all_approved_users = Userreg.objects.filter(admin_approved=True)
-        # print("len all_approved_users", len(all_approved_users))
+        print("len all_approved_users", len(all_approved_users), all_approved_users)
         assoc_categories = None
         assoc_videos = None
         top_category = None
@@ -45,9 +48,9 @@ def export_job():
             cur_payload = {}
             user = userreg_instance.user
             assoc_group = user.groups.all().first()
-            print("user", user, '\n', 'assoc_group', assoc_group)
+            # print("user", user, '\n', 'assoc_group', assoc_group)
             assoc_categories = Category.objects.filter(group=assoc_group, admin_approved=True) 
-            assoc_videos = get_list_or_404(Videos, category__admin_approved=True, checked_by=user)
+            assoc_videos = get_list_or_404(Videos, category__admin_approved=True, checked_by=user, status=True)
             top_category = assoc_categories.annotate(
                 video_count=Count('video_categories', filter=Q(video_categories__status=True))
             ).order_by('-video_count').first()
@@ -102,6 +105,7 @@ def create_categories(new_project, num_annotators, groups, cluster_keyword_id_si
         min_idx = 0
         max_idx = quota
 
+        # pick an annotator and assign videos to her
         for idx in range(num_annotators):
             cur_group = groups[idx]
             assoc_category_keyword_idx = range_total_categories[min_idx:max_idx]
@@ -124,10 +128,18 @@ def create_categories(new_project, num_annotators, groups, cluster_keyword_id_si
         return categories
 
 def handle_upload_videos(request, project_type, num_annotators, project_name, uploaded_videos, cluster_csv):
+    if project_type == "image_qa":
+        print("do process videos as image QA")
+    elif project_type == "annotation":
+        print("do process videos as annotation")
+    # print(f"handle upload video hit {project_type}")
+    
     new_project = ProjectTitle(project_type=project_type, cluster_csv=cluster_csv, project_name=project_name, number_of_annotators=num_annotators, user=request.user)
     new_project.save()
+    # return {"status": "just hit"}
 
     groups = create_groups(num_annotators, project_name)
+     # return {"status": "just hit"}
 
     cluster_csv_df = pd.read_csv(cluster_csv_file, index_col=0)
     cluster_keywords = np.unique(cluster_csv_df['cluster_keywords'])
@@ -155,24 +167,24 @@ def handle_upload_videos(request, project_type, num_annotators, project_name, up
         description = assoc_df_row['captions'].values[0]
         keywords = assoc_df_row['keywords'].values[0]
         #retrieve category
-        assoc_category = get_object_or_404(Category, cluster_keywords=cluster_keywords, cluster_id=cluster_id)
+        assoc_category = get_object_or_404(Category, cluster_keywords=cluster_keywords, cluster_id=cluster_id, project=new_project)
         
         cur_vid = Videos(video=video, checked_by=None, file_name=vid_name)
         cur_vid.category = assoc_category
         cur_vid.project = new_project
         cur_vid.keywords = keywords
         cur_vid.video_similarity_score = video_similarity_score
-        print("video_similarity_score", video_similarity_score)
+        # print("video_similarity_score", video_similarity_score)
         cur_vid.description = description
         cur_vid.save()
 
 
-def prepare_processed_videos(request=None, user=None):
+def prepare_processed_videos(request=None, user=None, project_type=None):
     from pages.models import ProjectTitle
     from django.db.models import Count, Q, F
     pay_load = {}
-
-    cur_project = ProjectTitle.objects.get(user=user)
+    print(f"user {user}")
+    cur_project = ProjectTitle.objects.get(user=user, project_type=project_type)
     all_groups = Group.objects.filter(name__icontains=cur_project)
     assoc_grp_users = []
     for group in all_groups:
@@ -218,24 +230,24 @@ def display_categories(request=None):
     return categories
 
 
-def  get_video_list(term=None, category=None, cluster_group=None, annotator=None):
+def  get_video_list(term=None, category=None, cluster_group=None, annotator=None, assoc_project=None):
     from django.db.models import Case, When, Value, BooleanField
     #  videos = get_video_list(term=None, category=category, cluster_group=cluster_group)
     # print("term", term, "group", group)
     if term:
-        assoc_video = get_object_or_404(Videos, file_name=term)
+        assoc_video = get_object_or_404(Videos, file_name=term, project=assoc_project)
         assoc_category = assoc_video.category
         cluster_keywords = assoc_category.cluster_keywords
         assoc_group = assoc_category.group
         print("assoc_video", assoc_video, "assoc_category", assoc_category, "assoc_group", assoc_group, "cluster_keywords", cluster_keywords)
         
         # cur_category = Category.objects.get(cluster_keywords=cluster_keywords, group=assoc_group)
-        videos = Videos.objects.filter(category=assoc_category)
+        videos = Videos.objects.filter(category=assoc_category, project=assoc_project)
     elif cluster_group:
         cluster_keywords = category.strip()
         assoc_group = Group.objects.get(name=cluster_group)
         
-        assoc_category = get_object_or_404(Category, cluster_keywords=cluster_keywords, group=assoc_group)
+        assoc_category = get_object_or_404(Category, cluster_keywords=cluster_keywords, group=assoc_group, project=assoc_project)
         videos = assoc_category.video_categories.annotate(
             checked=Case(
                 When(checked_by=None, then=Value(False)),
@@ -247,7 +259,7 @@ def  get_video_list(term=None, category=None, cluster_group=None, annotator=None
         # select all videos that as approved = True and belongs 
         # to the request.user
         cluster_keywords = category.strip()
-        assoc_category = get_object_or_404(Category, cluster_keywords=cluster_keywords)
+        assoc_category = get_object_or_404(Category, cluster_keywords=cluster_keywords, project=assoc_project)
         annotator = get_object_or_404(User, username=annotator)
         # print("no", annotator, assoc_category.group)
         videos = Videos.objects.filter(category=assoc_category, checked_by__username=annotator, status=True)
@@ -276,7 +288,8 @@ def get_paginated_video_list(term, group):
     return HttpResponse(videos, content_type='application/json')
 
 def serialize_videos(videos):
-    serialized_videos = serialize('json', videos, fields=('file_name', 'video', 'checked_by', 'status', 'video_similarity_score', 'keywords'))
+    
+    serialized_videos = serialize('json', videos, fields=('file_name', 'video', 'checked_by', 'status', 'video_similarity_score', 'keywords', 'project_type'))
     # print("serialized_videos", type(serialized_videos))
 
     return serialized_videos 
@@ -323,9 +336,9 @@ def move_selected_videos(destination_dir, source_dir, finished_jobs_csv):
     shutil.make_archive(os.path.join(finished_jobs_dir, zip_file_name), 'zip', destination_dir)
     return f"{zip_file_name}.zip"
 
-def check_user_decision(file_name, cur_user, appr_or_rej=None):
+def check_user_decision(file_name, cur_user, appr_or_rej=None, assoc_project=None):
     # print('appr_or_rej', appr_or_rej, appr_or_rej=='approve')
-    video = get_object_or_404(Videos, file_name=file_name)
+    video = get_object_or_404(Videos, file_name=file_name, project=assoc_project)
     # print(video)
     
     if appr_or_rej == 'approve':
