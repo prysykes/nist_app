@@ -191,7 +191,7 @@
                             {% block video_list %}
                             <div id="tm_video_list">
                                 <h3 id="cat_name" class="tm_headings_temp">
-                                    (1) - click explore to begin...
+                                    click explore to begin...
                                 </h3>
                                 
                                 <div id="video_list_disp">
@@ -206,89 +206,26 @@
                             {% block video_preview %}
                             <div id="tm_preview">
                                 <h3 class="tm_headings">
-                                   (2) - Video Preview 
-                                    <!-- <select id="project_type">
-                                        <option value="" selected disabled hidden>Switch to QandA</option>
-                                        <option value="annotation">Annotation</option>
-                                        <option value="image_qa">Image Q&A</option>
-        
-                                    </select> -->
+                                   
                                 </h3>
                                 <h4 style="text-align: center;" id="video_name"></h4>
                                 <h4 style="text-align: center;" id="video_keywords"></h4>
                                 <div  id="vid_preview">
-                                    <div id="vid_tag">
+                                    <form id="form-csrf-token" action="" method="post">{% csrf_token %}</form>
+                                    <h3 style="text-align: center; margin-top: 10px;" id="video-qa-h3" ></h3>
+                                    <div id="job-preview">
                                         
-                                    
-                                    </div>
-                                    <div id="question_tag" class="display-none">
-                                        <h3>Enter Questions and Answers</h3>
-                                        
-                                        
-                                        <form action="" method="post">{% csrf_token %}
-                                            <div class="row-align">
-                                                <div class="form-label">
-                                                    <label for="question"> Question: </label>
-                                                </div>
-                                                <div class="form-text-input">
-                                                    <textarea spellcheck="true" name="question" id="question" cols="50" rows="10"></textarea>
-                                                    <!-- <input maxlength="250" type="text" id="question" name="question"> -->
-                                                </div>
-                                            </div>
-
-                                            <div class="row-align">
-                                                <div class="form-label">
-                                                    <label for="answer-one"> Correct Answer: </label>
-                                                </div>
-                                                <div class="form-text-input">
-                                                    <textarea spellcheck="true" name="correct-answer" id="correct-answer" cols="50" rows="20"></textarea>
-                                                    <!-- <input maxlength="250" spellcheck="true" type="textarea" id="correct-answer" name="correct-answer"> -->
-                                                </div>
-                                            </div>
-
-                                            <div class="row-align">
-                                                <div class="form-label">
-                                                    <label for="answer-two"> Answer Option: </label>
-                                                </div>
-                                                <div class="form-text-input">
-                                                    <textarea spellcheck="true" name="answer-two" id="answer-two" cols="50" rows="20"></textarea>
-                                                    <!-- <input maxlength="250" spellcheck="true" type="textarea" id="answer-two" name="answer-two"> -->
-                                                </div>
-                                            </div>
-
-                                            <div class="row-align">
-                                                <div class="form-label">
-                                                    <label for="answer-three"> Answer Option: </label>
-                                                </div>
-                                                <div class="form-text-input">
-                                                    <textarea spellcheck="true" name="answer-three" id="answer-three" cols="50" rows="20"></textarea>
-                                                    <!-- <input maxlength="250" spellcheck="true" type="textarea" id="answer-three" name="answer-three"> -->
-                                                </div>
-                                            </div>
-
-                                            <div class="row-align">
-                                                <div class="form-label">
-                                                    <label for="answer-four"> Answer Option: </label>
-                                                </div>
-                                                <div class="form-text-input">
-                                                    <textarea spellcheck="true" name="answer-four" id="answer-four" cols="50" rows="20"></textarea>
-                                                    <!-- <input maxlength="250" spellcheck="true" type="textarea" id="answer-four" name="answer-four"> -->
-                                                </div>
-                                            </div>
-
-                                            <div class="row-align">
-                                                <div class="form-label">
-                                                    <label for="answer-five"> Answer Option: </label>
-                                                </div>
-                                                <div class="form-text-input">
-                                                    <textarea spellcheck="true" name="answer-five" id="answer-five" cols="50" rows="20"></textarea>
-                                                    <!-- <input maxlength="250" spellcheck="true" type="textarea" id="answer-five" name="answer-five"> -->
-                                                </div>
-                                            </div>
+                                        <div id="vid_tag">
                                             
-                                           
-                                        </form>
-                                    
+                                        
+                                        </div>
+                                        <div id="question_tag">
+                                            
+                                        
+                                        </div>
+                                    </div>
+                                    <div id="action-control">
+                                        
                                     </div>
                                     
                                     

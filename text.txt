@@ -1,0 +1,9 @@
+<div class="edit_qa_div">
+<div class="row-align">
+    <div class="qa_label">question:</div>
+    <div class="qa_value">Describe major action in video</div>
+</div><div class="row-align">
+
+<div class="qa_label">ans-0:</div>
+<div class="qa_value">A video of fireworks in the night</div>
+</div><div class="row-align"><div class="qa_label">ans-1:</div><div class="qa_value">A care racing event</div></div><div class="row-align"><div class="qa_label">ans-2:</div><div class="qa_value">A volley ball event</div></div><div class="row-align"><div class="qa_label">ans-3:</div><div class="qa_value">A man swimming in water</div></div></div>

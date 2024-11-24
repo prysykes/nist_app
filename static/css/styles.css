@@ -466,6 +466,20 @@ ul li:hover {
 #vid_preview {
     padding: 0px;
     display: flex;
+    flex-direction: column;
+    margin: auto;
+}
+
+#vid_tag{
+    padding: 0px;
+    display: flex;
+    flex-direction: row;
+    margin: auto;
+}
+
+#job-preview{
+    padding: 0px;
+    display: flex;
     flex-direction: row;
     margin: auto;
 }
@@ -479,19 +493,44 @@ ul li:hover {
 }
 
 #question_tag{
-    margin: auto;
+    margin: 40px 0 0 5px;
     width: fit-content;
     height: fit-content;
+    justify-content: center;
 }
+/* .edit_qa_div {
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  } */
 
-.apr_rej_btn_div, .submit_qs_btn_div{
+.qa_label {
+    width: 100px;
+    font-weight: bold;
+    margin-right: 10px;
+  }
+  
+  .qa_value {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+  }
+
+.apr_rej_btn_div, .submit_qs_btn_div, #edit_res{
     display: flex;
     flex-direction: row;
-    justify-content: space-between;
-    margin: auto;
+    margin: 1% 0 0 calc(28%);
    
 
 }
+
+.btn_apr_rej:first-child{
+    margin-right: 48%;
+}
+
+
 
 .btn_qa {
     background-color: rgb(14, 4, 46);;

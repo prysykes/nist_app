@@ -1,6 +1,17 @@
 from django.contrib import admin
 
-from .models import Videos, Category, ProjectTitle
+from .models import Videos, Category, ProjectTitle, Question, Answer
+
+class QuestionAdmin(admin.ModelAdmin):
+    list_display = ['question']
+    search_fields = ['question']
+admin.site.register(Question, QuestionAdmin)
+
+
+class AnswerAdmin(admin.ModelAdmin):
+    list_display = ['question']
+    search_fields = ['question']
+admin.site.register(Answer, AnswerAdmin)
 
 
 class VideosAdmin(admin.ModelAdmin):

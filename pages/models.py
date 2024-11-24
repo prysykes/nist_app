@@ -73,14 +73,15 @@ class ProjectTitle(models.Model):
         return self.project_name
 
 class Answer(models.Model):
-    answer = models.CharField(max_length=20)
-    question = models.ForeignKey('Question', on_delete=models.CASCADE)
+    answer = models.CharField(max_length=250)
+    correct = models.BooleanField(default=False)
+    question = models.ForeignKey('Question', on_delete=models.CASCADE, related_name="question_answers")
 
     def __str__(self):
         return self.answer
     
 class Question(models.Model):
-    question = models.CharField(max_length=20)
+    question = models.CharField(max_length=250)
 
     def __str__(self):
         return self.question
@@ -89,8 +90,6 @@ class Videos(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="video_categories")
     checked_by = models.ForeignKey(User, on_delete=models.DO_NOTHING, blank=True, null=True)
     question = models.ForeignKey(Question, null=True, blank=True, on_delete=models.CASCADE)
-    # sets the group associated with the video instance to null
-    # group = models.ForeignKey(Group, on_delete=models.SET_NULL, null=True)
     project = models.ForeignKey(ProjectTitle, default='', on_delete=models.CASCADE)
     video = models.FileField(upload_to='videos', verbose_name='Trec Videos')
     file_name = models.CharField(max_length=50, null=True, blank=True)
