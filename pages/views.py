@@ -13,7 +13,7 @@ from .utils import handle_upload_videos
 from .utils import (export_job, display_categories, get_rem_total_per_category, 
                     get_video_list, check_user_decision, get_user_all_processed, 
                     get_paginated_video_list, serialize_videos,
-                    move_selected_videos)
+                    move_selected_videos, create_question_answers)
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse, HttpResponse
 import json
@@ -174,8 +174,82 @@ def sign_up(request):
     context = {}
     return render(request, 'sign_up.html', context)
 
+def retrieve_video_qa(request):
+    payload = {}
+    file_name = request.GET.get('file_name')
+    cluster_keywords = request.GET.get('cluster_keywords')
+    user = request.user
+    user_obj = User.objects.get(username=user)
+    userreg_obj = Userreg.objects.get(user=user_obj)
+
+    assoc_project = userreg_obj.project
+    assoc_category = Category.objects.get(project=assoc_project, cluster_keywords=cluster_keywords)
+    assoc_video = Videos.objects.get(file_name=file_name, checked_by=user, project=assoc_project, category=assoc_category)
+
+
+
+    assoc_question = assoc_video.question
+    assoc_answers = assoc_question.question_answers.all()
+
+    payload['question'] = assoc_question.question
+
+    for idx, ans in enumerate(assoc_answers):
+        if ans.correct:
+            payload[f'ans-{idx}-correct'] = ans.answer
+        else:
+            payload[f'ans-{idx}'] = ans.answer
+
+
+    
+
+    print(payload)
+    return JsonResponse({"data": payload})
+
+def submit_vid_qa(request):
+    #TODO: in the getnext video in main.js
+    # add project type (587 and 571)
+    # the endpoint is get_next_video(in views.py)
+    # modify this endpoint to search for the next video in the
+    # current project
+    if request.method == 'POST':
+        question = request.POST.get('question')
+        correct_ans = request.POST.get('correct_ans')
+        answer_one = request.POST.get('opt_ans_one')
+        answer_two = request.POST.get('opt_ans_two')
+        answer_three = request.POST.get('opt_ans_three')
+        video_filename = request.POST.get('video_filename')
+        cluster_keywords = request.POST.get('cluster_keyword')
+        answers = [correct_ans, answer_one, answer_two, answer_three]
+
+        user = request.user
+        user_object = User.objects.get(username=user)
+        userreg_object = Userreg.objects.get(user=user_object)
+        assoc_project = userreg_object.project
+        assoc_category = Category.objects.get(cluster_keywords=cluster_keywords, project=assoc_project)
+        cur_video = Videos.objects.get(category=assoc_category, project=assoc_project, file_name=video_filename)
+        # retriveve project_type
+
+        if question:
+            #process video question
+            question_obj = create_question_answers(question=question, answers=answers)
+            cur_video.question = question_obj
+            cur_video.status = True
+            cur_video.checked_by = user
+            cur_video.save()
+        else:
+            cur_video.status = False
+            cur_video.checked_by = user
+            cur_video.save()
+
+       
+    return HttpResponse("QA and Video sent")
+
 def admin_approve(request):
     from registration.models import Userreg
+    admin_user = request.user
+    admin_user_object = User.objects.get(username=admin_user)
+    admin_userreg_obj = Userreg.objects.get(user=admin_user_object)
+    project = admin_userreg_obj.project
     
     if request.GET.get('user_catergories'):
         # print("user_catergories hit")
@@ -189,10 +263,11 @@ def admin_approve(request):
         # return JsonResponse({"info": f"Accepted {user} videos"})
         user_object = User.objects.get(username=user)
         userreg_object = Userreg.objects.get(user=user_object) # userreg_object has a one-to-one to user_object
+        # assoc_project = userreg_object.project
         
         # set admin_approved in the category as True
         for category in categories:
-            assoc_category = Category.objects.get(cluster_keywords=category)
+            assoc_category = Category.objects.get(cluster_keywords=category, project=project)
             if status == "approved":
                 # print("approving all")
                 assoc_category.admin_approved = True
@@ -211,10 +286,9 @@ def admin_approve(request):
         # return JsonResponse({"info": f"Accepted {user} videos"})
     
     elif request.GET.get('cluster_keyword'):
-        print("cluster_keywords hit")
         cluster_keyword = request.GET.get("cluster_keyword")
         status = request.GET.get("status")
-        assoc_category = Category.objects.get(cluster_keywords=cluster_keyword)
+        assoc_category = Category.objects.get(cluster_keywords=cluster_keyword, project=project)
         assoc_group = assoc_category.group
         assoc_user = assoc_group.user_set.all()[0]
         assoc_user = Userreg.objects.filter(user=assoc_user)[0]
@@ -364,7 +438,7 @@ def display_videos(request):
 def get_videos_per_category(request):
     if request.method == 'GET':
         import json
-        print("get videos per category hi")
+        
         from registration.models import Userreg
         term = request.GET.get('term')
         user = request.user

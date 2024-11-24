@@ -1,4 +1,4 @@
-from .models import Videos, Category, ProjectTitle
+from pages.models import Videos, Category, ProjectTitle, Question, Answer
 from django.shortcuts import get_list_or_404, get_object_or_404
 from django.core.serializers import serialize
 from django.db.models import Q, Count 
@@ -178,6 +178,22 @@ def handle_upload_videos(request, project_type, num_annotators, project_name, up
         cur_vid.description = description
         cur_vid.save()
 
+
+def create_question_answers(question=None, answers=None):
+    new_question = Question()
+    new_question.question = question
+    new_question.save()
+    
+
+    for idx, ans in enumerate(answers):
+        new_answer = Answer()
+        new_answer.answer = ans
+        new_answer.question = new_question
+        if idx == 0:
+            new_answer.correct = True
+        new_answer.save()
+    return new_question
+    
 
 def prepare_processed_videos(request=None, user=None, project_type=None):
     from pages.models import ProjectTitle

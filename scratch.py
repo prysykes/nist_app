@@ -1,3 +1,20 @@
+
+class Answer(models.Model):
+    answer = models.CharField(max_length=20)
+    question = models.ForeignKey('Question', on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.answer
+    
+class Question(models.Model):
+    question = models.CharField(max_length=20)
+
+    def __str__(self):
+        return self.question
+
+
+
+
 import os
 
 trial_vid = 'trial_vids'

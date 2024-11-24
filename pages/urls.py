@@ -15,6 +15,8 @@ urlpatterns = [
     path('reject_all', views.reject_all, name="reject_all"),
     path('end_annotation', views.end_annotation, name='end_annotation'),
     path('get_job_summary', views.get_job_summary, name="get_job_summary"),
-    path('export_all_videos', views.export_all_videos, name='export_all_videos')
+    path('export_all_videos', views.export_all_videos, name='export_all_videos'),
+    path('submit_vid_qa', views.submit_vid_qa, name="submit_vid_qa"),
+    path('retrieve_video_qa', views.retrieve_video_qa, name='retrieve_video_qa')
     
 ]

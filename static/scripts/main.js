@@ -176,6 +176,54 @@ function create_video_tag(){
 
     return video
 }
+function create_quest_ans_div({label=null, value=null, correct=null}){
+    let label_value_div = document.createElement('div')
+    label_value_div.className = 'row-align'
+
+    let label_div = document.createElement('div')
+    label_div.className = 'qa_label'
+    label_div.innerText = label+":"
+    if (correct){
+        var inlines = create_inline_elemets()
+        var inline_good = inlines[0]
+        var inline_bad = inlines[1]
+        label_div.appendChild(inline_good)
+        console.log("mark good here");
+        
+    }
+    label_value_div.appendChild(label_div)
+
+    let value_div = document.createElement('div')
+    value_div.className = 'qa_value'
+    value_div.innerText = value
+    label_value_div.appendChild(value_div)
+
+    return label_value_div
+}
+
+function prepare_quest_answer_resp(quest_ans_data){
+    let div = document.createElement('div')
+    div.className = "edit_qa_div"
+    
+    for (let [label, value] of Object.entries(quest_ans_data)){
+        if (label.split('-').at(-1)=='correct'){
+            console.log("correct");
+            let first_hypen_index = label.indexOf('-')
+            let second_hypen_index = label.indexOf('-', first_hypen_index+1)
+            
+            label = label.slice(0, second_hypen_index)
+            var label_value_div = create_quest_ans_div({label:label, value:value, correct:true})
+            
+        }
+        else{
+            var label_value_div = create_quest_ans_div({label:label, value:value})
+        }
+        
+        div.appendChild(label_value_div)
+    }
+    
+    return div 
+}
 
 function create_vidlist_disp_span(file_name, checked_by, status, video_url, video_similarity_score, keywords, assoc_category, project_type){
     // add video similarity confidence here.
@@ -198,11 +246,13 @@ function create_vidlist_disp_span(file_name, checked_by, status, video_url, vide
 
     span.addEventListener('click', (e)=>{
         let cur_span = e.target
+        let processed = false
         
         if ((cur_span.textContent == 'done') || (cur_span.textContent == 'close')){
             //checks if the span has inline element, hence the parent elem changes
             let parent_elem = cur_span.parentNode
-            var file_name = parent_elem.id.split('_')[1]    
+            var file_name = parent_elem.id.split('_')[1]   
+            processed = true 
         }
         else {
             var file_name = cur_span.id.split('_')[1]
@@ -222,28 +272,8 @@ function create_vidlist_disp_span(file_name, checked_by, status, video_url, vide
         // console.log("cur_span.textContent", cur_span.textContent );
         // console.log("file_name", file_name);
         
-        const conditions = [`${file_name}done`, 'done', `${file_name}close`, 'close']
         
-        // checks if the video has been approved or rejcted
-        if (conditions.includes(cur_span.textContent)){
-            let edit_btn_div = create_edit_btn()
-            vid_tag.appendChild(edit_btn_div)
-        }else{
-            console.log("project_type", project_type);
-            
-            if (project_type=='image_qa'){
-                var action_div = create_qa_btn_controls()
-                console.log("in qa");
-                
-            }
-            else{
-                var action_div = create_apr_rej(file_name, assoc_category, project_type) 
-            }
-            
-            vid_tag.appendChild(action_div)
-        }
-        
-        
+ 
         span_heading.textContent = file_name
         video_name.appendChild(span_heading)
         video_name.appendChild(br_elem)
@@ -251,6 +281,55 @@ function create_vidlist_disp_span(file_name, checked_by, status, video_url, vide
         let keyword_tag = document.getElementById('video_keywords')
         
         keyword_tag.textContent = `Video Keywords: ${keywords}`
+        console.log("project_type", project_type);
+
+        var question_tag = document.querySelector('#question_tag')
+        // checks if the video has been approved or rejected
+        const conditions = [`${file_name}done`, 'done', `${file_name}close`, 'close']
+        if (conditions.includes(cur_span.textContent)){
+            let cluster_keywords = document.querySelector('#cat_name')
+            cluster_keywords = cluster_keywords.textContent.split('|')[0].trim()
+            console.log("filename", file_name, "cluster_keywords", cluster_keywords);
+            // base_url+`/get_next_video?file_name=${file_name}&appr_rej=${appr_rej}`
+            let endpoint = `${base_url}/retrieve_video_qa?file_name=${file_name}&cluster_keywords=${cluster_keywords}`
+            
+       
+
+            const response = fetch(endpoint, {
+                method: 'GET'
+            }).then(response => response.json())
+            .then((data)=>{
+                let quest_ans_data = data['data']
+                question_tag.innerHTML = ""
+                let question_and_answers = prepare_quest_answer_resp(quest_ans_data)
+                question_tag.appendChild(question_and_answers)
+                
+                
+            })
+            
+            let edit_btn_div = create_edit_btn({project_type:project_type})
+            let action_control = document.querySelector('#action-control')
+            action_control.innerHTML = ""
+            action_control.appendChild(edit_btn_div)
+        }
+        else if(project_type="image_qa"){
+            
+            let action_control = document.querySelector('#action-control')
+            action_control.innerHTML = ""
+            
+            let action_div = create_qa_btn_controls()
+            action_control.appendChild(action_div)
+            
+            
+            question_tag.innerHTML = ""
+            
+            let form = create_video_QA_form()
+            question_tag.append(form)
+            
+        }else{
+            console.log("annotation pipeline no need for QandA");
+            
+        }
     })
 
     return span
@@ -264,7 +343,6 @@ function fecth_all_videos_in_category(endpoint, assoc_category){
     endpoint = endpoint+assoc_category
     let video_list_disp = document.getElementById('video_list_disp')
     video_list_disp.innerHTML = ""
-    console.log("endpoint", endpoint);
     
 
 
@@ -286,13 +364,13 @@ function fecth_all_videos_in_category(endpoint, assoc_category){
             let video_url = video_fields['video']
             let video_similarity_score = video_fields['video_similarity_score']
             let keywords = video_fields['keywords']
-            let cur_span = create_vidlist_disp_span(file_name, checked_by, status, video_url, video_similarity_score, keywords, assoc_category, project_type)
+            let cur_span = create_vidlist_disp_span(file_name, checked_by, status,
+                 video_url, video_similarity_score, keywords, assoc_category, project_type)
             video_list_disp.appendChild(cur_span)
-            // console.log(checked_by, file_name, status, video_url);
-           
-            // question_tag
+
             
-        })   
+        })  
+        // Function that gets the next unprocessed video and displays it 
         get_next_video({assoc_category:assoc_category, project_type:project_type})
     })  
 
@@ -335,9 +413,6 @@ cat_headings.forEach((elem)=>{
        
         cluster_id_i.textContent = cluster_id
         cluster_id_i.classList.add("visibility_hidden")
-        // console.log("cluster_id_i", cluster_id_i);
-        // console.log("cat_name", cat_name);
-        
        
         cat_name.textContent = category
         
@@ -419,10 +494,138 @@ function replace_processed_by_all_and_user(user_processed, all_processed, html_n
 
 }
 
+function submit_video_qa_form(){
+    let form_csrf_token = document.querySelector('#form-csrf-token')
+    // console.log("submit form clicked", form_csrf_token);
+    let csrf_token_element = form_csrf_token.elements[0]
+    let csrf_token_name = csrf_token_element.name
+    let csrf_token = csrf_token_element.value
+
+    let video_filename = document.querySelector('#video_name_value').innerText
+    let cluster_keyword = document.querySelector('#cat_name').innerText.split('|').at(0).trim()
+    
+    let vid_qa_form = document.querySelector('#video_qs_form')
+    
+    
+    let new_form_data = new FormData()
+    
+    for (let i=0; i < vid_qa_form.elements.length; i++){
+        let element = vid_qa_form.elements[i]
+        new_form_data.append(element.name, element.value)
+
+        
+    }
+    
+
+    new_form_data.append('video_filename', video_filename)
+    new_form_data.append('cluster_keyword', cluster_keyword)
+    new_form_data.append(csrf_token_name, csrf_token)
+
+    let endpoint = base_url+"/submit_vid_qa"
+
+    let response = fetch(endpoint,{
+        method: 'POST',
+        body: new_form_data
+    })
+}
+
+
+function create_form_elements({elem_name=null, elem_id=null, elem_inner_text=null, submit=null}){
+    let label_elem_div = document.createElement('div')
+    label_elem_div.className = 'row-align'
+
+    let form_label_div = document.createElement('div')
+    form_label_div.className = 'form-label'
+
+    let label = document.createElement('label')
+    label.for = `${elem_name}`
+    label.innerText = `${elem_inner_text}:`
+    form_label_div.appendChild(label)
+
+    label_elem_div.appendChild(form_label_div)
+
+    if (submit){
+        let submit_elem_div = document.createElement('div')
+        submit_elem_div.className = "nist-button"
+        let submit_elem = document.createElement('input')
+        submit_elem.name = `${elem_name}`
+        submit_elem.style = 'text-align: center;'
+        submit_elem.type = 'submit'
+        submit_elem.value = "Submit"
+        submit_elem.addEventListener('click', (e)=>{
+            e.preventDefault()
+            submit_video_qa_form()
+        })
+        
+        submit_elem_div.appendChild(submit_elem)
+        label_elem_div.appendChild(submit_elem_div)
+      
+        
+    }
+    else {
+        let text_area_div = document.createElement('div')
+        text_area_div.className = "form-text-input"
+
+        let text_area = document.createElement('textarea')
+        text_area.spellcheck = "true"
+        text_area.name = elem_name
+        text_area.id = elem_id
+        text_area.cols = "50"
+        text_area.rows = "10"
+        text_area_div.appendChild(text_area)
+        
+        label_elem_div.appendChild(text_area_div)
+    }
+
+    
+
+    
+
+    return label_elem_div
+}
+
+function create_video_QA_form(){
+    // let form_parent_div = document.createElement('div')
+    // form_parent_div.id = "question_tag"
+    let video_qa_h3 = document.querySelector('#video-qa-h3')
+    video_qa_h3.textContent = ""
+        
+    
+
+    let video_QA_form = document.createElement('form')
+    video_QA_form.method = "post"
+    video_QA_form.id = 'video_qs_form'
+    
+    let question = create_form_elements({elem_name:'question', elem_id:'question', elem_inner_text:'Question'})
+    video_QA_form.appendChild(question)
+    
+    let correct_ans = create_form_elements({elem_name:'correct_ans', elem_id:'correct_ans', elem_inner_text:'Correct Answer'})
+    video_QA_form.appendChild(correct_ans)
+    
+    let opt_ans_one = create_form_elements({elem_name:'opt_ans_one', elem_id:'opt_ans_one', elem_inner_text:'Answer Option'})
+    video_QA_form.appendChild(opt_ans_one)
+    
+    let opt_ans_two = create_form_elements({elem_name:'opt_ans_two', elem_id:'opt_ans_two', elem_inner_text:'Answer Option'})
+    video_QA_form.appendChild(opt_ans_two)
+    
+    let opt_ans_three = create_form_elements({elem_name:'opt_ans_three', elem_id:'opt_ans_three', elem_inner_text:'Answer Option'})
+    video_QA_form.appendChild(opt_ans_three)
+    
+    // let opt_ans_four = create_form_elements({elem_name:'opt_ans_four', elem_id:'opt_ans_four', elem_inner_text:'Answer Option'})
+    // video_QA_form.appendChild(opt_ans_four)
+    
+    let submit = create_form_elements({elem_name:'submit-vid-qa', elem_id:'submit-vid-qa', elem_inner_text:'Send QandA', submit:true})
+    video_QA_form.appendChild(submit)
+
+
+    video_qa_h3.textContent = "Enter Question and Answers"
+    return video_QA_form
+    // form_parent_div.appendChild(video_QA_form)
+
+}
+
 function show_video_in_preview({is_admin_=false, prev_file_name=null, assoc_category = null, data=null, appr_rej=null, caller='', project_type=null}){
     // console.log("logic for showing video in vid tag");
-    console.log("!!!!", project_type);
-    
     
     const[span_heading, br_elem, span_category] = create_vidname_category_spans(assoc_category)
     let vid_preview = document.getElementById('vid_preview')
@@ -441,34 +644,36 @@ function show_video_in_preview({is_admin_=false, prev_file_name=null, assoc_cate
     keyword_tag.textContent = `Video Keywords: ${vid_keywords}`
 
     span_heading.textContent = file_name
+    
     video_name.appendChild(span_heading)
     video_name.appendChild(br_elem)
     video_name.appendChild(span_category)
 
     const video = create_video_tag()
     video.src =  base_vid_src+video_url
+    
     vid_tag.appendChild(video)
     if (project_type=='image_qa'){
         var action_div = create_qa_btn_controls()
         let question_tag = document.querySelector('#question_tag')
-        if (question_tag.classList.contains('display-none')){
-            console.log("class display none");
-            question_tag.classList.remove('display-none')
-            
-        }
+        question_tag.innerHTML = ""
         
-    // console.log("in qa");
+        let form = create_video_QA_form()
+        question_tag.append(form)
     
     }
     else{
         var action_div = create_apr_rej(file_name, assoc_category, project_type) 
        
     }
+    // let vid_preview_childnodes = vid_preview.childNodes
+    // console.log("vid_preview_childnodes");
+    
+    // vid_preview.lastElementChild = action_div
+    let action_control = document.querySelector('#action-control')
+    action_control.innerHTML = ""
+    action_control.appendChild(action_div)
 
-    vid_tag.appendChild(action_div)
-    // let apr_rej_btn = create_apr_rej(file_name, assoc_category) 
-    // vid_tag.appendChild(apr_rej_btn)
-    // vid_preview.appendChild(vid_tag)
 
 
     if (caller=='appr_rej'){
@@ -484,8 +689,7 @@ function show_video_in_preview({is_admin_=false, prev_file_name=null, assoc_cate
    return file_name 
 }
 
-// kwargs = {file_name:file_name, assoc_category:assoc_category,
-    // appr_rej:appr_rej, add_active_to_span:add_active_to_span, project_type:project_type}
+
 function get_next_video_appr_rej({file_name=null, assoc_category=null, appr_rej=null, add_active_to_span=null, project_type=null}){
     // console.log("project_type!!!", project_type);
     
@@ -521,6 +725,11 @@ function get_next_video_appr_rej({file_name=null, assoc_category=null, appr_rej=
 }
 
  function get_next_video_defualt(assoc_category, add_active_to_span, project_type){
+    /**
+     * Returns the next video to be display on Video display div when explore is clicked
+     * @param {assoc_category} - The category the current video belongs to.
+     * @returns null
+     */
     
     let get_next_video_endpoint = base_url+`/get_next_video?category=${assoc_category}`
     
@@ -554,8 +763,8 @@ function get_next_video({file_name=null, assoc_category=null, appr_rej=null, pro
         let file_name_ = get_next_video_appr_rej(kwargs)
     }
     else{
-        // console.log("!!..", project_type);
-        // console.log("!!!!!", project_type);
+        // Get nexxt video when explore is clicked
+        
         let file_name_ = get_next_video_defualt(assoc_category, add_active_to_span, project_type)
        
         
@@ -592,6 +801,7 @@ function create_vidname_category_spans(category=null) {
     return [span_heading, br_elem, span_category]
 }
 
+
 function create_qa_btn_controls(){
     let div = document.createElement('div')
     div.id = 'submit_qs_btn_div'
@@ -602,12 +812,13 @@ function create_qa_btn_controls(){
     skip.classList =  "nist-button btn_qa"
     skip.type = 'button'
     
-    let submit = document.createElement('input')
-    submit.value = 'submit'
-    submit.classList =  "nist-button btn_qa"
-    submit.type = 'submit'
+    // let submit = document.createElement('input')
+    // submit.value = 'submit'
+    // submit.classList =  "nist-button btn_qa"
+    // submit.type = 'submit'
+    
 
-    div.appendChild(submit)
+    // div.appendChild(submit)
     div.appendChild(skip)
 
     return div
@@ -681,8 +892,6 @@ var create_apr_rej = function appr_rej(file_name, assoc_category){
             get_next_video({file_name: file_name, assoc_category: assoc_category, appr_rej: 'reject'})
             
         }
-        
-   
       
     })
     div.appendChild(reject_input)
@@ -690,7 +899,9 @@ var create_apr_rej = function appr_rej(file_name, assoc_category){
     return div
 }
 
-function create_edit_btn(){
+function create_edit_btn({project_type=null}){
+
+    
     let div = document.createElement('div')
     div.id = 'edit_res'
     div.style.textAlign = 'center'
@@ -702,7 +913,13 @@ function create_edit_btn(){
 
     btn.addEventListener('click', ()=>{
         let edit_div = document.getElementById('edit_res')
-        app_rej_btn_div = create_apr_rej()
+        if (project_type=='image_qa'){
+            // handle edit reponse logic for video qa
+            console.log("edit response for image_qa");
+            
+        }
+        else{
+            app_rej_btn_div = create_apr_rej()
         let childnodes  = edit_div.childNodes
         // check if appr or reject button has already been 
         // added to edit response
@@ -714,6 +931,8 @@ function create_edit_btn(){
             edit_div.removeChild(apr_rej_btn_div)
            
         }
+        }
+        
         
     })
 
