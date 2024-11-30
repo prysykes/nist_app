@@ -24,7 +24,8 @@ class Category(models.Model):
         # while uploading it.
     def get_unprocessed_videos(self, user=None):
         # get all videos belonging to a user
-        assoc_videos = self.video_categories.exclude(status__isnull=False).order_by('id')
+        assoc_videos = self.video_categories.exclude(status__isnull=True).order_by('id')
+        
         return assoc_videos
     
     def get_next_video(self):
@@ -97,6 +98,7 @@ class Videos(models.Model):
     keywords = models.CharField(max_length=250, null=True, blank=True)
     status = models.BooleanField(default=None, blank=True, null=True)
     video_similarity_score = models.FloatField(default=0.0)
+    admin_approve = models.BooleanField(default=False, null=True, blank=True)
 
     date_uploaded = models.DateField(auto_now_add=True)
 

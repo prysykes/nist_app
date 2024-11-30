@@ -206,11 +206,6 @@ def retrieve_video_qa(request):
     return JsonResponse({"data": payload})
 
 def submit_vid_qa(request):
-    #TODO: in the getnext video in main.js
-    # add project type (587 and 571)
-    # the endpoint is get_next_video(in views.py)
-    # modify this endpoint to search for the next video in the
-    # current project
     if request.method == 'POST':
         question = request.POST.get('question')
         correct_ans = request.POST.get('correct_ans')
@@ -429,9 +424,15 @@ def display_videos(request):
             cluster_group = request.GET.get('cluster_group')
             videos = get_video_list(category=category, cluster_group=cluster_group, assoc_project=assoc_project)
         else:
-            category = request.GET.get('category')
-            annotator = request.GET.get('annotator')
-            videos = get_video_list(category=category, annotator=annotator, assoc_project=assoc_project)
+            is_admin = request.GET.get('is_admin')
+            if is_admin:
+                category = request.GET.get('category')
+                annotator = request.GET.get('annotator')
+                videos = get_video_list(category=category, annotator=annotator, assoc_project=assoc_project, is_admin=is_admin)
+            else:
+                category = request.GET.get('category')
+                annotator = request.GET.get('annotator')
+                videos = get_video_list(category=category, annotator=annotator, assoc_project=assoc_project)
 
     return videos
 
@@ -492,12 +493,16 @@ def process_user_decision(request):
             return JsonResponse({'info': f"Rejected {file_name}"}) 
 
 def get_next_video(request):
+    is_admin = request.GET.get('is_admin')
+    
+    
     cur_user = request.user
     user_object = User.objects.get(username=cur_user )
     userreg_object = Userreg.objects.get(user=user_object)
     assoc_project = userreg_object.project
     if request.method == 'GET':
         if request.GET.get('category'):
+            
             cluster_keywords = request.GET.get('category')
             assoc_category = Category.objects.get(cluster_keywords=cluster_keywords, project=assoc_project)
             next_video = assoc_category.video_categories.filter(status__isnull=True).order_by('-video_similarity_score').first()
@@ -506,26 +511,38 @@ def get_next_video(request):
             context = {"serialized_next_video": serialized_next_video}
             context = JsonResponse(context)
         else:
+            # print("is_admin!!", is_admin, file_name)
             file_name = request.GET.get('file_name')
-            print("file_name", file_name)
             appr_rej = request.GET.get('appr_rej')
-            check_user_decision(file_name, cur_user, appr_rej, assoc_project)
+            
+            check_user_decision(file_name, cur_user, appr_rej, assoc_project, is_admin)
             assoc_video = get_object_or_404(Videos, file_name=file_name, project=assoc_project)
             assoc_category = assoc_video.category
-        
-            next_video = assoc_category.video_categories.filter(status__isnull=True).order_by('-video_similarity_score').first()
+
+            if is_admin:
+                next_video = assoc_category.video_categories.filter(status=True, admin_approve=False).order_by('id').first()
+            else:
+                next_video = assoc_category.video_categories.filter(status__isnull=True).order_by('-video_similarity_score').first()
             
             serialized_next_video = serialize_videos([next_video])
             serialized_next_video = json.loads(serialized_next_video)
-            
+            annotator = assoc_video.checked_by
+        
             rem_total_per_category = get_rem_total_per_category(assoc_category)
 
-            user_all_processed = get_user_all_processed(cur_user)
+            if is_admin:
+                user_all_processed = get_user_all_processed(annotator, is_admin=is_admin, category=assoc_category)
 
+            else:
+                user_all_processed = get_user_all_processed(cur_user)
+            print("user_all_processed", user_all_processed)
+            
             context = {"serialized_next_video": serialized_next_video,
                     "rem_total_per_category": rem_total_per_category,
                     "user_all_processed": user_all_processed}
             # # context = {"rem_total_per_category":rem_total_per_category}
+
+            
             context = JsonResponse(context)
         # context = HttpResponse(context, content_type='application/json')
         

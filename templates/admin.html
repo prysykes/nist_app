@@ -49,6 +49,11 @@
         <div>hana</div>
         <div>hagi</div> -->
         {% for user, categories in users_processed_videos.items %}
+        {%if forloop.first %}
+        <span id="project_type" class="display-none">{{user.userreg.project.project_type}}</span>
+        {% endif %}
+        
+      
             
             <div  class="video_categories"> 
                 <div style="text-align: center; margin: auto;" class="process_all_videos display-none">
@@ -71,20 +76,37 @@
         {% endfor %}
     </div>
     <div id="video_inspection" class="display-none">
-        <div class="row-align_base">
-            <div id="video_list_admin">
-                <h2> Video List </h2>
+        <div id="video_list_admin">
+            <h2> Video List </h2>
+            
+        </div>
+        <div id="admin-video-preview">
+
+            <h4 style="text-align: center;" id="video_name"></h4>
+            <h4 style="text-align: center;" id="video_keywords"></h4>
+            <div  id="vid_preview">
+                <form id="form-csrf-token" action="" method="post">{% csrf_token %}</form>
+                <h3 style="text-align: center; margin-top: 10px;" id="video-qa-h3" ></h3>
+                <div id="job-preview">
+                    <div id="vid_tag">
+                        
+                    </div>
+                    <div id="question_tag">
+                        
+                    
+                    </div>
+                </div>
+                <div id="edit-reponse" style="text-align: center;">
+
+                </div>
+    
+                <div id="action-control">
+                    
+                </div>
+
                 
-            </div>
-
-            <div id="video_preview_admin">
-                <h2> Video Preview </h2>
-                <div style="display: flex; justify-content: center;" id="video_player_admin">
-
-                </div>
-                <div id="app_rej_btn_admin">
-
-                </div>
+                
+                
             </div>
         </div>
     </div>

@@ -246,7 +246,7 @@ def display_categories(request=None):
     return categories
 
 
-def  get_video_list(term=None, category=None, cluster_group=None, annotator=None, assoc_project=None):
+def  get_video_list(term=None, category=None, cluster_group=None, annotator=None, assoc_project=None, is_admin=None):
     from django.db.models import Case, When, Value, BooleanField
     #  videos = get_video_list(term=None, category=category, cluster_group=cluster_group)
     # print("term", term, "group", group)
@@ -255,7 +255,7 @@ def  get_video_list(term=None, category=None, cluster_group=None, annotator=None
         assoc_category = assoc_video.category
         cluster_keywords = assoc_category.cluster_keywords
         assoc_group = assoc_category.group
-        print("assoc_video", assoc_video, "assoc_category", assoc_category, "assoc_group", assoc_group, "cluster_keywords", cluster_keywords)
+        # print("assoc_video", assoc_video, "assoc_category", assoc_category, "assoc_group", assoc_group, "cluster_keywords", cluster_keywords)
         
         # cur_category = Category.objects.get(cluster_keywords=cluster_keywords, group=assoc_group)
         videos = Videos.objects.filter(category=assoc_category, project=assoc_project)
@@ -272,20 +272,13 @@ def  get_video_list(term=None, category=None, cluster_group=None, annotator=None
             )
         ).order_by('-checked', 'id')
     else:
-        # select all videos that as approved = True and belongs 
-        # to the request.user
+        print("admin admin")
         cluster_keywords = category.strip()
         assoc_category = get_object_or_404(Category, cluster_keywords=cluster_keywords, project=assoc_project)
         annotator = get_object_or_404(User, username=annotator)
         # print("no", annotator, assoc_category.group)
-        videos = Videos.objects.filter(category=assoc_category, checked_by__username=annotator, status=True)
-        
+        videos = Videos.objects.filter(category=assoc_category, checked_by__username=annotator, status=True).order_by('id')
 
-
-    # print('videos', videos)
-    # print('cur_cat', cur_category)
-    # for video in videos:
-    #         print("yipee", video.checked_by, video.status)
     qs = videos
     # print('a qs', qs)
     videos = serialize('json', qs, fields=('file_name', 'video', 'checked_by', 'status', 'keywords'))
@@ -322,12 +315,19 @@ def get_rem_total_per_category(category):
     # context = {"rem_total_per_category": rem_total_per_category}
     return rem_total_per_category
 
-def get_user_all_processed(user):
-    user_processed = len(get_list_or_404(Videos, checked_by=user))
-  
-    all_processed = len(get_list_or_404(Videos, checked_by__isnull=False))
-    context = (user_processed, all_processed)
- 
+def get_user_all_processed(user, is_admin=None, category=None):
+
+    if is_admin:
+        user_processed = len(get_list_or_404(Videos, category=category, checked_by=user, status=True))
+    
+        all_processed = len(get_list_or_404(Videos, checked_by__isnull=False))
+        context = (user_processed, all_processed)
+    else:
+        user_processed = len(get_list_or_404(Videos, checked_by=user))
+    
+        all_processed = len(get_list_or_404(Videos, checked_by__isnull=False))
+        context = (user_processed, all_processed)
+    print("all_processed", all_processed)
     return context
 
 def move_selected_videos(destination_dir, source_dir, finished_jobs_csv):
@@ -352,19 +352,32 @@ def move_selected_videos(destination_dir, source_dir, finished_jobs_csv):
     shutil.make_archive(os.path.join(finished_jobs_dir, zip_file_name), 'zip', destination_dir)
     return f"{zip_file_name}.zip"
 
-def check_user_decision(file_name, cur_user, appr_or_rej=None, assoc_project=None):
-    # print('appr_or_rej', appr_or_rej, appr_or_rej=='approve')
+def check_user_decision(file_name, cur_user, appr_or_rej=None, assoc_project=None, is_admin=None):
+   
     video = get_object_or_404(Videos, file_name=file_name, project=assoc_project)
-    # print(video)
+    # print("is_admin", is_admin, "file_name", file_name, "assoc_project",  assoc_project, "appr_or_rej", appr_or_rej)
     
     if appr_or_rej == 'approve':
-        video.checked_by = cur_user
-        video.status = True
-        video.save()
+        if is_admin:
+            # no need to change the user
+            video.status = True
+            video.admin_approve = True
+            video.save()
+            
+        else:
+            
+            video.checked_by = cur_user
+            video.status = True
+            video.save()
     elif appr_or_rej == 'reject':
-        video.checked_by = cur_user
-        video.status = False
-        video.save()
+        if is_admin:
+            video.status = False
+            video.admin_approve = False
+            video.save()
+        else:
+            video.checked_by = cur_user
+            video.status = False
+            video.save()
 
 def get_rem_and_total(category, cur_user):
     # Category.objects.all().filter(category=category)

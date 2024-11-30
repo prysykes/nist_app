@@ -206,9 +206,13 @@ Admin Page styles Begins
     font-size: medium;
     background-color: rgb(244, 244, 249);
     padding: 8px;
-    margin-right: 2px;
+    text-align: center;
+    margin: auto;
     border-radius: 10px;
+    width: 30%;
     cursor: pointer;
+    font-size: x-large;
+    font-weight: 700;
     color: rgb(115, 0, 0);
 }
 
