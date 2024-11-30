@@ -35,10 +35,10 @@
                             
                             {% if request.user.is_authenticated and request.user|has_group:"admin" %}
                                 <div> <button  class="nist-button" id="upload_videos"> click to upload videos </button></div>
-                                <div style="font-weight: 800;"> Processed by All - <i id="processed_by_all" style="color: darkred;">{{all_processed_videos}}/{{total_videos}}</i> </div>
+                                <div style="font-weight: 800;"> Processed by All - <i id="processed_by_all_div" style="color: darkred;">{{all_processed_videos}}/{{total_videos}}</i> </div>
                             {% else %}
-                                <div style="font-weight: 800;"> Processed by All - <i id="processed_by_all" style="color: darkred;" class="">{{percentage_process_all_vids}}/{{total_videos}}</i>  </div>
-                                <div style="font-weight: 800;"> Proccessed by User - <i id="processed_by_user"  style="color: darkred;">{{user_processed_videos}}/{{total_user_assigned_vids}}</i> </div>
+                                <div style="font-weight: 800;"> Processed by All - <i id="processed_by_all_div" style="color: darkred;" class="">{{percentage_process_all_vids}}/{{total_videos}}</i>  </div>
+                                <div style="font-weight: 800;"> Proccessed by User - <i id="processed_by_user_div"  style="color: darkred;">{{user_processed_videos}}/{{total_user_assigned_vids}}</i> </div>
                             {% endif %}
                         {% else %}
                             <p id="tm-login"> login - to use the application</p>
@@ -223,6 +223,9 @@
                                             
                                         
                                         </div>
+                                    </div>
+                                    <div id="edit-reponse" style="text-align: center;">
+
                                     </div>
                                     <div id="action-control">
                                         

@@ -4,14 +4,16 @@ var show_job_summary = document.querySelector('#show_job_summary')
 var export_all_videos = document.querySelector('#export-all-videos')
 var per_cluster_approve = document.querySelectorAll('.per-cluster-approve')
 
-import {create_apr_rej} from './main.js'
+import {create_apr_rej, allow_edit_and_show_qa, create_vidname_category_spans,
+    create_video_tag, prepare_quest_answer_resp, create_edit_btn, create_qa_btn_controls,
+   create_video_QA_form} from './main.js'
 
-// console.log(typeof create_apr_rej);
 
 
 let iJobSummaryShowing = false
 const root_url = window.location.origin
 const VIDEO_TYPE_ = "video/webm"
+const base_vid_src = "media/"
 
 function handle_export_all_videos(){
     let annotator_usernames = document.querySelectorAll('.tm-users')
@@ -205,33 +207,6 @@ function populate_and_show_annotation_stats(data){
         
     })
 
-    // let endpoint = `${root_url}/export_job`
-    // let response = fetch(endpoint, {
-    //     method: 'GET'
-    // })
-    // .then(response => response.json())
-    // .then((data)=> {
-    //     data.forEach((data)=>{
-            
-    //         let tr_elem = document.createElement('tr')
-    //         for (const [key, value] of Object.entries(data)){
-                
-    //             let td_elem = document.createElement('td')
-    //             if (key == "user"){
-    //                 td_elem.classList.add("tm-users")
-                    
-    //             }
-    //             td_elem.innerText = value
-    //             tr_elem.appendChild(td_elem)
-                
-    //         }
-    //         tbody.appendChild(tr_elem)
-            
-         
-            
-    //     })
-        
-    // })
 }
     
 
@@ -310,13 +285,7 @@ per_cluster_approve.forEach((cat_elem)=>{
             cat_elem.innerText = "approve"
             cat_elem.classList.remove('cat-approve-status-true')
             cat_elem.classList.add("cat-approve-status-false")
-            // console.log("<<", endpoint);
-
-            // endpoint = endpoint + "&status=rejected"
             
-            // let message = "Do wish to cancel approval?"
-            // let callback = approve_single_cluster
-            // custom_confirm({message: message, callback: callback, endpoint:endpoint, cat_elem:cat_elem})
             
         }
         
@@ -374,10 +343,7 @@ function replace_category_appr_rej(text_to_replace, assoc_class, cat_elem){
 
 // {endpoint:endpoint, category_list_ul:category_list_ul}
 function approve_all_videos({endpoint=endpoint,category_list_ul=category_list_ul}){
-    // approves or rejcts all the videos and changes the class of
-    // each category list
-    // console.log("endpoint", endpoint);
-    // console.log("category_list_ul", category_list_ul);
+   
     let all_cluster_keyword_li = category_list_ul.querySelectorAll('li')
     let response_data = null;
     // replace cluster keyword spans based on user selection
@@ -421,41 +387,7 @@ function approve_all_videos({endpoint=endpoint,category_list_ul=category_list_ul
         
     })
 
-    // return response_data
     
-    // if (!approve_video_fetch_promise) {
-    //     approve_video_fetch_promise = fetch(endpoint, {
-    //         method: 'GET'
-    //     })
-    //     .then(approve_video_fetch_promise => approve_video_fetch_promise.json())
-    //     .then((data)=>{
-    //         // console.log(data);
-
-    //     })
-    // }
-    // // console.log("approve_all_videos_btn", approve_all_videos_btn);
-    // if (!caller){
-    //     // console.log("inner_text", inner_text, approve_all_videos_btn);
-
-        
-    //     approve_all_videos_btn.innerText = inner_text
-
-    //     approve_all_videos_btn.classList = "cat-approve-status-true display-none"
-    // }
-
-    // if (endpoint.includes('approved')){
-    //     let text_to_replace = "approved"
-    //     let assoc_class = "cat-approve-status-true per-cluster-approve"
-    //     replace_category_appr_rej(text_to_replace, assoc_class, cat_elem)
-    //     // console.log("just approved", cat_elem);
-        
-    // }else{
-    //     let text_to_replace = "approve cluster"
-    //     let assoc_class = "cat-approve-status-false per-cluster-approve"
-    //     console.log("just rejected", cat_elem);
-    //     replace_category_appr_rej(text_to_replace, assoc_class, cat_elem)
-        
-    // }
     
     
 }
@@ -468,47 +400,7 @@ video_categories.forEach((cat_elem)=>{
     let approve_all_videos_btn = process_all_videos_div.querySelector('#approve_all_videos')
     let reject_all_videos_btn = process_all_videos_div.querySelector('#reject_all_videos')
     
-    // let h3_span_innerText = h3_span.innerText
-        // let already_approved = h3_span_innerText == "Approved" ? true : false
-        
-        // let child_node = cat_elem.childNodes
-        // let cur_h3 = child_node[1]
-        // let annotator = cur_h3.innerText.split(' - ')[1].split(' ')[0]
-        
-        // let approve_all_videos_btn = cur_h3.childNodes[1]
-        // let approve_all_videos_btn_innerText = approve_all_videos_btn.innerText 
-        // if (!already_approved){
-        //     let full_load = prepare_full_load_admin(annotator, approve_all_videos_btn)
-                
-        //     let status = "approved"
-        //     let inner_text = "Approved"
-            
-        //     let endpoint = `${root_url}/admin_approve?user_catergories=${full_load}&status=${status}`
-        //     let kwargs = {approve_video_fetch_promise:approve_video_fetch_promise, endpoint:endpoint, approve_all_videos_btn:approve_all_videos_btn, inner_text:inner_text, cat_elem:cat_elem}
-
-        //     approve_all_videos(kwargs)
-            
-            
-        // }
-        // else{
-        //     let status = "rejected"
-        //     let inner_text = "Approve all Videos"
-        //     let message = "Do you want you reject all approved clusters"
-        //     let full_load = prepare_full_load_admin(annotator, approve_all_videos_btn)
-        //     let endpoint = `${root_url}/admin_approve?user_catergories=${full_load}&status=${status}`
-        //     let caller = "reject-all"
-            
-        //     let callback = approve_all_videos
-        //     let kwargs = {message:message, callback:callback, endpoint:endpoint, cat_elem:cat_elem, approve_video_fetch_promise:approve_video_fetch_promise, inner_text:inner_text, caller:caller}
-        //     // console.log("approve_all_videos_btn >>", approve_all_videos_btn);
-            
-        //     // approve_all_videos(approve_video_fetch_promise, endpoint, approve_all_videos_btn, inner_text)
-        //    custom_confirm(kwargs)
-        //     // console.log("Approved, run reject cycle");
-        // }
-        
-         
-        // let already_approved = 
+    
     approve_all_videos_btn.addEventListener('click', ()=>{
         let vid_categories = approve_all_videos_btn.parentElement.parentElement
         let annotator = vid_categories.querySelector('h3').innerText.split('-')[1]
@@ -520,13 +412,7 @@ video_categories.forEach((cat_elem)=>{
         let endpoint = `${root_url}/admin_approve?user_catergories=${full_load}&status=${status}`
         let kwargs = {endpoint:endpoint, category_list_ul:category_list_ul}
         approve_all_videos(kwargs)
-        // console.log("<< data", data);
-        
-        // populate_and_show_annotation_stats(annotation_stats, data)
-        // annotation_stats.classList.toggle('display-none')
-        // console.log("full_load", full_load);
-        
-        
+ 
         
     })
 
@@ -581,10 +467,53 @@ function create_video_element(){
     return video
 }
 
-function create_ul_elements_with_videos(data){
+function preview_video_admin({file_name=null, cluster_keywords=null, video_url=null, 
+                                checked_by=null, question_tag=null, project_type=null}){
+
+
+    const[span_heading, br_elem, span_category] = create_vidname_category_spans(cluster_keywords)
+    let vid_tag = document.getElementById('vid_tag')
+    let video_name = document.querySelector('#video_name')
+
+    video_name.innerHTML = ""
+    vid_tag.innerHTML = ""
+
+    const video = create_video_tag()
+    video.src =  base_vid_src+video_url
+    vid_tag.appendChild(video)
+
+    span_heading.textContent = file_name
+    video_name.appendChild(span_heading)
+    video_name.appendChild(br_elem)
+    video_name.appendChild(span_category)
+
+    let keyword_tag = document.getElementById('video_keywords')
+
+    if (checked_by){
+        var question_tag = document.querySelector('#question_tag')
+        allow_edit_and_show_qa({checked_by:checked_by, project_type:project_type, 
+            file_name:file_name, cluster_keywords:cluster_keywords, question_tag:question_tag})
+        
+    }
+   
+    
+
+}
+
+function remove_active_marks(parent_elem){
+    let child_nodes = parent_elem.childNodes
+
+    child_nodes.forEach((node)=>{
+        node.classList.remove('active')
+    })
+
+}
+function create_ul_elements_with_videos({data=null, cluster_keywords=null, project_type=null}){
     // console.log("response_data", response_data);
     // check if the ul element is already create, else create it
     let ul_elem = document.getElementById('admin_video_ul')
+    let video_list_admin = document.querySelector('#video_list_admin')
+    
 
     if (ul_elem == null) {
         ul_elem = document.createElement('ul')
@@ -592,50 +521,58 @@ function create_ul_elements_with_videos(data){
     }else{
         ul_elem.innerHTML = ""
     }
-        
+
+
+    
+
+    let count = 0
     for (const [key, value] of Object.entries(data)){
         let file_name = value['fields']['file_name']
         let keywords = value['fields']['keywords']
-        let video = value['fields']['video']
-        // console.log(file_name, keywords, video);
+        let video_url = value['fields']['video']
+        let checked_by = value['fields']['checked_by']
         let li_elem = document.createElement('li')
-        let span_elem = document.createElement('span')
-        span_elem.innerText = video
-        span_elem.id = file_name
-        span_elem.classList.add('display-none')  
+        li_elem.id = `${file_name}`
         li_elem.innerText = file_name  
-        li_elem.appendChild(span_elem)
+
+        let target_elem = li_elem
+        if (count==0){
+            target_elem = li_elem
+            remove_active_marks(ul_elem)
+            
+            preview_video_admin({file_name:file_name, cluster_keywords:cluster_keywords, video_url:video_url, 
+                checked_by:checked_by, question_tag:question_tag, project_type:project_type})
+            target_elem.classList = 'active'
+        }
         
         li_elem.addEventListener('click', (e) => { 
+            remove_active_marks(ul_elem)
             
-            let target_element = e.target
             
-            let cur_span_elem = target_element.childNodes[1]
-            let video_preview_admin = document.getElementById('video_preview_admin')
-            let video_player = document.getElementById('video_player_admin')
-            let app_rej_btn_admin = document.getElementById('app_rej_btn_admin')
-            app_rej_btn_admin.innerHTML = ""
-            video_player.innerHTML = ""
-
-            let video_url = cur_span_elem.innerText
-            let full_video_url = "media"+"/"+video_url
-            let video_tag = create_video_element()
-
-            video_tag.src = full_video_url 
-            video_player.appendChild(video_tag)
-            let apr_rej_btn = create_apr_rej()
-            app_rej_btn_admin.appendChild(apr_rej_btn)
-            // console.log("video_url", video_url, 'video_preview_admin', video_preview_admin);
+            preview_video_admin({file_name:file_name, cluster_keywords:cluster_keywords, video_url:video_url, 
+                checked_by:checked_by, question_tag:question_tag, project_type:project_type})
+            let target_elem = e.target
+            target_elem.classList = 'active'
+           
+            
             
         })
 
         ul_elem.appendChild(li_elem)
+
+        count = count+1
+        
     }
+    
     return ul_elem
 }
 
 user_processed_categories.forEach((category)=>{
+    let project_type = document.querySelector('#project_type').innerText.trim()
     category.addEventListener('click', (e) => {
+        // let admin_video_preview = document.querySelector('#admin-video-preview')
+        //     admin_video_preview.innerHTML = ""
+        let cluster_keywords = category.innerText.trim()
         user_processed_categories.forEach((cat)=> {
             cat.classList.remove('active')
         })
@@ -646,28 +583,45 @@ user_processed_categories.forEach((category)=>{
         if (video_inspection.classList.contains('display-none')){
           
             video_inspection.classList.remove('display-none')
+            video_inspection.classList.add('row-align_base')     
             
         }else{
+
         }
-        // let category_text_value = li_ele.innerText.trim().split(" ")[0]
-        let cluster_keywords = category.innerText.trim()
         
-        // select h3 element that holds the user name
+        // select h3 element that holds the annotator's name
         let h3_elem_text = category.parentElement.parentElement.parentElement.childNodes[3].innerText
-        console.log("h3_elem_text ", h3_elem_text );
+
         
         let annotator = h3_elem_text.trim().split(' - ')[1].split(" ")[0]
         
-        let get_category_endpoint = `${root_url}/display_videos?category=${cluster_keywords}&annotator=${annotator}`
+        let isAdmin = null
+        let admin_project_type_span = document.getElementById('project_type')
+        
+        if (admin_project_type_span){
+            isAdmin = true
+            var get_category_endpoint = `${root_url}/display_videos?category=${cluster_keywords}&annotator=${annotator}&project_type=${project_type}&is_admin=${isAdmin}`
+            
+            
+        }else{
+            var get_category_endpoint = `${root_url}/display_videos?category=${cluster_keywords}&annotator=${annotator}&project_type=${project_type}`
+        }
+    
+        
+        
         let response = fetch(get_category_endpoint, {
             method: 'GET'
         })
         .then(response => response.json())
         .then((data)=>{
+            
+            
             let video_list_admin = document.querySelector('#video_list_admin')
 
-            let ul_elem = create_ul_elements_with_videos(data)
+            let ul_elem = create_ul_elements_with_videos({data:data, cluster_keywords:cluster_keywords, project_type:project_type})
             video_list_admin.appendChild(ul_elem)
+
+            
             
         })
     })

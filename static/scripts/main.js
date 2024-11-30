@@ -226,6 +226,8 @@ function prepare_quest_answer_resp(quest_ans_data){
 }
 
 function create_vidlist_disp_span(file_name, checked_by, status, video_url, video_similarity_score, keywords, assoc_category, project_type){
+    
+    
     // add video similarity confidence here.
     
     
@@ -260,6 +262,7 @@ function create_vidlist_disp_span(file_name, checked_by, status, video_url, vide
 
         
         const[span_heading, br_elem, span_category] = create_vidname_category_spans(assoc_category)
+        
         let vid_preview = document.getElementById('vid_preview')
         let vid_tag = document.getElementById('vid_tag')
         let video_name = document.querySelector('#video_name')
@@ -269,11 +272,7 @@ function create_vidlist_disp_span(file_name, checked_by, status, video_url, vide
         const video = create_video_tag()
         video.src =  base_vid_src+video_url
         vid_tag.appendChild(video)
-        // console.log("cur_span.textContent", cur_span.textContent );
-        // console.log("file_name", file_name);
-        
-        
- 
+
         span_heading.textContent = file_name
         video_name.appendChild(span_heading)
         video_name.appendChild(br_elem)
@@ -281,61 +280,73 @@ function create_vidlist_disp_span(file_name, checked_by, status, video_url, vide
         let keyword_tag = document.getElementById('video_keywords')
         
         keyword_tag.textContent = `Video Keywords: ${keywords}`
-        console.log("project_type", project_type);
+        
 
         var question_tag = document.querySelector('#question_tag')
+        let cluster_keywords = document.querySelector('#cat_name')
+        cluster_keywords = cluster_keywords.textContent.split('|')[0].trim()
+        
         // checks if the video has been approved or rejected
         const conditions = [`${file_name}done`, 'done', `${file_name}close`, 'close']
-        if (conditions.includes(cur_span.textContent)){
-            let cluster_keywords = document.querySelector('#cat_name')
-            cluster_keywords = cluster_keywords.textContent.split('|')[0].trim()
-            console.log("filename", file_name, "cluster_keywords", cluster_keywords);
-            // base_url+`/get_next_video?file_name=${file_name}&appr_rej=${appr_rej}`
-            let endpoint = `${base_url}/retrieve_video_qa?file_name=${file_name}&cluster_keywords=${cluster_keywords}`
-            
-       
-
-            const response = fetch(endpoint, {
-                method: 'GET'
-            }).then(response => response.json())
-            .then((data)=>{
-                let quest_ans_data = data['data']
-                question_tag.innerHTML = ""
-                let question_and_answers = prepare_quest_answer_resp(quest_ans_data)
-                question_tag.appendChild(question_and_answers)
-                
-                
-            })
-            
-            let edit_btn_div = create_edit_btn({project_type:project_type})
-            let action_control = document.querySelector('#action-control')
-            action_control.innerHTML = ""
-            action_control.appendChild(edit_btn_div)
-        }
-        else if(project_type="image_qa"){
-            
-            let action_control = document.querySelector('#action-control')
-            action_control.innerHTML = ""
-            
-            let action_div = create_qa_btn_controls()
-            action_control.appendChild(action_div)
-            
-            
-            question_tag.innerHTML = ""
-            
-            let form = create_video_QA_form()
-            question_tag.append(form)
-            
-        }else{
-            console.log("annotation pipeline no need for QandA");
-            
-        }
+        allow_edit_and_show_qa({checked_by:checked_by, project_type:project_type, 
+            file_name:file_name, cluster_keywords:cluster_keywords, question_tag:question_tag})
+        
     })
 
     return span
 
 }
 
+function allow_edit_and_show_qa({checked_by=null, project_type=null, 
+                                    file_name=null, cluster_keywords=null, question_tag=null}){
+    if (checked_by){
+        if (project_type == "image_qa"){
+        
+        // console.log("filename", file_name, "cluster_keywords", cluster_keywords);
+        // base_url+`/get_next_video?file_name=${file_name}&appr_rej=${appr_rej}`
+        let endpoint = `${base_url}/retrieve_video_qa?file_name=${file_name}&cluster_keywords=${cluster_keywords}`
+        
+   
+
+        const response = fetch(endpoint, {
+            method: 'GET'
+        }).then(response => response.json())
+        .then((data)=>{
+            let quest_ans_data = data['data']
+            question_tag.innerHTML = ""
+            let question_and_answers = prepare_quest_answer_resp(quest_ans_data)
+            question_tag.appendChild(question_and_answers)
+            
+            
+        })
+
+        
+    }
+        let edit_btn_div = create_edit_btn({file_name:file_name, cluster_keywords:cluster_keywords, project_type:project_type})
+        let edit_reponse_div = document.querySelector('#edit-reponse')
+        let action_control = document.querySelector('#action-control')
+        edit_reponse_div.innerHTML = ""
+        action_control.innerHTML = ""
+        edit_reponse_div.appendChild(edit_btn_div)
+    }
+    else {
+        // TODO: edit shows the question and ans in editable mode
+        let action_control = document.querySelector('#action-control')
+        action_control.innerHTML = ""
+        if(project_type == "image_qa"){
+            var action_div = create_qa_btn_controls()
+            question_tag.innerHTML = ""
+            let form = create_video_QA_form()
+            question_tag.append(form)
+        }
+        else if(project_type == "annotation"){
+            var action_div = create_apr_rej({file_name:file_name, cluster_keywords:cluster_keywords})
+            
+        }
+        action_control.appendChild(action_div)
+        
+    }
+}
 
 
 function fecth_all_videos_in_category(endpoint, assoc_category){
@@ -351,7 +362,6 @@ function fecth_all_videos_in_category(endpoint, assoc_category){
     })
     .then(response => response.json())
     .then((data)=>{
-        console.log("data>>", data);
         let serialized_videos = data['serialized_videos']
         var project_type = data['project_type']
         
@@ -468,28 +478,33 @@ function mark_good_bad(file_name, appr_rej) {
     return cur_span
 }
 
-function replace_rem_total_per_category(unprocessed_vids, total_vids, html_node){
-    let text_content = html_node.textContent
+function replace_rem_total_per_category({unprocessed_vids=null, total_vids=null, html_node_vid_list=null}){
+    let vid_list_div = document.querySelector('#cat_name')
+    console.log("vid_list_div!!", vid_list_div);
+    let text_content = vid_list_div.textContent
     let cluster_keywords = text_content.split('|')[0]
     let rem_total = `|${unprocessed_vids}/${total_vids}`
     let new_text_content = cluster_keywords+rem_total
-    html_node.textContent = new_text_content
+    vid_list_div.textContent = new_text_content
     
 }
 
-function replace_processed_by_all_and_user(user_processed, all_processed, html_node_user, html_node_all, is_admin){
-    if (is_admin){
-
+function replace_processed_by_all_and_user({user_processed=null, all_processed=null, processed_by_user_div=null, processed_by_all_div=null, isAdmin=null, html_node_user=null}){
+    if (isAdmin){
+        let total_videos = processed_by_all_div.innerText.split('/').at(1)
+        let new_text_content_all = `${all_processed}/${total_videos}`
+        processed_by_all_div.innerText = new_text_content_all
+        
     }else{
-        let text_content_user_node = html_node_user.textContent
+        let text_content_user_node = processed_by_user_div.textContent
         let total_vids_category = text_content_user_node.split('/')[1]
         let new_text_content_user_node = user_processed+"/"+total_vids_category
-        html_node_user.textContent = new_text_content_user_node
+        processed_by_user_div.textContent = new_text_content_user_node
 
-        let text_content_all = html_node_all.textContent
+        let text_content_all = processed_by_all_div.textContent
         let total_vids = text_content_all.split('/')[1]
         let new_text_content_all = all_processed+"/"+total_vids
-        html_node_all.textContent = new_text_content_all   
+        processed_by_all_div.textContent = new_text_content_all   
     }
 
 }
@@ -555,6 +570,9 @@ function create_form_elements({elem_name=null, elem_id=null, elem_inner_text=nul
         submit_elem.addEventListener('click', (e)=>{
             e.preventDefault()
             submit_video_qa_form()
+            let file_name = document.querySelector('#video_name_value').textContent
+            let cluster_keyword = document.querySelector('#cat_name').innerText.split('|').at(0).trim()
+            // get_next_video({file_name: file_name, assoc_category: assoc_category, appr_rej: 'approve'})
         })
         
         submit_elem_div.appendChild(submit_elem)
@@ -624,7 +642,7 @@ function create_video_QA_form(){
 
 }
 
-function show_video_in_preview({is_admin_=false, prev_file_name=null, assoc_category = null, data=null, appr_rej=null, caller='', project_type=null}){
+function show_video_in_preview({prev_file_name=null, assoc_category = null, data=null, appr_rej=null, caller='', project_type=null, isAdmin=null}){
     // console.log("logic for showing video in vid tag");
     
     const[span_heading, br_elem, span_category] = create_vidname_category_spans(assoc_category)
@@ -635,12 +653,15 @@ function show_video_in_preview({is_admin_=false, prev_file_name=null, assoc_cate
     vid_tag.innerHTML = ""
 
     let next_video = data["serialized_next_video"][0]
+   
+    
 
     let video_fields = next_video['fields']
     let file_name = video_fields['file_name']
     let video_url = video_fields['video'] 
     let vid_keywords = video_fields['keywords']
     let keyword_tag = document.getElementById('video_keywords')
+    
     keyword_tag.textContent = `Video Keywords: ${vid_keywords}`
 
     span_heading.textContent = file_name
@@ -663,7 +684,8 @@ function show_video_in_preview({is_admin_=false, prev_file_name=null, assoc_cate
     
     }
     else{
-        var action_div = create_apr_rej(file_name, assoc_category, project_type) 
+        let kwargs = {file_name:file_name, assoc_category:assoc_category, project_type:project_type}
+        var action_div = create_apr_rej(kwargs) 
        
     }
     // let vid_preview_childnodes = vid_preview.childNodes
@@ -674,74 +696,131 @@ function show_video_in_preview({is_admin_=false, prev_file_name=null, assoc_cate
     action_control.innerHTML = ""
     action_control.appendChild(action_div)
 
-
+ 
+    
 
     if (caller=='appr_rej'){
-        mark_good_bad(prev_file_name, appr_rej)
+        
         let rem_total_per_category = data["rem_total_per_category"]
         let user_all_processed = data["user_all_processed"]
-        let unprocessed_vids = rem_total_per_category[0]
-        let total_vids = rem_total_per_category[1]
-        let html_node_vid_list = document.getElementById('cat_name')
-        return [is_admin_, file_name, unprocessed_vids, total_vids, html_node_vid_list, user_all_processed]
+        if (!isAdmin){
+            // admin page not not mark span as resolved
+            mark_good_bad(prev_file_name, appr_rej)
+
+            
+            
+            let unprocessed_vids = rem_total_per_category[0]
+            let total_vids = rem_total_per_category[1]
+            let html_node_vid_list = document.getElementById('cat_name')
+            
+                
+            var payload = [file_name, unprocessed_vids, total_vids, html_node_vid_list, user_all_processed]
+            
+            
+        }
+        else{
+            var payload = [rem_total_per_category, user_all_processed]
+        }
+
+        
+        return payload
     }
+    
     
    return file_name 
 }
 
 
-function get_next_video_appr_rej({file_name=null, assoc_category=null, appr_rej=null, add_active_to_span=null, project_type=null}){
+function get_next_video_appr_rej({file_name=null, assoc_category=null, appr_rej=null, add_active_to_span=null, project_type=null, isAdmin=null}){
     // console.log("project_type!!!", project_type);
-    
+
+  
     var prev_file_name = file_name
-    let get_next_video_endpoint = base_url+`/get_next_video?file_name=${file_name}&appr_rej=${appr_rej}`
+    if (isAdmin){
+        console.log("isAdmin", isAdmin, "appr_rej", appr_rej);
+        var get_next_video_endpoint = base_url+`/get_next_video?file_name=${file_name}&appr_rej=${appr_rej}&is_admin=${isAdmin}`
+    }
+    else{
+        
+        var get_next_video_endpoint = base_url+`/get_next_video?file_name=${file_name}&appr_rej=${appr_rej}`
+    }
+    
     // get_next_video_endpoint = get_next_video_endpoint+file_name
     return fetch(get_next_video_endpoint, {
         method: 'GET'
     })
     .then(response => response.json())
     .then((data)=>{
-        
-        let is_admin_ = false
-        const[is_admin, file_name_, unprocessed_vids, total_vids, html_node_vid_list, user_all_processed] = show_video_in_preview({is_admin:is_admin_, prev_file_name:prev_file_name,  assoc_category:assoc_category, data:data, appr_rej:appr_rej, caller:'appr_rej'})
-        
 
-        // replace the progress  span on video_list_disp div
-        replace_rem_total_per_category(unprocessed_vids, total_vids , html_node_vid_list)
+        
+        
+        if (!isAdmin){
+            console.log("not admin data", data);
+            const[file_name_, unprocessed_vids, total_vids, html_node_vid_list, user_all_processed] = show_video_in_preview({prev_file_name:prev_file_name,  assoc_category:assoc_category, data:data, appr_rej:appr_rej, caller:'appr_rej', isAdmin:isAdmin})
+            
+            let all_processed = user_all_processed[1]
+            let user_processed = user_all_processed[0]
+            
+            
+            // replace the progress  span on video_list_disp div
+            let processed_by_user_div = document.getElementById('processed_by_user_div')
+            let processed_by_all_div = document.getElementById('processed_by_all_div')
+               
+        replace_rem_total_per_category({unprocessed_vids:unprocessed_vids, total_vids:total_vids})
         let html_node_category = document.getElementsByClassName('cat_headings active')[0]
-        replace_rem_total_per_category(unprocessed_vids, total_vids , html_node_category)
+        // {user_processed=null, all_processed=null, 
+        //     processed_by_user_div=null, processed_by_all_div=null, 
+        //     isAdmin=null, html_node_user=null}
+        // replace_rem_total_per_category({user_processed:user_processed, all_processed:all_processed, processed_by_user_div:processed_by_user_div, processed_by_all_div:processed_by_all_div, html_node_category:html_node_category})
 
         // replace user_processed value and processed by all value
-        let user_processed = user_all_processed[0]
-        let all_processed = user_all_processed[1]
         
-        let processed_by_user = document.getElementById('processed_by_user')
-        let processed_by_all = document.getElementById('processed_by_all')
-        replace_processed_by_all_and_user(user_processed, all_processed, processed_by_user, processed_by_all, is_admin)
-
+        
+        
+        let kwargs = {user_processed:user_processed, all_processed:all_processed, processed_by_user_div:processed_by_user_div, processed_by_all_div:processed_by_all_div}
+        replace_processed_by_all_and_user(kwargs)
         add_active_to_span(file_name_)
+        }
+        else {
+            const[rem_total_per_category, user_all_processed] = show_video_in_preview({prev_file_name:prev_file_name,  assoc_category:assoc_category, data:data, appr_rej:appr_rej, caller:'appr_rej', isAdmin:isAdmin})
+            let all_processed = user_all_processed[1]
+            let user_processed = user_all_processed[0]
+            
+            let processed_by_all_div = document.getElementById('processed_by_all_div')
+            console.log("all_processed", all_processed);
+            
+            let kwargs = {all_processed:all_processed,  processed_by_all_div:processed_by_all_div, isAdmin:isAdmin}
+            replace_processed_by_all_and_user(kwargs)
+        }
+        
+
+        
     })
     
 }
 
- function get_next_video_defualt(assoc_category, add_active_to_span, project_type){
+function get_next_video_defualt({assoc_category:assoc_category, add_active_to_span:add_active_to_span, project_type:project_type, isAdmin:isAdmin}){
     /**
      * Returns the next video to be display on Video display div when explore is clicked
      * @param {assoc_category} - The category the current video belongs to.
      * @returns null
      */
+    if (isAdmin){
+        var get_next_video_endpoint = base_url+`/get_next_video?category=${assoc_category}&is_admin=${isAdmin}`
+    }else{
+        var get_next_video_endpoint = base_url+`/get_next_video?category=${assoc_category}`
+    }
     
-    let get_next_video_endpoint = base_url+`/get_next_video?category=${assoc_category}`
     
     let response = fetch(get_next_video_endpoint, {
         method: 'GET'
     })
     .then(response => response.json())
     .then((data)=>{
-        let is_admin_ = false
+       
         
         
-        let file_name_ = show_video_in_preview({is_admin:is_admin_, data:data,project_type:project_type})
+        let file_name_ = show_video_in_preview({data:data, project_type:project_type})
         add_active_to_span(file_name_,'default')
 
         
@@ -753,19 +832,27 @@ function get_next_video_appr_rej({file_name=null, assoc_category=null, appr_rej=
 function get_next_video({file_name=null, assoc_category=null, appr_rej=null, project_type=null}){
     // console.log('filename', file_name);
     // var prev_file_name = file_name
-    
+    let isAdmin = null
+    let admin_project_type_span = document.getElementById('project_type')
+    if (admin_project_type_span){
+        isAdmin = true
+        
+    }
     
     if (appr_rej){
         let kwargs = {file_name:file_name, assoc_category:assoc_category,
-             appr_rej:appr_rej, add_active_to_span:add_active_to_span, project_type:project_type}
+             appr_rej:appr_rej, add_active_to_span:add_active_to_span, project_type:project_type, isAdmin:isAdmin}
             //  console.log("!!..", project_type);
+    
+        
         
         let file_name_ = get_next_video_appr_rej(kwargs)
     }
     else{
+        
         // Get nexxt video when explore is clicked
         
-        let file_name_ = get_next_video_defualt(assoc_category, add_active_to_span, project_type)
+        let file_name_ = get_next_video_defualt({assoc_category:assoc_category, add_active_to_span:add_active_to_span, project_type:project_type, isAdmin:isAdmin})
        
         
     }
@@ -825,8 +912,8 @@ function create_qa_btn_controls(){
     
 }
 
-var create_apr_rej = function appr_rej(file_name, assoc_category){
-    
+var create_apr_rej = function appr_rej({file_name=null, assoc_category=null, caller=null, project_type=null}){
+     
     
     let div = document.createElement('div')
     div.id = 'apr_rej_btn_div'
@@ -839,10 +926,12 @@ var create_apr_rej = function appr_rej(file_name, assoc_category){
     approve_input.className = 'nist-button btn_apr_rej'
 
     approve_input.addEventListener('click', ()=>{
+        
+        
         try {
             let end_annotation = document.getElementById('end-annotation')
             let end_annotation_inner_text = end_annotation.innerText.trim()
-            if (end_annotation_inner_text == 'Restart Annotation' ){
+            if (end_annotation_inner_text == 'Restart Annotation' ){//user had already finished job so he must restart
                 const appr_rej = 'approve'
                 let end_annotation = document.getElementById('end-annotation')
                 // console.log('annotation_ended', end_annotation);
@@ -851,10 +940,12 @@ var create_apr_rej = function appr_rej(file_name, assoc_category){
                 // get_next_video_appr_rej(file_name, assoc_category, appr_rej, add_active_to_span)
                 customConfirm({message:message, target_elem:end_annotation, callback:handle_confirm_yes_or_no, appr_rej:appr_rej, file_name:file_name, assoc_category:assoc_category, callback2:add_active_to_span}) ;
             }else{
+                
                 get_next_video({file_name: file_name, assoc_category: assoc_category, appr_rej: 'approve'})
             }
         } catch (error){
             console.log(error);
+            
             get_next_video({file_name: file_name, assoc_category: assoc_category, appr_rej: 'approve'})
             
         }
@@ -899,12 +990,14 @@ var create_apr_rej = function appr_rej(file_name, assoc_category){
     return div
 }
 
-function create_edit_btn({project_type=null}){
+function create_edit_btn({file_name:file_name, cluster_keywords:cluster_keywords, project_type:project_type}){
 
+    let  app_rej_btn_div = create_apr_rej({file_name:file_name, cluster_keywords:cluster_keywords , caller:"appr_rej_admin"})
     
     let div = document.createElement('div')
     div.id = 'edit_res'
     div.style.textAlign = 'center'
+    
 
     let btn = document.createElement('input')
     btn.type = 'button'
@@ -919,18 +1012,16 @@ function create_edit_btn({project_type=null}){
             
         }
         else{
-            app_rej_btn_div = create_apr_rej()
-        let childnodes  = edit_div.childNodes
-        // check if appr or reject button has already been 
-        // added to edit response
-        
-        if (childnodes.length === 1){
-            edit_div.appendChild(app_rej_btn_div)
-        }else{
-            let apr_rej_btn_div = document.getElementById('apr_rej_btn_div')
-            edit_div.removeChild(apr_rej_btn_div)
-           
-        }
+
+            let action_control = document.querySelector('#action-control')
+            if (action_control.innerHTML == ""){
+                action_control.appendChild(app_rej_btn_div)
+            }else{
+                action_control.innerHTML = ""
+            }
+            // action_control.innerHTML = ""
+            
+
         }
         
         
@@ -942,4 +1033,6 @@ function create_edit_btn({project_type=null}){
 }
 
 
-export {create_apr_rej}
+export {create_apr_rej, create_vidname_category_spans,
+     create_video_tag, prepare_quest_answer_resp, create_edit_btn, create_qa_btn_controls,
+    create_video_QA_form, allow_edit_and_show_qa}
