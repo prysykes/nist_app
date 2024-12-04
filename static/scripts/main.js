@@ -1,3 +1,5 @@
+import {create_qa_btn_controls, create_video_QA_form} from './video_qa.js'
+
 let login = document.querySelector('#tm-login')
 let tm_login_form = document.querySelector('#tm_login_form')
 let btn_vid_upload = document.querySelector('#upload_videos')
@@ -42,10 +44,10 @@ if (login != null) {
         tm_login_form.classList.toggle('display-none');
     })
 }
-    
 
-if (end_annotation == null){
-    // checks if the displayed page is for annotator
+
+if ((end_annotation==null) && (login==null)){
+    // checks if you are in the admin page
     let btn_vid_upload = document.querySelector('#upload_videos')
     btn_vid_upload.addEventListener('click', ()=>{
         div_vid_upld.classList.toggle('display-none')
@@ -123,7 +125,7 @@ function customConfirm({message=null, target_elem=null, callback=null, appr_rej=
 
 }
 
-if (btn_vid_upload == null){
+if ((btn_vid_upload == null) && (login==null)){
     // checks if the displayed page is for admin
     // btn_vid_upload  is only in the admin page
     let end_annotation = document.querySelector('#end-annotation')
@@ -238,6 +240,8 @@ function create_vidlist_disp_span(file_name, checked_by, status, video_url, vide
     let span = document.createElement('span')
     span.id = "li_"+file_name
     span.textContent = file_name
+    
+    
     if (checked_by != null && status==true){
         span.appendChild(inline_good)
     }
@@ -332,6 +336,8 @@ function allow_edit_and_show_qa({checked_by=null, project_type=null,
     else {
         // TODO: edit shows the question and ans in editable mode
         let action_control = document.querySelector('#action-control')
+        let edit_reponse = document.querySelector('#edit-reponse')
+        edit_reponse.innerHTML = ""
         action_control.innerHTML = ""
         if(project_type == "image_qa"){
             var action_div = create_qa_btn_controls()
@@ -509,138 +515,6 @@ function replace_processed_by_all_and_user({user_processed=null, all_processed=n
 
 }
 
-function submit_video_qa_form(){
-    let form_csrf_token = document.querySelector('#form-csrf-token')
-    // console.log("submit form clicked", form_csrf_token);
-    let csrf_token_element = form_csrf_token.elements[0]
-    let csrf_token_name = csrf_token_element.name
-    let csrf_token = csrf_token_element.value
-
-    let video_filename = document.querySelector('#video_name_value').innerText
-    let cluster_keyword = document.querySelector('#cat_name').innerText.split('|').at(0).trim()
-    
-    let vid_qa_form = document.querySelector('#video_qs_form')
-    
-    
-    let new_form_data = new FormData()
-    
-    for (let i=0; i < vid_qa_form.elements.length; i++){
-        let element = vid_qa_form.elements[i]
-        new_form_data.append(element.name, element.value)
-
-        
-    }
-    
-
-    new_form_data.append('video_filename', video_filename)
-    new_form_data.append('cluster_keyword', cluster_keyword)
-    new_form_data.append(csrf_token_name, csrf_token)
-
-    let endpoint = base_url+"/submit_vid_qa"
-
-    let response = fetch(endpoint,{
-        method: 'POST',
-        body: new_form_data
-    })
-}
-
-
-function create_form_elements({elem_name=null, elem_id=null, elem_inner_text=null, submit=null}){
-    let label_elem_div = document.createElement('div')
-    label_elem_div.className = 'row-align'
-
-    let form_label_div = document.createElement('div')
-    form_label_div.className = 'form-label'
-
-    let label = document.createElement('label')
-    label.for = `${elem_name}`
-    label.innerText = `${elem_inner_text}:`
-    form_label_div.appendChild(label)
-
-    label_elem_div.appendChild(form_label_div)
-
-    if (submit){
-        let submit_elem_div = document.createElement('div')
-        submit_elem_div.className = "nist-button"
-        let submit_elem = document.createElement('input')
-        submit_elem.name = `${elem_name}`
-        submit_elem.style = 'text-align: center;'
-        submit_elem.type = 'submit'
-        submit_elem.value = "Submit"
-        submit_elem.addEventListener('click', (e)=>{
-            e.preventDefault()
-            submit_video_qa_form()
-            let file_name = document.querySelector('#video_name_value').textContent
-            let cluster_keyword = document.querySelector('#cat_name').innerText.split('|').at(0).trim()
-            // get_next_video({file_name: file_name, assoc_category: assoc_category, appr_rej: 'approve'})
-        })
-        
-        submit_elem_div.appendChild(submit_elem)
-        label_elem_div.appendChild(submit_elem_div)
-      
-        
-    }
-    else {
-        let text_area_div = document.createElement('div')
-        text_area_div.className = "form-text-input"
-
-        let text_area = document.createElement('textarea')
-        text_area.spellcheck = "true"
-        text_area.name = elem_name
-        text_area.id = elem_id
-        text_area.cols = "50"
-        text_area.rows = "10"
-        text_area_div.appendChild(text_area)
-        
-        label_elem_div.appendChild(text_area_div)
-    }
-
-    
-
-    
-
-    return label_elem_div
-}
-
-function create_video_QA_form(){
-    // let form_parent_div = document.createElement('div')
-    // form_parent_div.id = "question_tag"
-    let video_qa_h3 = document.querySelector('#video-qa-h3')
-    video_qa_h3.textContent = ""
-        
-    
-
-    let video_QA_form = document.createElement('form')
-    video_QA_form.method = "post"
-    video_QA_form.id = 'video_qs_form'
-    
-    let question = create_form_elements({elem_name:'question', elem_id:'question', elem_inner_text:'Question'})
-    video_QA_form.appendChild(question)
-    
-    let correct_ans = create_form_elements({elem_name:'correct_ans', elem_id:'correct_ans', elem_inner_text:'Correct Answer'})
-    video_QA_form.appendChild(correct_ans)
-    
-    let opt_ans_one = create_form_elements({elem_name:'opt_ans_one', elem_id:'opt_ans_one', elem_inner_text:'Answer Option'})
-    video_QA_form.appendChild(opt_ans_one)
-    
-    let opt_ans_two = create_form_elements({elem_name:'opt_ans_two', elem_id:'opt_ans_two', elem_inner_text:'Answer Option'})
-    video_QA_form.appendChild(opt_ans_two)
-    
-    let opt_ans_three = create_form_elements({elem_name:'opt_ans_three', elem_id:'opt_ans_three', elem_inner_text:'Answer Option'})
-    video_QA_form.appendChild(opt_ans_three)
-    
-    // let opt_ans_four = create_form_elements({elem_name:'opt_ans_four', elem_id:'opt_ans_four', elem_inner_text:'Answer Option'})
-    // video_QA_form.appendChild(opt_ans_four)
-    
-    let submit = create_form_elements({elem_name:'submit-vid-qa', elem_id:'submit-vid-qa', elem_inner_text:'Send QandA', submit:true})
-    video_QA_form.appendChild(submit)
-
-
-    video_qa_h3.textContent = "Enter Question and Answers"
-    return video_QA_form
-    // form_parent_div.appendChild(video_QA_form)
-
-}
 
 function show_video_in_preview({prev_file_name=null, assoc_category = null, data=null, appr_rej=null, caller='', project_type=null, isAdmin=null}){
     // console.log("logic for showing video in vid tag");
@@ -737,8 +611,12 @@ function get_next_video_appr_rej({file_name=null, assoc_category=null, appr_rej=
   
     var prev_file_name = file_name
     if (isAdmin){
-        console.log("isAdmin", isAdmin, "appr_rej", appr_rej);
+        
         var get_next_video_endpoint = base_url+`/get_next_video?file_name=${file_name}&appr_rej=${appr_rej}&is_admin=${isAdmin}`
+    }
+    else if(project_type){
+        console.log("skip appr_rej", appr_rej);
+        var get_next_video_endpoint = base_url+`/get_next_video?file_name=${file_name}&appr_rej=${appr_rej}&project_type=${project_type}`
     }
     else{
         
@@ -889,28 +767,7 @@ function create_vidname_category_spans(category=null) {
 }
 
 
-function create_qa_btn_controls(){
-    let div = document.createElement('div')
-    div.id = 'submit_qs_btn_div'
-    div.classList.add('submit_qs_btn_div')
 
-    let skip = document.createElement('input')
-    skip.value = 'skip video'
-    skip.classList =  "nist-button btn_qa"
-    skip.type = 'button'
-    
-    // let submit = document.createElement('input')
-    // submit.value = 'submit'
-    // submit.classList =  "nist-button btn_qa"
-    // submit.type = 'submit'
-    
-
-    // div.appendChild(submit)
-    div.appendChild(skip)
-
-    return div
-    
-}
 
 var create_apr_rej = function appr_rej({file_name=null, assoc_category=null, caller=null, project_type=null}){
      
@@ -944,7 +801,6 @@ var create_apr_rej = function appr_rej({file_name=null, assoc_category=null, cal
                 get_next_video({file_name: file_name, assoc_category: assoc_category, appr_rej: 'approve'})
             }
         } catch (error){
-            console.log(error);
             
             get_next_video({file_name: file_name, assoc_category: assoc_category, appr_rej: 'approve'})
             
@@ -1033,6 +889,6 @@ function create_edit_btn({file_name:file_name, cluster_keywords:cluster_keywords
 }
 
 
-export {create_apr_rej, create_vidname_category_spans,
+export {base_url, get_next_video_appr_rej, create_apr_rej, create_vidname_category_spans,
      create_video_tag, prepare_quest_answer_resp, create_edit_btn, create_qa_btn_controls,
-    create_video_QA_form, allow_edit_and_show_qa}
+    create_video_QA_form, allow_edit_and_show_qa, add_active_to_span}

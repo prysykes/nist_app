@@ -527,6 +527,7 @@ def get_next_video(request):
             serialized_next_video = serialize_videos([next_video])
             serialized_next_video = json.loads(serialized_next_video)
             annotator = assoc_video.checked_by
+          
         
             rem_total_per_category = get_rem_total_per_category(assoc_category)
 
