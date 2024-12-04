@@ -27,6 +27,7 @@
                 <div style="margin-right: 1%;">
                     <div >
                         {% if request.user.is_authenticated %}
+                        <span id="project_type_user_pg" class="display-none">{{request.user.userreg.project.project_type}}</span>
                             <div id="name_plate">
                                 <p id="last_name">Welcome {{ request.user}}</p> &nbsp;&nbsp;
                                 <a href="{% url 'user_logout' %}"> <input class="nist-button" type="button" value="logout"></a>
@@ -241,12 +242,6 @@
                         {% endblock main %}
                     </div>
                     
-                    <!-- <div id="show-annotation-job" class="display-none">
-                        {% include 'annotation.html' %}
-                    </div>
-                    <div id="show-imageqa-job" class="display-none">
-                        {% include 'image-qa.html' %}
-                    </div> -->
                     
                 {% endif %}
             {% else %}
@@ -260,11 +255,11 @@
                         <div class="form-row">
                             <div class="row-align" > 
                             <div><label for="username"></label> Username</div>
-                            <div> <input type="text" name="username" id="username"></div>
+                            <div> <input type="text" name="username" id="username-qa"></div>
                             </div>
                             <div class="row-align"> 
                             <div><label for="password"></label> Password</div>
-                            <div> <input type="password" name="password" id="password"></div>  
+                            <div> <input type="password" name="password" id="password-qa"></div>  
                             </div>
                             
                         <div class="form-row row-align">
@@ -301,12 +296,14 @@
 {% block scripts %}
 <script type="module" src="{% static '/scripts/main.js' %}"></script>
 
+
 {% if request.user.is_authenticated and request.user|has_group:"admin" %}
 <script type="module" src="{% static '/scripts/admin.js' %}"> </script>
 {% endif %}
 
 {% if request.user.is_authenticated and not request.user|has_group:"admin" %}
 <script type="module" src="{% static '/scripts/project_manager.js' %}"></script>
+<script type="module" src="{% static '/scripts/video_qa.js' %}"></script>
 {% endif %}
 
 

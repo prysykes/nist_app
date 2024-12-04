@@ -10,7 +10,7 @@ import {create_apr_rej, allow_edit_and_show_qa, create_vidname_category_spans,
 
 
 
-let iJobSummaryShowing = false
+let IsJobSummaryShowing = false
 const root_url = window.location.origin
 const VIDEO_TYPE_ = "video/webm"
 const base_vid_src = "media/"
@@ -213,14 +213,14 @@ function populate_and_show_annotation_stats(data){
 show_job_summary.addEventListener('click', ()=>{
     let annotation_stats = document.querySelector('#annotation-stats')
      // show_job_summary
-     if (!iJobSummaryShowing){
+     if (!IsJobSummaryShowing){
         annotation_stats.classList.add('align-items-center')
-        iJobSummaryShowing = true
+        IsJobSummaryShowing = true
         show_job_summary.innerText = 'Hide Job Summary'
     }
-    else if(iJobSummaryShowing){
+    else if(IsJobSummaryShowing){
         annotation_stats.classList.remove('align-items-center')
-        iJobSummaryShowing = false
+        IsJobSummaryShowing = false
         show_job_summary.innerText = 'Show Job Summary'
     }
     // populate_and_show_annotation_stats(annotation_stats)
@@ -490,6 +490,8 @@ function preview_video_admin({file_name=null, cluster_keywords=null, video_url=n
     let keyword_tag = document.getElementById('video_keywords')
 
     if (checked_by){
+        console.log("checked_by", checked_by);
+        
         var question_tag = document.querySelector('#question_tag')
         allow_edit_and_show_qa({checked_by:checked_by, project_type:project_type, 
             file_name:file_name, cluster_keywords:cluster_keywords, question_tag:question_tag})
