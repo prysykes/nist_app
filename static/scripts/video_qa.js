@@ -39,7 +39,7 @@ function create_qa_btn_controls(){
     
 }
 
-function submit_video_qa_form(){
+function submit_video_qa_form({isEdit=null}){
     let form_csrf_token = document.querySelector('#form-csrf-token')
     // console.log("submit form clicked", form_csrf_token);
     let csrf_token_element = form_csrf_token.elements[0]
@@ -48,25 +48,51 @@ function submit_video_qa_form(){
 
     let video_filename = document.querySelector('#video_name_value').innerText
     let cluster_keyword = document.querySelector('#cat_name').innerText.split('|').at(0).trim()
+
     
+    
+    
+
     let vid_qa_form = document.querySelector('#video_qs_form')
+    // console.log("vid_qa_form", vid_qa_form);
     
     
     let new_form_data = new FormData()
+    if (!isEdit){
+        var endpoint = base_url+"/submit_vid_qa"
+        for (let i=0; i < vid_qa_form.elements.length; i++){
+            let element = vid_qa_form.elements[i]
+            new_form_data.append(element.name, element.value)
     
-    for (let i=0; i < vid_qa_form.elements.length; i++){
-        let element = vid_qa_form.elements[i]
-        new_form_data.append(element.name, element.value)
-
-        
+            
+        }
+    }else{
+        console.log("is edit");
+        let qa_ids = document.querySelectorAll('.qa_ids')
+        let video_qa_vals = document.querySelectorAll('.video_qa_vals')    
+        for (let i=0; i < qa_ids.length; i++){
+            let cur_id = qa_ids[i].id.split('-').at(-1)
+            let cur_text_area = video_qa_vals[i]
+            let cur_text_area_name = cur_text_area.name
+            let element_name = cur_text_area_name + "-" + cur_id
+            let element_value = cur_text_area.value
+            // console.log(">>", element_name, element_value);
+            
+            // let element = vid_qa_form.elements[i]
+            new_form_data.append(element_name, element_value)
+    
+            
+        } 
+        var endpoint = base_url+`/submit_vid_qa?is_edit=${isEdit}`
     }
+    
     
 
     new_form_data.append('video_filename', video_filename)
     new_form_data.append('cluster_keyword', cluster_keyword)
     new_form_data.append(csrf_token_name, csrf_token)
 
-    let endpoint = base_url+"/submit_vid_qa"
+    // let endpoint = base_url+"/submit_vid_qa"
 
     let response = fetch(endpoint,{
         method: 'POST',
@@ -74,6 +100,23 @@ function submit_video_qa_form(){
     })
 }
 
+function retrieve_next_video_qa(){
+    let project_type_div = document.querySelector('#project_type_user_pg')
+    let cat_name_div = document.querySelector('#cat_name')
+    let file_name_div = document.querySelector('#video_name_value')
+
+    
+    let file_name = file_name_div.textContent
+    let assoc_category = cat_name_div.textContent.split('|').at(0).trim()
+    let appr_rej = 'approve'
+    let project_type = project_type_div.textContent
+
+    let kwargs = {file_name:file_name, assoc_category:assoc_category, 
+        appr_rej:appr_rej, add_active_to_span:add_active_to_span,
+         project_type:project_type}
+    get_next_video_appr_rej(kwargs)
+
+}
 
 function create_form_elements({elem_name=null, elem_id=null, elem_inner_text=null, submit=null}){
     let label_elem_div = document.createElement('div')
@@ -99,22 +142,11 @@ function create_form_elements({elem_name=null, elem_id=null, elem_inner_text=nul
         submit_elem.value = "Submit"
         submit_elem.addEventListener('click', (e)=>{
             e.preventDefault()
-            submit_video_qa_form()
+            submit_video_qa_form({isEdit:false})
             
             // retrieve next video 
-            let project_type_div = document.querySelector('#project_type_user_pg')
-            let cat_name_div = document.querySelector('#cat_name')
-            let file_name_div = document.querySelector('#video_name_value')
-
-            
-            let file_name = file_name_div.textContent
-            let assoc_category = cat_name_div.textContent.split('|').at(0).trim()
-            let appr_rej = 'approve'
-            let project_type = project_type_div.textContent
-
-            let kwargs = {file_name:file_name, assoc_category:assoc_category, appr_rej:appr_rej, add_active_to_span:add_active_to_span, project_type:project_type}
-            get_next_video_appr_rej(kwargs)
-            console.log("kwargs skip",kwargs);
+            retrieve_next_video_qa()
+           
         })
         
         submit_elem_div.appendChild(submit_elem)
@@ -186,4 +218,4 @@ function create_video_QA_form(){
 
 
 
-export {create_qa_btn_controls, create_video_QA_form, create_form_elements, submit_video_qa_form}
+export {create_qa_btn_controls, create_video_QA_form, create_form_elements, submit_video_qa_form, retrieve_next_video_qa}

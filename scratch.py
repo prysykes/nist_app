@@ -1,3 +1,19 @@
+user = request.user
+        user_object = User.objects.get(username=user)
+        userreg_object = Userreg.objects.get(user=user_object)
+        assoc_project = userreg_object.project
+        assoc_category = Category.objects.get(cluster_keywords=cluster_keywords, project=assoc_project)
+        assoc_category = Category.objects.get(cluster_keywords='fireworks_night_sky_background', project=assoc_project)
+        FILENAMES = ['21172', '23401', '25676', '25068', '21525', '19809']
+        for filename in FILENAMES:
+            assoc_video = Videos.objects.get(category=assoc_category, file_name=filename)
+            assoc_video.question = None
+            assoc_video.status = None
+            assoc_video.checked_by = None
+            assoc_video.save()
+            print("assoc_video", assoc_video)
+
+
 
 class Answer(models.Model):
     answer = models.CharField(max_length=20)
