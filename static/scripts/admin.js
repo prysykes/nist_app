@@ -143,13 +143,16 @@ function custom_confirm({message=null, callback=null, endpoint=null, cat_elem=nu
     })
 }
 
-export_all_videos.addEventListener('click', ()=>{
+if(export_all_videos){
+    export_all_videos.addEventListener('click', ()=>{
     
-    let message = "Are you sure you want to export all videos?"
-    let callback = handle_export_all_videos
-    custom_confirm({message: message, callback: callback})
+        let message = "Are you sure you want to export all videos?"
+        let callback = handle_export_all_videos
+        custom_confirm({message: message, callback: callback})
+    
+    })
+}
 
-})
 
 function set_default_th(thead){
     let default_tr_elem = document.createElement('tr')
@@ -184,7 +187,7 @@ function populate_and_show_annotation_stats(data){
     if (thead.innerHTML == ""){
         set_default_th(thead)
     }
-    console.log("data>>", data);
+    // console.log("data>>", data);
     
     // data
     data.forEach((data)=>{
@@ -201,16 +204,13 @@ function populate_and_show_annotation_stats(data){
             tr_elem.appendChild(td_elem)
             
         }
-        tbody.appendChild(tr_elem)
-        
-     
+        tbody.appendChild(tr_elem)  
         
     })
 
 }
     
-
-show_job_summary.addEventListener('click', ()=>{
+function handle_show_job_summary(){
     let annotation_stats = document.querySelector('#annotation-stats')
      // show_job_summary
      if (!IsJobSummaryShowing){
@@ -225,7 +225,10 @@ show_job_summary.addEventListener('click', ()=>{
     }
     // populate_and_show_annotation_stats(annotation_stats)
     // fetch endport for job summary
-     let endpoint = `${root_url}/get_job_summary`
+    let project_type = document.querySelector('#project_type').innerText
+    console.log("project_type", project_type);
+    
+     let endpoint = `${root_url}/get_job_summary?project_type=${project_type}`
 
     let response = fetch(endpoint, {
         method: "GET"
@@ -233,11 +236,19 @@ show_job_summary.addEventListener('click', ()=>{
     .then(response => response.json())
     .then((data)=>{
         // console.log("data!!!!", data);
+        
         populate_and_show_annotation_stats(data)
         
     })
-    
-})
+}
+
+if (show_job_summary){
+    show_job_summary.addEventListener('click', ()=>{
+        handle_show_job_summary()
+        
+    })
+}
+
 
 function approve_single_cluster(endpoint){
     // console.log(">>", endpoint);
@@ -262,12 +273,14 @@ per_cluster_approve.forEach((cat_elem)=>{
     
     cat_elem.addEventListener("click", ()=>{
         // console.log("per cluster clicked");
+        // let project_type = document.querySelector('#project_type').innerText.trim()
+        // // console.log("project_type>>", project_type);
         
         let cat_elem_text = cat_elem.innerText
         let cur_elem_parent = cat_elem.parentNode
         
         let cluster_keyword = cur_elem_parent.innerText.trim().split(" ")[0]
-        let endpoint = `${root_url}/admin_approve?cluster_keyword=${cluster_keyword}`
+        let endpoint = `${root_url}/admin_approve?cluster_keyword=${cluster_keyword}&project_type=${project_type}`
         if (cat_elem_text == "approve"){
             endpoint = endpoint + "&status=approved"
             // ght_sky_background&status=approved
@@ -438,8 +451,6 @@ video_categories.forEach((cat_elem)=>{
     let h3_span = h3.querySelector('span')
     let approve_video_fetch_promise = null
     
-    
-    
     cat_elem.addEventListener('mouseover', (e)=>{ 
         
         process_all_videos_div.classList.remove('display-none')
@@ -456,7 +467,6 @@ video_categories.forEach((cat_elem)=>{
 })
 
 
-
 function create_video_element(){
     let video = document.createElement('video')
     video.width = 600
@@ -468,8 +478,7 @@ function create_video_element(){
 }
 
 function preview_video_admin({file_name=null, cluster_keywords=null, video_url=null, 
-                                checked_by=null, question_tag=null, project_type=null}){
-
+                                checked_by=null, question_tag=null, project_type=null, annotator=null}){
 
     const[span_heading, br_elem, span_category] = create_vidname_category_spans(cluster_keywords)
     let vid_tag = document.getElementById('vid_tag')
@@ -490,11 +499,9 @@ function preview_video_admin({file_name=null, cluster_keywords=null, video_url=n
     let keyword_tag = document.getElementById('video_keywords')
 
     if (checked_by){
-        console.log("checked_by", checked_by);
-        
         var question_tag = document.querySelector('#question_tag')
         allow_edit_and_show_qa({checked_by:checked_by, project_type:project_type, 
-            file_name:file_name, cluster_keywords:cluster_keywords, question_tag:question_tag})
+            file_name:file_name, cluster_keywords:cluster_keywords, question_tag:question_tag, annotator:annotator})
         
     }
    
@@ -510,11 +517,12 @@ function remove_active_marks(parent_elem){
     })
 
 }
-function create_ul_elements_with_videos({data=null, cluster_keywords=null, project_type=null}){
+function create_ul_elements_with_videos({data=null, cluster_keywords=null, project_type=null, annotator=null}){
     // console.log("response_data", response_data);
     // check if the ul element is already create, else create it
     let ul_elem = document.getElementById('admin_video_ul')
     let video_list_admin = document.querySelector('#video_list_admin')
+    console.log("annotator", annotator);
     
 
     if (ul_elem == null) {
@@ -523,9 +531,6 @@ function create_ul_elements_with_videos({data=null, cluster_keywords=null, proje
     }else{
         ul_elem.innerHTML = ""
     }
-
-
-    
 
     let count = 0
     for (const [key, value] of Object.entries(data)){
@@ -539,11 +544,12 @@ function create_ul_elements_with_videos({data=null, cluster_keywords=null, proje
 
         let target_elem = li_elem
         if (count==0){
+            // displays the first video once a category is clicked
             target_elem = li_elem
             remove_active_marks(ul_elem)
             
             preview_video_admin({file_name:file_name, cluster_keywords:cluster_keywords, video_url:video_url, 
-                checked_by:checked_by, question_tag:question_tag, project_type:project_type})
+                checked_by:checked_by, question_tag:question_tag, project_type:project_type, annotator:annotator})
             target_elem.classList = 'active'
         }
         
@@ -552,7 +558,7 @@ function create_ul_elements_with_videos({data=null, cluster_keywords=null, proje
             
             
             preview_video_admin({file_name:file_name, cluster_keywords:cluster_keywords, video_url:video_url, 
-                checked_by:checked_by, question_tag:question_tag, project_type:project_type})
+                checked_by:checked_by, question_tag:question_tag, project_type:project_type, annotator:annotator})
             let target_elem = e.target
             target_elem.classList = 'active'
            
@@ -574,12 +580,15 @@ user_processed_categories.forEach((category)=>{
     category.addEventListener('click', (e) => {
         // let admin_video_preview = document.querySelector('#admin-video-preview')
         //     admin_video_preview.innerHTML = ""
+        
+        // add and remove active mark
         let cluster_keywords = category.innerText.trim()
         user_processed_categories.forEach((cat)=> {
             cat.classList.remove('active')
         })
         let li = e.target
         li.classList.add('active')
+
         let video_inspection = document.querySelector('#video_inspection')
     
         if (video_inspection.classList.contains('display-none')){
@@ -601,6 +610,7 @@ user_processed_categories.forEach((category)=>{
         let admin_project_type_span = document.getElementById('project_type')
         
         if (admin_project_type_span){
+            // console.log("for admin", "annptator", annotator, "cluster_kw", cluster_keywords, "project_type", project_type);
             isAdmin = true
             var get_category_endpoint = `${root_url}/display_videos?category=${cluster_keywords}&annotator=${annotator}&project_type=${project_type}&is_admin=${isAdmin}`
             
@@ -617,10 +627,9 @@ user_processed_categories.forEach((category)=>{
         .then(response => response.json())
         .then((data)=>{
             
-            
             let video_list_admin = document.querySelector('#video_list_admin')
 
-            let ul_elem = create_ul_elements_with_videos({data:data, cluster_keywords:cluster_keywords, project_type:project_type})
+            let ul_elem = create_ul_elements_with_videos({data:data, cluster_keywords:cluster_keywords, project_type:project_type, annotator:annotator})
             video_list_admin.appendChild(ul_elem)
 
             
@@ -628,3 +637,5 @@ user_processed_categories.forEach((category)=>{
         })
     })
 })
+
+export {handle_show_job_summary}

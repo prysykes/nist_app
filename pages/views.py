@@ -18,6 +18,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse, HttpResponse
 import json
 from pages.utils import serialize_objects
+from pages.models import Question, Answer
 
 from django.db.models import Q, Count 
 
@@ -45,11 +46,11 @@ def index(request):
         # print("user", user)
         user_object = User.objects.get(username=user)
         userreg_object = Userreg.objects.get(user=user_object) 
-        assoc_project_type = userreg_object.project
+        assoc_project = userreg_object.project
         #ensures that only admin can upload videos
         if "admin" in user_groups:
-            total_videos = Videos.objects.filter(project=assoc_project_type).count()
-            all_processed_videos = Videos.objects.filter(project=assoc_project_type).exclude(checked_by=None).count()
+            total_videos = Videos.objects.filter(project=assoc_project).count()
+            accepted_videos= Videos.objects.filter(project=assoc_project, status=True).count()
             if request.method == "POST":
 
                 project_title_form = ProjectTitleForm(request.POST, request.FILES)
@@ -64,8 +65,7 @@ def index(request):
                 return redirect('/')
             else:
                 try:
-                    project_type = request.POST.get('project_type')
-                    project_type = "annotation"
+                    project_type = assoc_project.project_type
                     users_processed_videos = prepare_processed_videos(request=None, user=user, project_type=project_type)
                 except:
                     users_processed_videos = None
@@ -73,9 +73,10 @@ def index(request):
                         'project_details': project_title_form,
                         'video_upload': video_upload_form,
                         'total_videos': total_videos,
-                        'all_processed_videos': all_processed_videos,
+                        'accepted_videos': accepted_videos,
                         'users_processed_videos': users_processed_videos
                     }
+                
                 return render(request, 'index.html', context)
     
     if not request.user.is_anonymous:
@@ -86,7 +87,7 @@ def index(request):
         assoc_project_type = userreg_object.project
         #TODO: redo logic for all processed videos
         # all_processed_videos = len(Videos.objects.all().filter(status=True, checked_by=str(user)))
-        percentage_process_all_vids = len(Videos.objects.filter(project=assoc_project_type).exclude(checked_by=None))
+        accepted_videos = Videos.objects.filter(project=assoc_project_type, status=True).count()
         total_videos = len(get_list_or_404(Videos, project=assoc_project_type))
 
         
@@ -104,7 +105,7 @@ def index(request):
         except IndexError:
             user_assigned_videos = []
 
-        user_processed_videos = Videos.objects.filter(project=assoc_project_type, checked_by=user)
+        user_processed_videos = Videos.objects.filter(project=assoc_project_type, checked_by=user, status=True)
         try:
             percentage_remaining = (len(user_processed_videos)/total_user_assigned_vids) *100
             percentage_remaining = round(percentage_remaining, 2)
@@ -113,7 +114,7 @@ def index(request):
         # print('user procesed video', user_processed_videos)
     else:
         percentage_remaining = None
-        percentage_process_all_vids = None
+        accepted_videos = None
     
     # print(type(categories))
    
@@ -135,7 +136,7 @@ def index(request):
                     'percentage_rem_user': percentage_remaining,
                     'user_processed_videos': len(user_processed_videos),
                     'total_user_assigned_vids': total_user_assigned_vids,
-                    'percentage_process_all_vids': percentage_process_all_vids,
+                    'accepted_videos': accepted_videos,
                     'total_videos': total_videos
                     # 'categories': categories
                 }
@@ -156,7 +157,7 @@ def index(request):
                     'percentage_rem_user': percentage_remaining,
                     'user_processed_videos': len(user_processed_videos),
                     'total_user_assigned_vids': total_user_assigned_vids,
-                    'percentage_process_all_vids': percentage_process_all_vids,
+                    'accepted_videos': accepted_videos,
                     'total_videos': total_videos,
                     'project_type': project_type
                 }
@@ -178,43 +179,47 @@ def retrieve_video_qa(request):
     payload = {}
     file_name = request.GET.get('file_name')
     cluster_keywords = request.GET.get('cluster_keywords')
+    annotator = request.GET.get('annotator')
     user = request.user
     user_obj = User.objects.get(username=user)
     userreg_obj = Userreg.objects.get(user=user_obj)
 
     assoc_project = userreg_obj.project
     assoc_category = Category.objects.get(project=assoc_project, cluster_keywords=cluster_keywords)
-    assoc_video = Videos.objects.get(file_name=file_name, checked_by=user, project=assoc_project, category=assoc_category)
+    if not annotator:
+        assoc_video = Videos.objects.get(file_name=file_name, checked_by=user, project=assoc_project, category=assoc_category)
 
+    else:
+        user = User.objects.get(username=annotator)
+        assoc_video = Videos.objects.get(file_name=file_name, checked_by=user, project=assoc_project, category=assoc_category)
 
+    try:
+        assoc_question = assoc_video.question
+        assoc_answers = assoc_question.question_answers.all()
+        question_load = {"id": assoc_question.id,
+                         "value": assoc_question.question}
+        payload['question'] = question_load
 
-    assoc_question = assoc_video.question
-    assoc_answers = assoc_question.question_answers.all()
+        for idx, ans in enumerate(assoc_answers):
+            if ans.correct:
+                answer_load = {"id": ans.id,
+                               "value":ans.answer}
+                payload[f'ans-{idx}-correct'] = answer_load
+            else:
+                answer_load = {"id": ans.id,
+                               "value":ans.answer}
+                payload[f'ans-{idx}'] = answer_load
+    except:
+        payload['question'] = None
 
-    payload['question'] = assoc_question.question
-
-    for idx, ans in enumerate(assoc_answers):
-        if ans.correct:
-            payload[f'ans-{idx}-correct'] = ans.answer
-        else:
-            payload[f'ans-{idx}'] = ans.answer
-
-
-    
-
-    print(payload)
     return JsonResponse({"data": payload})
 
 def submit_vid_qa(request):
     if request.method == 'POST':
-        question = request.POST.get('question')
-        correct_ans = request.POST.get('correct_ans')
-        answer_one = request.POST.get('opt_ans_one')
-        answer_two = request.POST.get('opt_ans_two')
-        answer_three = request.POST.get('opt_ans_three')
+        is_edit = request.GET.get('is_edit')
         video_filename = request.POST.get('video_filename')
         cluster_keywords = request.POST.get('cluster_keyword')
-        answers = [correct_ans, answer_one, answer_two, answer_three]
+        print(video_filename, cluster_keywords)
 
         user = request.user
         user_object = User.objects.get(username=user)
@@ -222,19 +227,62 @@ def submit_vid_qa(request):
         assoc_project = userreg_object.project
         assoc_category = Category.objects.get(cluster_keywords=cluster_keywords, project=assoc_project)
         cur_video = Videos.objects.get(category=assoc_category, project=assoc_project, file_name=video_filename)
-        # retriveve project_type
 
-        if question:
-            #process video question
-            question_obj = create_question_answers(question=question, answers=answers)
-            cur_video.question = question_obj
-            cur_video.status = True
-            cur_video.checked_by = user
-            cur_video.save()
+        if is_edit:
+            # print("request.POST", request.POST)
+            for key, value in request.POST.items():
+                # print(key, value)
+                if "question" in key:
+                    assoc_id = int(key.split('-')[-1])
+                    question = {"id":assoc_id, "value":value}
+                    assoc_question = Question.objects.get(id=assoc_id)
+                    assoc_question.question = value
+                    assoc_question.save()
+                    # print("assoc_question", assoc_question, "new_qs_text", value)
+                elif "ans-0" in key:
+                    assoc_id = int(key.split('-')[-1])
+                    correct_ans = {"id":assoc_id, "value":value}
+                    assoc_ans = Answer.objects.get(id=assoc_id)
+                    assoc_ans.answer = value
+                    assoc_ans.save()
+                elif "ans-1" in key:
+                    assoc_id = int(key.split('-')[-1])
+                    answer_one = {"id":assoc_id, "value":value}
+                    assoc_ans = Answer.objects.get(id=assoc_id)
+                    assoc_ans.answer = value
+                    assoc_ans.save()
+                elif "ans-2" in key:
+                    assoc_id = int(key.split('-')[-1])
+                    answer_two = {"id":assoc_id, "value":value}
+                    assoc_ans = Answer.objects.get(id=assoc_id)
+                    assoc_ans.answer = value
+                    assoc_ans.save()
+                elif "ans-3" in key:
+                    assoc_id = int(key.split('-')[-1])
+                    answer_three = {"id":assoc_id, "value":value}
+                    assoc_ans = Answer.objects.get(id=assoc_id)
+                    assoc_ans.answer = value
+                    assoc_ans.save()
         else:
-            cur_video.status = False
-            cur_video.checked_by = user
-            cur_video.save()
+            question = request.POST.get('question')
+            correct_ans = request.POST.get('correct_ans')
+            answer_one = request.POST.get('opt_ans_one')
+            answer_two = request.POST.get('opt_ans_two')
+            answer_three = request.POST.get('opt_ans_three')
+            answers = [correct_ans, answer_one, answer_two, answer_three]
+
+            if question:
+                #process video question
+                question_obj = create_question_answers(question=question, answers=answers)
+                cur_video.question = question_obj
+                cur_video.status = True
+                cur_video.checked_by = user
+                cur_video.save()
+            else:
+                cur_video.status = False
+                cur_video.checked_by = user
+                cur_video.save()
+        
 
        
     return HttpResponse("QA and Video sent")
@@ -245,6 +293,7 @@ def admin_approve(request):
     admin_user_object = User.objects.get(username=admin_user)
     admin_userreg_obj = Userreg.objects.get(user=admin_user_object)
     project = admin_userreg_obj.project
+    project_type = project.project_type
     
     if request.GET.get('user_catergories'):
         # print("user_catergories hit")
@@ -314,14 +363,13 @@ def admin_approve(request):
         
         # return JsonResponse({"info": f"{cluster_keyword} {status}" })
     
-    payload = export_job()
+    payload = export_job(project_type)
     # print("payload", payload)
     return JsonResponse(payload, safe=False)
 
 def get_job_summary(request):
-    print("get job sumary called")
-    payload = export_job()
-    print("payload>>", payload)
+    project_type = request.GET.get("project_type")
+    payload = export_job(project_type)
     
     return JsonResponse(payload, safe=False)
 
@@ -518,6 +566,8 @@ def get_next_video(request):
             check_user_decision(file_name, cur_user, appr_rej, assoc_project, is_admin)
             assoc_video = get_object_or_404(Videos, file_name=file_name, project=assoc_project)
             assoc_category = assoc_video.category
+            project_type = assoc_project.project_type
+            
 
             if is_admin:
                 next_video = assoc_category.video_categories.filter(status=True, admin_approve=False).order_by('id').first()
@@ -532,11 +582,11 @@ def get_next_video(request):
             rem_total_per_category = get_rem_total_per_category(assoc_category)
 
             if is_admin:
-                user_all_processed = get_user_all_processed(annotator, is_admin=is_admin, category=assoc_category)
-
+                category_all_processed = get_user_all_processed(annotator, is_admin=is_admin, category=assoc_category, project=assoc_project)
+                user_all_processed = category_all_processed
             else:
-                user_all_processed = get_user_all_processed(cur_user)
-            print("user_all_processed", user_all_processed)
+                user_all_processed = get_user_all_processed(cur_user, project=assoc_project)
+            # print("user_all_processed", user_all_processed)
             
             context = {"serialized_next_video": serialized_next_video,
                     "rem_total_per_category": rem_total_per_category,

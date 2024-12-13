@@ -268,7 +268,7 @@ Admin Page styles Begins
 
 .row-align_base{
     display: flex;
-    /* justify-content: space-between; */
+    justify-content: space-between;
     margin-top: 2px;
     padding: 2px;
     width: 100%;

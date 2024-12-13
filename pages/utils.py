@@ -32,13 +32,14 @@ APP_LABEL = 'pages'
 
 
 
-def export_job():
+def export_job(project_type):
     # print("export job hit")
     # user_fields = ['id', 'finished_job', 'admin_approved']
-   
+    assoc_project = ProjectTitle.objects.get(project_type=project_type)
+    print("assoc_project", assoc_project)
     payload = []
     try:
-        all_approved_users = Userreg.objects.filter(admin_approved=True)
+        all_approved_users = Userreg.objects.filter(admin_approved=True, project=assoc_project)
         print("len all_approved_users", len(all_approved_users), all_approved_users)
         assoc_categories = None
         assoc_videos = None
@@ -272,12 +273,12 @@ def  get_video_list(term=None, category=None, cluster_group=None, annotator=None
             )
         ).order_by('-checked', 'id')
     else:
-        print("admin admin")
+        
         cluster_keywords = category.strip()
         assoc_category = get_object_or_404(Category, cluster_keywords=cluster_keywords, project=assoc_project)
         annotator = get_object_or_404(User, username=annotator)
-        # print("no", annotator, assoc_category.group)
         videos = Videos.objects.filter(category=assoc_category, checked_by__username=annotator, status=True).order_by('id')
+        
 
     qs = videos
     # print('a qs', qs)
@@ -315,19 +316,23 @@ def get_rem_total_per_category(category):
     # context = {"rem_total_per_category": rem_total_per_category}
     return rem_total_per_category
 
-def get_user_all_processed(user, is_admin=None, category=None):
+def get_user_all_processed(user, is_admin=None, category=None,project=None):
 
     if is_admin:
         user_processed = len(get_list_or_404(Videos, category=category, checked_by=user, status=True))
-    
-        all_processed = len(get_list_or_404(Videos, checked_by__isnull=False))
+        # all_processed_videos = Videos.objects.filter(project=assoc_project_type).exclude(checked_by=None).count()
+        all_processed = Videos.objects.filter(project=project, status=True).count() #len(get_list_or_404(Videos, checked_by__isnull=False, status=True))
         context = (user_processed, all_processed)
+        print("admin all_processed", all_processed)
+        print("admin user_processed", user_processed)
     else:
-        user_processed = len(get_list_or_404(Videos, checked_by=user))
+        user_processed = len(get_list_or_404(Videos, checked_by=user, status=True))
     
-        all_processed = len(get_list_or_404(Videos, checked_by__isnull=False))
+        all_processed = Videos.objects.filter(project=project, status=True).count() #len(get_list_or_404(Videos, checked_by__isnull=False, status=True))
         context = (user_processed, all_processed)
-    print("all_processed", all_processed)
+        print("user all_processed", all_processed)
+        print("user user_processed", user_processed)
+    
     return context
 
 def move_selected_videos(destination_dir, source_dir, finished_jobs_csv):
@@ -378,6 +383,7 @@ def check_user_decision(file_name, cur_user, appr_or_rej=None, assoc_project=Non
             video.checked_by = cur_user
             video.status = False
             video.save()
+ 
 
 def get_rem_and_total(category, cur_user):
     # Category.objects.all().filter(category=category)

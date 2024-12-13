@@ -19,7 +19,26 @@
 <body>
    
     {% block header %}
+    
         <header>
+            <!-- <div>
+                
+                <iframe width="560" height="315" 
+                src="https://www.youtube.com/embed/YVQwAEKZpaU?si=AID4kFGq8mcMy4MY&output=embed"
+                 title="YouTube video player" frameborder="0"
+                  allow="accelerometer; autoplay; 
+                    clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                    referrerpolicy="strict-origin-when-cross-origin" 
+                    allowfullscreen></iframe>
+                
+                <iframe width="560" height="315" 
+                    src="https://www.youtube.com/embed/M3QYDtSbhrA?si=FBmvT0BMcUJFUEmL" 
+                    title="YouTube video player" frameborder="0" 
+                    allow="accelerometer; autoplay; 
+                    clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                    referrerpolicy="strict-origin-when-cross-origin" 
+                    allowfullscreen></iframe>
+            </div> -->
             <div class="tm_banner">
                 <div id="logo-nist">
                     <img src="{{ STATIC_URL }}/static/media\nist_logo.jpg" alt="nist logo">
@@ -36,10 +55,10 @@
                             
                             {% if request.user.is_authenticated and request.user|has_group:"admin" %}
                                 <div> <button  class="nist-button" id="upload_videos"> click to upload videos </button></div>
-                                <div style="font-weight: 800;"> Processed by All - <i id="processed_by_all_div" style="color: darkred;">{{all_processed_videos}}/{{total_videos}}</i> </div>
+                                <div style="font-weight: 800;"> Completed - <i id="processed_by_all_div" style="color: darkred;">{{accepted_videos}}/{{total_videos}}</i> </div>
                             {% else %}
-                                <div style="font-weight: 800;"> Processed by All - <i id="processed_by_all_div" style="color: darkred;" class="">{{percentage_process_all_vids}}/{{total_videos}}</i>  </div>
-                                <div style="font-weight: 800;"> Proccessed by User - <i id="processed_by_user_div"  style="color: darkred;">{{user_processed_videos}}/{{total_user_assigned_vids}}</i> </div>
+                                <div style="font-weight: 800;"> Completed- <i id="processed_by_all_div" style="color: darkred;" class="">{{accepted_videos}}/{{total_videos}}</i>  </div>
+                                <div style="font-weight: 800;"> User Completed - <i id="processed_by_user_div"  style="color: darkred;">{{user_processed_videos}}/{{total_user_assigned_vids}}</i> </div>
                             {% endif %}
                         {% else %}
                             <p id="tm-login"> login - to use the application</p>
