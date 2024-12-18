@@ -316,6 +316,7 @@
 <script type="module" src="{% static '/scripts/main.js' %}"></script>
 
 
+
 {% if request.user.is_authenticated and request.user|has_group:"admin" %}
 <script type="module" src="{% static '/scripts/admin.js' %}"> </script>
 {% endif %}

@@ -186,12 +186,15 @@ def retrieve_video_qa(request):
 
     assoc_project = userreg_obj.project
     assoc_category = Category.objects.get(project=assoc_project, cluster_keywords=cluster_keywords)
+    # print(file_name,"-", assoc_project, "-", assoc_category)
     if not annotator:
+        # called from user page
         assoc_video = Videos.objects.get(file_name=file_name, checked_by=user, project=assoc_project, category=assoc_category)
 
     else:
+        # called from admin page
         user = User.objects.get(username=annotator)
-        assoc_video = Videos.objects.get(file_name=file_name, checked_by=user, project=assoc_project, category=assoc_category)
+        assoc_video = Videos.objects.get(file_name=file_name, project=assoc_project, category=assoc_category)
 
     try:
         assoc_question = assoc_video.question
@@ -211,7 +214,6 @@ def retrieve_video_qa(request):
                 payload[f'ans-{idx}'] = answer_load
     except:
         payload['question'] = None
-
     return JsonResponse({"data": payload})
 
 def submit_vid_qa(request):
@@ -219,7 +221,6 @@ def submit_vid_qa(request):
         is_edit = request.GET.get('is_edit')
         video_filename = request.POST.get('video_filename')
         cluster_keywords = request.POST.get('cluster_keyword')
-        print(video_filename, cluster_keywords)
 
         user = request.user
         user_object = User.objects.get(username=user)
@@ -227,42 +228,74 @@ def submit_vid_qa(request):
         assoc_project = userreg_object.project
         assoc_category = Category.objects.get(cluster_keywords=cluster_keywords, project=assoc_project)
         cur_video = Videos.objects.get(category=assoc_category, project=assoc_project, file_name=video_filename)
-
+        
         if is_edit:
+            print("is edit", cur_video)
             # print("request.POST", request.POST)
+            def populate_payload(assoc_id, key, value, payload, obj=None, isQuestion=False):
+                if isQuestion:
+                    payload.setdefault(key, {"id": assoc_id, "value":value})
+                else:
+                    if  obj.correct:
+                        payload.setdefault(f'{key}-correct', {"id": assoc_id, "value":value})
+                    else:
+                        payload.setdefault(key, {"id": assoc_id, "value":value})
+                return payload
+            payload = {}
+
             for key, value in request.POST.items():
                 # print(key, value)
                 if "question" in key:
                     assoc_id = int(key.split('-')[-1])
+                    new_key = key.split('-')[0]
                     question = {"id":assoc_id, "value":value}
                     assoc_question = Question.objects.get(id=assoc_id)
+
                     assoc_question.question = value
                     assoc_question.save()
+                    cur_video.question = assoc_question
+                    cur_video.save()
+                    populate_payload(assoc_id, new_key, value, payload, isQuestion=True)
                     # print("assoc_question", assoc_question, "new_qs_text", value)
                 elif "ans-0" in key:
                     assoc_id = int(key.split('-')[-1])
+                    new_key = key.split('-')[0] + "-" + key.split('-')[1]
                     correct_ans = {"id":assoc_id, "value":value}
                     assoc_ans = Answer.objects.get(id=assoc_id)
                     assoc_ans.answer = value
                     assoc_ans.save()
+                    populate_payload(assoc_id, new_key, value, payload, obj=assoc_ans, isQuestion=False)
+                    
                 elif "ans-1" in key:
                     assoc_id = int(key.split('-')[-1])
+                    new_key = key.split('-')[0] + "-" + key.split('-')[1]
                     answer_one = {"id":assoc_id, "value":value}
                     assoc_ans = Answer.objects.get(id=assoc_id)
                     assoc_ans.answer = value
+                    
                     assoc_ans.save()
+                    populate_payload(assoc_id, new_key, value, payload, obj=assoc_ans, isQuestion=False)
                 elif "ans-2" in key:
                     assoc_id = int(key.split('-')[-1])
+                    new_key = key.split('-')[0] + "-" + key.split('-')[1]
                     answer_two = {"id":assoc_id, "value":value}
                     assoc_ans = Answer.objects.get(id=assoc_id)
                     assoc_ans.answer = value
+                    
                     assoc_ans.save()
+                    populate_payload(assoc_id, new_key, value, payload, obj=assoc_ans, isQuestion=False)
                 elif "ans-3" in key:
                     assoc_id = int(key.split('-')[-1])
+                    new_key = key.split('-')[0] + "-" + key.split('-')[1]
                     answer_three = {"id":assoc_id, "value":value}
                     assoc_ans = Answer.objects.get(id=assoc_id)
                     assoc_ans.answer = value
+                   
                     assoc_ans.save()
+                    populate_payload(assoc_id, new_key, value, payload, obj=assoc_ans, isQuestion=False)
+            #TODO: return a payload of the editted and replace the div
+            return JsonResponse(payload)
+                   
         else:
             question = request.POST.get('question')
             correct_ans = request.POST.get('correct_ans')
@@ -285,7 +318,7 @@ def submit_vid_qa(request):
         
 
        
-    return HttpResponse("QA and Video sent")
+    return JsonResponse({"info":"QA and Video sent"})
 
 def admin_approve(request):
     from registration.models import Userreg
@@ -496,6 +529,12 @@ def get_videos_per_category(request):
         # print("assoc_proj", assoc_proj)
 
         assoc_category = get_object_or_404(Category, cluster_keywords=term, project=assoc_proj)
+        # assoc_vid = Videos.objects.get(category=assoc_category, project=assoc_proj, file_name="24964")
+        # assoc_vid.checked_by = None
+        # assoc_vid.status = None
+        # assoc_vid.question = None
+        # assoc_vid.save()
+        # return
         videos = assoc_category.video_categories.all().order_by('-video_similarity_score')
         serialized_videos = serialize_videos(videos)
         serialized_videos_json = json.loads(serialized_videos)
@@ -570,7 +609,11 @@ def get_next_video(request):
             
 
             if is_admin:
-                next_video = assoc_category.video_categories.filter(status=True, admin_approve=False).order_by('id').first()
+                from_admin_edit = request.GET.get('from_admin_edit')
+                if from_admin_edit:
+                    next_video = assoc_category.video_categories.filter(status=True, admin_approve=True, question__isnull=False).order_by('id').first()
+                else:
+                    next_video = assoc_category.video_categories.filter(status=True, admin_approve=False).order_by('id').first()
             else:
                 next_video = assoc_category.video_categories.filter(status__isnull=True).order_by('-video_similarity_score').first()
             

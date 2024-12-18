@@ -277,6 +277,11 @@ Admin Page styles Begins
 .user-processed-categories {
     margin-bottom: 2px;
 }
+.row-align_vid_inspection{
+    display: flex;
+    flex-direction: row;
+
+}
 #video_inspection {
     width: 85%;
     margin-left: auto;

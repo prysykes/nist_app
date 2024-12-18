@@ -209,8 +209,8 @@ function create_quest_ans_div({label=null, value=null, assoc_id=null, correct=nu
 
     return label_value_div
 }
-
-function prepare_quest_answer_resp(quest_ans_data){
+// prepare_quest_answer_resp({data:data, isEdit:isEdit})
+function prepare_quest_answer_resp({quest_ans_data=null, isEdit=null}){
     
     let question = quest_ans_data['question']
     
@@ -328,12 +328,14 @@ function create_vidlist_disp_span(file_name, checked_by, status, video_url, vide
 }
 
 function allow_edit_and_show_qa({checked_by=null, project_type=null, 
-                                    file_name=null, cluster_keywords=null, question_tag=null, annotator:annotator}){
+                                   file_name=null, cluster_keywords=null, question_tag=null, annotator:annotator}){
+    
     if (checked_by){
         if (project_type == "image_qa"){
-            
-            console.log("annotor", annotator==undefined);
+            // retrieve associated QA data for a particular video
             if (annotator==undefined){
+                console.log(`filename:${file_name} cluster_keywords:${cluster_keywords}`);
+                
                 var endpoint = `${base_url}/retrieve_video_qa?file_name=${file_name}&cluster_keywords=${cluster_keywords}`
             }else{
                 var endpoint = `${base_url}/retrieve_video_qa?file_name=${file_name}&cluster_keywords=${cluster_keywords}&annotator=${annotator}`
@@ -348,7 +350,8 @@ function allow_edit_and_show_qa({checked_by=null, project_type=null,
                 let quest_ans_data = data['data']
                 
                 question_tag.innerHTML = ""
-                let question_and_answers = prepare_quest_answer_resp(quest_ans_data)
+                question_tag.className = "qs_default"
+                let question_and_answers = prepare_quest_answer_resp({quest_ans_data:quest_ans_data})
                 question_tag.appendChild(question_and_answers)            
         })     
     }
@@ -362,6 +365,7 @@ function allow_edit_and_show_qa({checked_by=null, project_type=null,
 
     else {
         // TODO: edit shows the question and ans in editable mode
+
         let action_control = document.querySelector('#action-control')
         let edit_reponse = document.querySelector('#edit-reponse')
         edit_reponse.innerHTML = ""
@@ -496,10 +500,10 @@ function mark_good_bad(file_name, appr_rej) {
     let cur_span_id = "li_"+file_name
     let cur_span = document.getElementById(cur_span_id)
 
-    if (appr_rej=='approve'){
+    if (appr_rej=='approve' && cur_span){
         cur_span.appendChild(inline_good)
     }
-    else if (appr_rej=='reject'){
+    else if (appr_rej=='reject' && cur_span){
         cur_span.appendChild(inline_bad)
     }
  
@@ -508,7 +512,6 @@ function mark_good_bad(file_name, appr_rej) {
 
 function replace_rem_total_per_category({unprocessed_vids=null, total_vids=null, html_node_vid_list=null}){
     let vid_list_div = document.querySelector('#cat_name')
-    console.log("vid_list_div!!", vid_list_div);
     let text_content = vid_list_div.textContent
     let cluster_keywords = text_content.split('|')[0]
     let rem_total = `|${unprocessed_vids}/${total_vids}`
@@ -594,6 +597,8 @@ function show_video_in_preview({prev_file_name=null, assoc_category = null, data
         let rem_total_per_category = data["rem_total_per_category"]
         let user_all_processed = data["user_all_processed"]
         if (!isAdmin){
+            console.log("isAdmin>>", isAdmin);
+            
             // admin page not not mark span as resolved
             mark_good_bad(prev_file_name, appr_rej)
 
@@ -607,6 +612,7 @@ function show_video_in_preview({prev_file_name=null, assoc_category = null, data
             
         }
         else{
+            console.log("isAdmin", isAdmin);
             var payload = [rem_total_per_category, user_all_processed]
         }
 
@@ -619,18 +625,30 @@ function show_video_in_preview({prev_file_name=null, assoc_category = null, data
 }
 
 
-function get_next_video_appr_rej({file_name=null, assoc_category=null, appr_rej=null, add_active_to_span=null, project_type=null, isAdmin=null}){
+function get_next_video_appr_rej({file_name=null, assoc_category=null, appr_rej=null, add_active_to_span=null, project_type=null, isAdmin=null, IsAdminPage=null}){
     // console.log("project_type!!!", project_type);
 
   
     var prev_file_name = file_name
     if (isAdmin){
-        console.log("admin apre rej");
+        if (IsAdminPage){
+            // retrive the clicked submit btn
+            const target_btn = document.querySelector('input[name="submit-vid-qa"]')
+            if (target_btn.classList.contains('from-edit')){
+                let admin_edit = true
+                var get_next_video_endpoint = base_url+`/get_next_video?file_name=${file_name}&appr_rej=${appr_rej}&is_admin=${isAdmin}&from_admin_edit=${admin_edit}`
+            }
+            // check if the submit button has from edit and retrive only 
+            // videos part of that category belongign to th annotator
+            // that has questionn as not null
+            
+        }else{
+            var get_next_video_endpoint = base_url+`/get_next_video?file_name=${file_name}&appr_rej=${appr_rej}&is_admin=${isAdmin}`
+        }
         
-        var get_next_video_endpoint = base_url+`/get_next_video?file_name=${file_name}&appr_rej=${appr_rej}&is_admin=${isAdmin}`
+        
     }
     else if(project_type){
-        console.log("skip appr_rej", appr_rej);
         var get_next_video_endpoint = base_url+`/get_next_video?file_name=${file_name}&appr_rej=${appr_rej}&project_type=${project_type}`
     }
     else{
@@ -646,17 +664,10 @@ function get_next_video_appr_rej({file_name=null, assoc_category=null, appr_rej=
     .then((data)=>{
 
         if (!isAdmin){
-            console.log("not admin data", data);
             const[file_name_, unprocessed_vids, total_vids, html_node_vid_list, user_all_processed] = show_video_in_preview({prev_file_name:prev_file_name,  assoc_category:assoc_category, data:data, appr_rej:appr_rej, caller:'appr_rej', isAdmin:isAdmin})
             
             let all_processed = user_all_processed[1]
             let user_processed = user_all_processed[0]
-
-            console.log("all_processed", all_processed);
-            console.log("user_processed",user_processed);
-            
-            
-            
             
             // replace the progress  span on video_list_disp div
             let processed_by_user_div = document.getElementById('processed_by_user_div')
@@ -716,10 +727,13 @@ function get_next_video_defualt({assoc_category:assoc_category, add_active_to_sp
 function get_next_video({file_name=null, assoc_category=null, appr_rej=null, project_type=null}){
     // console.log('filename', file_name);
     // var prev_file_name = file_name
-    let isAdmin = null
+    let isAdmin = false
     let admin_project_type_span = document.getElementById('project_type')
     if (admin_project_type_span){
+        console.log("admin_project_type_span", admin_project_type_span);
+        
         isAdmin = true
+
         
     }
     
@@ -877,13 +891,25 @@ function create_qa_edit_form_elem({id=null, label=null, value=null, submit=null}
         submit_btn.style = 'text-align: center;'
         submit_btn.type = 'submit'
         submit_btn.value = value
+        submit_btn.className = "from-edit"
         submit_btn.addEventListener('click', (e)=>{
             e.preventDefault()
-            submit_video_qa_form({isEdit:true})
+            let target_btn = document.querySelector('input[name="submit-vid-qa"]')
+            if (target_btn.classList.contains('from-edit')){
+                // don't retrive next video
+                let payload = submit_video_qa_form({isEdit:true})
+                // replace the old values of the the vide
+                // with user provided values
+                
+            }else{
+                // retrieve next video 
+                submit_video_qa_form()
+                retrieve_next_video_qa()
+            }
+            
         
-            // retrieve next video 
-            retrieve_next_video_qa()
-            console.log("do submit action");
+            
+           
             
         })
         submit_elem_div.append(submit_btn)
@@ -921,7 +947,7 @@ function create_qa_edit_form_elem({id=null, label=null, value=null, submit=null}
 
 
 }
-
+let default_question = null
 function create_edit_btn({file_name:file_name, cluster_keywords:cluster_keywords, project_type:project_type}){
 
     let  app_rej_btn_div = create_apr_rej({file_name:file_name, cluster_keywords:cluster_keywords , caller:"appr_rej_admin"})
@@ -958,8 +984,29 @@ function create_edit_btn({file_name:file_name, cluster_keywords:cluster_keywords
             }
             let submit_row = create_qa_edit_form_elem({id:'submit', label:"Send QandA", value:"Submit", submit:true})
             qa_form.appendChild(submit_row)
-            parent_div.innerHTML = ""
-            parent_div.appendChild(qa_form)
+            // console.log("parent_div", parent_div);
+            
+            // retrieve the old video qs data in 
+            // case the user decides not to edit anymore
+            if (parent_div.classList.contains('qs_default')){            
+                //save the current inner html
+                default_question = parent_div.innerHTML
+                parent_div.innerHTML = ""
+                parent_div.appendChild(qa_form)
+                let edit_btn = document.querySelector('#edit_res input')
+                edit_btn.value = "close edit"
+                
+                // remove the class list
+                parent_div.classList.remove('qs_default')
+                
+            }else{
+                parent_div.innerHTML = ""
+                parent_div.innerHTML = default_question
+                let edit_btn = document.querySelector('#edit_res input')
+                edit_btn.value = "edit response"
+                parent_div.className = 'qs_default'
+            }
+            
             
         }
         else{
