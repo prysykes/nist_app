@@ -1,4 +1,4 @@
-import {base_url, get_next_video_appr_rej, add_active_to_span} from './main.js'
+import {base_url, get_next_video_appr_rej, add_active_to_span, prepare_quest_answer_resp} from './main.js'
 
 let skip_btn_qa = document.querySelector('#skip_btn_qa')
 console.log("hello", skip_btn_qa );
@@ -46,17 +46,19 @@ function submit_video_qa_form({isEdit=null}){
     let csrf_token_name = csrf_token_element.name
     let csrf_token = csrf_token_element.value
 
-    let video_filename = document.querySelector('#video_name_value').innerText
-    let cluster_keyword = document.querySelector('#cat_name').innerText.split('|').at(0).trim()
-
+    let project_type = document.querySelector('#project_type')
+    if (project_type){
+        var video_filename = document.querySelector('#video_name_value').innerText.trim()
+        var cluster_keyword = document.querySelector('#cluster_keyword').innerText.split(':').at(1).trim()
+        
+    }else{
+        var video_filename = document.querySelector('#video_name_value').innerText
+        var cluster_keyword = document.querySelector('#cat_name').innerText.split('|').at(0).trim()
+    }
     
-    
-    
-
     let vid_qa_form = document.querySelector('#video_qs_form')
     // console.log("vid_qa_form", vid_qa_form);
-    
-    
+     
     let new_form_data = new FormData()
     if (!isEdit){
         var endpoint = base_url+"/submit_vid_qa"
@@ -76,7 +78,6 @@ function submit_video_qa_form({isEdit=null}){
             let cur_text_area_name = cur_text_area.name
             let element_name = cur_text_area_name + "-" + cur_id
             let element_value = cur_text_area.value
-            // console.log(">>", element_name, element_value);
             
             // let element = vid_qa_form.elements[i]
             new_form_data.append(element_name, element_value)
@@ -93,30 +94,97 @@ function submit_video_qa_form({isEdit=null}){
     new_form_data.append(csrf_token_name, csrf_token)
 
     // let endpoint = base_url+"/submit_vid_qa"
-
+    console.log("endpoint>>", endpoint);
+    
     let response = fetch(endpoint,{
         method: 'POST',
         body: new_form_data
     })
+    .then((response)=> response.json())
+    .then((data)=>{
+        let parent_div = document.querySelector('#question_tag')
+        parent_div.classList.add("qs_default")
+        parent_div.innerHTML = ""
+        let div = prepare_quest_answer_resp({quest_ans_data:data, isEdit:isEdit})
+        
+        parent_div.appendChild(div)
+        let edit_btn = document.querySelector('#edit_res input')
+        edit_btn.value = "edit response"
+        
+        // remove the class list
+        parent_div.classList.add('qs_default')
+                
+        // console.log("data", data);
+        // Object.entries(data).forEach(([key, value])=>{
+        //     if (key.includes("question")){
+        //         let assoc_id = value[0]
+        //         let inner_text = value[1]
+        //         console.log("met question", assoc_id, inner_text);
+
+        //     }else{
+        //         if (key.includes("correct")){
+        //             let assoc_id = value[0]
+        //             let inner_text = value[1]
+        //             console.log("met correct", assoc_id, inner_text);
+                    
+        //         }else{
+        //             let assoc_id = value[0]
+        //             let inner_text = value[1]
+        //             console.log("not qs not correct", assoc_id, inner_text);
+                    
+        //         }
+        //     }
+            
+        // })
+        
+    })
+    .catch(error => {
+        console.log("error22", error);
+        
+    })
+
 }
 
-function retrieve_next_video_qa(){
+function retrieve_next_video_qa({isEdit=isEdit}){
+    console.log("is edit>>", isEdit);
+    
     let project_type_div = document.querySelector('#project_type_user_pg')
     let cat_name_div = document.querySelector('#cat_name')
+    // if (cat_name_div){
+    //     console.log("inside user QA");
+        
+    // }else {
+    //     console.log("inside adminQA");
+        
+    // }
+
     let file_name_div = document.querySelector('#video_name_value')
+ 
+    let file_name = file_name_div.textContent
+    let project_type = project_type_div.textContent
+    let assoc_category = document.querySelector('#cluster_keyword')
+    let IsAdminPage = false
+    if (assoc_category){
+        assoc_category = assoc_category.innerText.split(':').at(1).trim()
+        IsAdminPage = true
+    }
+    else{
+        assoc_category = document.querySelector('#cat_name').innerText.split('|').at(0).trim() 
+    }
+
 
     
-    let file_name = file_name_div.textContent
-    let assoc_category = cat_name_div.textContent.split('|').at(0).trim()
     let appr_rej = 'approve'
-    let project_type = project_type_div.textContent
+    
+    
 
     let kwargs = {file_name:file_name, assoc_category:assoc_category, 
         appr_rej:appr_rej, add_active_to_span:add_active_to_span,
-         project_type:project_type}
+         project_type:project_type, IsAdminPage:IsAdminPage}
     get_next_video_appr_rej(kwargs)
 
 }
+
 
 function create_form_elements({elem_name=null, elem_id=null, elem_inner_text=null, submit=null}){
     let label_elem_div = document.createElement('div')
@@ -142,10 +210,12 @@ function create_form_elements({elem_name=null, elem_id=null, elem_inner_text=nul
         submit_elem.value = "Submit"
         submit_elem.addEventListener('click', (e)=>{
             e.preventDefault()
-            submit_video_qa_form({isEdit:false})
+            let isEdit = false
+            submit_video_qa_form({isEdit:isEdit})
+
             
             // retrieve next video 
-            retrieve_next_video_qa()
+            retrieve_next_video_qa({isEdit:isEdit})
            
         })
         

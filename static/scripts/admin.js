@@ -594,7 +594,7 @@ user_processed_categories.forEach((category)=>{
         if (video_inspection.classList.contains('display-none')){
           
             video_inspection.classList.remove('display-none')
-            video_inspection.classList.add('row-align_base')     
+            video_inspection.classList.add('row-align_vid_inspection')     
             
         }else{
 
