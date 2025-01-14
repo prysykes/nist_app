@@ -129,7 +129,7 @@ def create_categories(new_project, num_annotators, groups, cluster_keyword_id_si
         return categories
 
 def handle_upload_videos(request, project_type, num_annotators, project_name, uploaded_videos, cluster_csv):
-    if project_type == "image_qa":
+    if project_type == "video_qa":
         print("do process videos as image QA")
     elif project_type == "annotation":
         print("do process videos as annotation")

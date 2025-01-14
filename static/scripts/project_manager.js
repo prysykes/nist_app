@@ -9,7 +9,7 @@ var appr_rej_btn_appended = false
 </div> */}
 
 
-// if (project_type=='image_qa'){
+// if (project_type=='video_qa'){
 //     var action_div = create_qa_btn_controls()
 //     console.log("in qa");
     
@@ -67,14 +67,14 @@ function create_qa_btn_controls(){
             
 //         // }
 //         // else if (project_selected==2){
-//         //     //image_qa showing hide it and show annotation project
+//         //     //video_qa showing hide it and show annotation project
 //         //     show_imageqa_job.classList.add('display-none')
 //         //     show_annotation_job.classList.remove('display-none')
 //         //     project_selected = 1
 //         // }
         
 //     }
-//     else if (selected_project_type == 'image_qa'){
+//     else if (selected_project_type == 'video_qa'){
 //         let apr_rej_btn_div = document.querySelector('#apr_rej_btn_div')
 //         const[skip, submit] = create_qa_btn_controls()
 //         console.log("skip", skip)
@@ -108,13 +108,13 @@ function create_qa_btn_controls(){
 //         //     project_selected = 2
 //         // }
 //         // else if (project_selected==2){
-//         //     // user wants to hide image_qa project
+//         //     // user wants to hide video_qa project
 //         //     show_imageqa_job.classList.add('display-none')
 //         //     project_selected = 0
             
 //         // }
 //         // else if (project_selected==1){
-//         //     //annotation showing hide it and show image_qa project
+//         //     //annotation showing hide it and show video_qa project
 //         //     show_annotation_job.classList.add('display-none')
 //         //     show_imageqa_job.classList.remove('display-none')
 //         //     project_selected = 2

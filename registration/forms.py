@@ -12,5 +12,5 @@ class RegistrationForm(UserCreationForm):
 class UserregForm(ModelForm):
     class Meta:
         model = Userreg
-        fields = ['title']
+        fields = ['project_name']
         exclude = ['user']

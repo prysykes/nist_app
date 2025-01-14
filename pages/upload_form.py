@@ -8,7 +8,7 @@ class ProjectTitleForm(forms.ModelForm):
     #     "type": "select",
     #     "class": "upload_form",
     #     "size": 20
-    # }, labels={"project_type": "Select projct type"})
+    # }, labels={"project_type": "Select project type"})
 
     # project_name = forms.CharField(widget=forms.TextInput(attrs={
     #     "name": "project_name",
@@ -58,7 +58,7 @@ class ProjectTitleForm(forms.ModelForm):
 
         }
         labels = {
-            'project_type': 'Select projct type',
+            'project_type': 'Select project type',
             'project_name': 'Enter project name',
             'cluster_csv': 'Upload clustered videos csv',
             'number_of_annotators': 'Enter the number of annotators'

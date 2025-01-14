@@ -61,8 +61,8 @@ class ProjectTitle(models.Model):
         This helps in group management
     """
     PROJECT_TYPE = [
-        ("annotation", "Image Annotation"),
-        ("image_qa", "Image Question Answering")
+        ("annotation", "Video Annotation"),
+        ("video_qa", "Video Question Answering")
     ]
     project_type = models.CharField(max_length=10, choices=PROJECT_TYPE, default="annotation")
     project_name = models.CharField(max_length=100)

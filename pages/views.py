@@ -32,6 +32,7 @@ finished_jobs_dir = os.path.join(media_dir, "finished_jobs")
 def index(request):
     from pages.utils import prepare_processed_videos
     
+    
     # avaliable_groups = Group.objects.all()
     # print('request.user', request.user.is_anonymous)
     video_upload_form = VideoUploadForm()
@@ -42,13 +43,14 @@ def index(request):
     user = request.user
     
     if not user.is_anonymous:
+        
         user_groups = str(user.groups.all())
         # print("user", user)
         user_object = User.objects.get(username=user)
         userreg_object = Userreg.objects.get(user=user_object) 
         assoc_project = userreg_object.project
         #ensures that only admin can upload videos
-        if "admin" in user_groups:
+        if "job_admin" in user_groups:
             total_videos = Videos.objects.filter(project=assoc_project).count()
             accepted_videos= Videos.objects.filter(project=assoc_project, status=True).count()
             if request.method == "POST":
@@ -80,14 +82,16 @@ def index(request):
                 return render(request, 'index.html', context)
     
     if not request.user.is_anonymous:
-        
         user = request.user
         user_object = User.objects.get(username=user)
         userreg_object = Userreg.objects.get(user=user_object) 
         assoc_project_type = userreg_object.project
+        # print("yoo")
+        
         #TODO: redo logic for all processed videos
         # all_processed_videos = len(Videos.objects.all().filter(status=True, checked_by=str(user)))
         accepted_videos = Videos.objects.filter(project=assoc_project_type, status=True).count()
+        # print("yoo", assoc_project_type)
         total_videos = len(get_list_or_404(Videos, project=assoc_project_type))
 
         
@@ -102,6 +106,7 @@ def index(request):
                 len_vids = len(cur_cat_videos)
                 total_user_assigned_vids += len_vids
                 user_assigned_videos.append(cur_cat_videos)
+            
         except IndexError:
             user_assigned_videos = []
 

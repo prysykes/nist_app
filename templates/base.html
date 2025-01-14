@@ -18,8 +18,7 @@
 </head>
 <body>
    
-    {% block header %}
-    
+    {% block header %}   
         <header>
             <!-- <div>
                 
@@ -53,7 +52,7 @@
                                 
                             </div>
                             
-                            {% if request.user.is_authenticated and request.user|has_group:"admin" %}
+                            {% if request.user.is_authenticated and request.user|has_group:"job_admin" %}
                                 <div> <button  class="nist-button" id="upload_videos"> click to upload videos </button></div>
                                 <div style="font-weight: 800;"> Completed - <i id="processed_by_all_div" style="color: darkred;">{{accepted_videos}}/{{total_videos}}</i> </div>
                             {% else %}
@@ -83,7 +82,7 @@
     {% endblock header %}
     {% block section %}
         <div class="section">
-            {% if request.user.is_authenticated and not request.user|has_group:"admin" %}
+            {% if request.user.is_authenticated and not request.user|has_group:"job_admin" %}
                 <div id="custom-confirm" class="confirm-overlay">
                     <div class="confirm-box">
                         <p> You already finished annotation. Do you want to restart?</p>
@@ -94,7 +93,7 @@
             {% endif %}
             <h1 class="tm_headings">NIST Automated Video Annotation Application 
                 <div class="actions">
-                    {% if request.user.is_authenticated and not request.user|has_group:"admin" %}
+                    {% if request.user.is_authenticated and not request.user|has_group:"job_admin" %}
                     
                         <span id="end-annotation" class="job-action-btn">
                             {% if not request.user.userreg.finished_job %} 
@@ -105,7 +104,7 @@
                         </span> 
                       
                     
-                        {%elif request.user.is_authenticated and request.user|has_group:"admin"%} 
+                        {%elif request.user.is_authenticated and request.user|has_group:"job_admin"%} 
                             <!-- <span id="show_job_summary" class="job-action-btn"> Show Job Summary </span>  -->
                     {% endif %}
                 </div> 
@@ -175,7 +174,7 @@
             
             {% if request.user.is_authenticated %} 
 
-                {% if request.user.is_authenticated and request.user|has_group:"admin" %}
+                {% if request.user.is_authenticated and request.user|has_group:"job_admin" %}
                 
                     <div class="row-align">
                         {% include "admin.html" %}
@@ -317,11 +316,11 @@
 
 
 
-{% if request.user.is_authenticated and request.user|has_group:"admin" %}
+{% if request.user.is_authenticated and request.user|has_group:"job_admin" %}
 <script type="module" src="{% static '/scripts/admin.js' %}"> </script>
 {% endif %}
 
-{% if request.user.is_authenticated and not request.user|has_group:"admin" %}
+{% if request.user.is_authenticated and not request.user|has_group:"job_admin" %}
 <script type="module" src="{% static '/scripts/project_manager.js' %}"></script>
 <script type="module" src="{% static '/scripts/video_qa.js' %}"></script>
 {% endif %}
