@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='projecttitle',
             name='project_type',
-            field=models.CharField(choices=[('annotation', 'Image Annotation'), ('image_qa', 'Image Question Answering')], default='annotation', max_length=10),
+            field=models.CharField(choices=[('annotation', 'Image Annotation'), ('video_qa', 'Image Question Answering')], default='annotation', max_length=10),
         ),
     ]

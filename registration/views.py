@@ -3,6 +3,7 @@ from .forms import RegistrationForm, UserregForm
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
+from pages.models import ProjectTitle
 
 
 from django.core.mail import EmailMessage
@@ -41,10 +42,13 @@ def signup(request):
             # print('cleaned data', registration_form.cleaned_data)
             username = registration_form.cleaned_data.get('username')
             user_email = registration_form.cleaned_data.get('email')
-       
-            
-            
+            project_name = userreg_form.cleaned_data.get('project_name')
+            assoc_project = ProjectTitle.objects.get(project_name=project_name)
+            print("project::", project_name)
+            print("assoc_project", assoc_project)
+
             userreg.user = user
+            userreg.project = assoc_project
             userreg.save()
             messages.success(request, 'Account Successfully Created for' + username.upper() +
                                 'and activation email sent to:' + user_email + ", \n" + "Please visit your email to activate your account...")

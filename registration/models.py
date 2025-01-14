@@ -7,7 +7,7 @@ from pages.models import ProjectTitle
 
 class Userreg(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, verbose_name='User')
-    title = models.CharField(max_length=5)
+    project_name = models.CharField(max_length=50, default="")
     date_created = models.DateField(auto_now_add=True)
     finished_job = models.BooleanField(default=False)
     admin_approved = models.BooleanField(default=False)

@@ -331,7 +331,7 @@ function allow_edit_and_show_qa({checked_by=null, project_type=null,
                                    file_name=null, cluster_keywords=null, question_tag=null, annotator:annotator}){
     
     if (checked_by){
-        if (project_type == "image_qa"){
+        if (project_type == "video_qa"){
             // retrieve associated QA data for a particular video
             if (annotator==undefined){
                 console.log(`filename:${file_name} cluster_keywords:${cluster_keywords}`);
@@ -370,7 +370,7 @@ function allow_edit_and_show_qa({checked_by=null, project_type=null,
         let edit_reponse = document.querySelector('#edit-reponse')
         edit_reponse.innerHTML = ""
         action_control.innerHTML = ""
-        if(project_type == "image_qa"){
+        if(project_type == "video_qa"){
             var action_div = create_qa_btn_controls()
             question_tag.innerHTML = ""
             let form = create_video_QA_form()
@@ -573,7 +573,7 @@ function show_video_in_preview({prev_file_name=null, assoc_category = null, data
     video.src =  base_vid_src+video_url
     
     vid_tag.appendChild(video)
-    if (project_type=='image_qa'){
+    if (project_type=='video_qa'){
         var action_div = create_qa_btn_controls()
         let question_tag = document.querySelector('#question_tag')
         question_tag.innerHTML = ""
@@ -964,7 +964,7 @@ function create_edit_btn({file_name:file_name, cluster_keywords:cluster_keywords
 
     btn.addEventListener('click', ()=>{
         let edit_div = document.getElementById('edit_res')
-        if (project_type=='image_qa'){
+        if (project_type=='video_qa'){
             let parent_div = document.querySelector('#question_tag')
             // create_qa_edit_form_elem({id=null, label=null, value=null}
             let qa_label = document.querySelectorAll('.qa_label')
