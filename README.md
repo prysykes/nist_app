@@ -33,7 +33,7 @@ We have provided a jupyter notebook that accepts thousands of unlabeled video an
 1. The program accepts a path to unlabeled videos and outputs a CSV file.
 2. The CSV file contains video defualt filenames, cluster membership IDs, video keywords descriptions, cluster keywords description, intracluster performance scores.
 3. The CSV file is saved as full_cluster_csv.csv.
-### User Group Management
+### AVCAS Usecases
 AVCAS Supports two kinds of video analytics pipelines
 1. **Video Annotation (annotation)**
 2. **Video Question and Answering (Video_qa)**

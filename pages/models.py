@@ -2,13 +2,27 @@ from django.db import models
 from django.contrib.auth.models import Group, User
 from django.core.validators import MinValueValidator
 from django.db.models import Case, When, Value, BooleanField
+# from pages.models import VideoGroup
+
 
 # Create your models here.
+
+    
+class VideoGroup(models.Model):
+    #project = models.ForeignKey(ProjectTitle, blank=True, null=True, on_delete=models.CASCADE)
+    name = models.CharField(max_length=50, default="")
+    project_name = models.CharField(max_length=50, default="")
+    user = models.ForeignKey(User, blank=True, null=True, on_delete=models.DO_NOTHING)
+    is_assigned = models.BooleanField(default=False)
+    date_added = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
 
 class Category(models.Model):
     cluster_keywords = models.CharField(max_length=250)
     cluster_id = models.IntegerField()
-    group = models.ForeignKey(Group, on_delete=models.SET_NULL, null=True)
+    group = models.ForeignKey("VideoGroup", on_delete=models.SET_NULL, null=True)
     admin_approved = models.BooleanField(default=False)
     project = models.ForeignKey('ProjectTitle', default=1374, blank=True, null=True, on_delete=models.CASCADE)
     cluster_similarity_score = models.FloatField(default=0.0)
@@ -65,8 +79,8 @@ class ProjectTitle(models.Model):
         ("video_qa", "Video Question Answering")
     ]
     project_type = models.CharField(max_length=10, choices=PROJECT_TYPE, default="annotation")
-    project_name = models.CharField(max_length=100)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    project_name = models.CharField(max_length=100, unique=True)
+    user = models.ForeignKey(User, on_delete=models.DO_NOTHING)
     cluster_csv = models.FileField(upload_to='cluster_csv', verbose_name='Trec Videos Cluster Info', null=True, blank=True)
     number_of_annotators = models.IntegerField(null=True, blank=True)
 
@@ -92,7 +106,8 @@ class Videos(models.Model):
     checked_by = models.ForeignKey(User, on_delete=models.DO_NOTHING, blank=True, null=True)
     question = models.ForeignKey(Question, null=True, blank=True, on_delete=models.CASCADE)
     project = models.ForeignKey(ProjectTitle, default='', on_delete=models.CASCADE)
-    video = models.FileField(upload_to='videos', verbose_name='Trec Videos')
+    # video = models.FileField(upload_to='videos', verbose_name='Trec Videos')
+    video_path = models.CharField(max_length=50)
     file_name = models.CharField(max_length=50, null=True, blank=True)
     description = models.CharField(max_length=500, null=True, blank=True)
     keywords = models.CharField(max_length=250, null=True, blank=True)

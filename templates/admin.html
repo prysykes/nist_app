@@ -48,9 +48,11 @@
         <!-- <div> haha</div>
         <div>hana</div>
         <div>hagi</div> -->
+        <div id="project_type" class="display-none">{{request.user.userreg.project.project_type}}</div>
+        
         {% for user, categories in users_processed_videos.items %}
         {%if forloop.first %}
-        <span id="project_type" class="display-none">{{user.userreg.project.project_type}}</span>
+        <!-- <span id="project_type" class="display-none">{{user.userreg.project.project_type}}</span> -->
         {% endif %}
         
       

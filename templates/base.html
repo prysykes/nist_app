@@ -52,10 +52,12 @@
                                 
                             </div>
                             
-                            {% if request.user.is_authenticated and request.user|has_group:"job_admin" %}
+                            {% if request.user.is_authenticated and not request.user.userreg.group %}
+                          
                                 <div> <button  class="nist-button" id="upload_videos"> click to upload videos </button></div>
                                 <div style="font-weight: 800;"> Completed - <i id="processed_by_all_div" style="color: darkred;">{{accepted_videos}}/{{total_videos}}</i> </div>
                             {% else %}
+                            {% comment %} <div> {{request.user.userreg.group}} ff</div> {% endcomment %}
                                 <div style="font-weight: 800;"> Completed- <i id="processed_by_all_div" style="color: darkred;" class="">{{accepted_videos}}/{{total_videos}}</i>  </div>
                                 <div style="font-weight: 800;"> User Completed - <i id="processed_by_user_div"  style="color: darkred;">{{user_processed_videos}}/{{total_user_assigned_vids}}</i> </div>
                             {% endif %}
@@ -82,7 +84,7 @@
     {% endblock header %}
     {% block section %}
         <div class="section">
-            {% if request.user.is_authenticated and not request.user|has_group:"job_admin" %}
+            {% if request.user.is_authenticated and request.user.userreg.group %}
                 <div id="custom-confirm" class="confirm-overlay">
                     <div class="confirm-box">
                         <p> You already finished annotation. Do you want to restart?</p>
@@ -93,7 +95,7 @@
             {% endif %}
             <h1 class="tm_headings">NIST Automated Video Annotation Application 
                 <div class="actions">
-                    {% if request.user.is_authenticated and not request.user|has_group:"job_admin" %}
+                    {% if request.user.is_authenticated and request.user.userreg.group %}
                     
                         <span id="end-annotation" class="job-action-btn">
                             {% if not request.user.userreg.finished_job %} 
@@ -104,7 +106,7 @@
                         </span> 
                       
                     
-                        {%elif request.user.is_authenticated and request.user|has_group:"job_admin"%} 
+                        {%elif request.user.is_authenticated and not not request.user.userreg.group %} 
                             <!-- <span id="show_job_summary" class="job-action-btn"> Show Job Summary </span>  -->
                     {% endif %}
                 </div> 
@@ -135,10 +137,10 @@
                                 </div>
                                 <div class="row-align">
                                     <div class="form-label">
-                                        {{project_details.cluster_csv.label}}
+                                        CSV filename
                                     </div>
                                     <div class="form-text-input">
-                                        {{project_details.cluster_csv}}
+                                        <input type="text" name="cluster_csv" id="cluster_csv">
                                     </div>
                                 </div>
                                 <div class="row-align">
@@ -147,6 +149,14 @@
                                     </div>
                                     <div class="form-text-input">
                                         {{project_details.number_of_annotators}}
+                                    </div>
+                                </div>
+                                <div class="row-align">
+                                    <div class="form-label">
+                                        Video directory name
+                                    </div>
+                                    <div class="form-text-input">
+                                        <input type="text" name="video_path" id="video_path">
                                     </div>
                                 </div>
                                 <div class="row-align">
@@ -174,7 +184,7 @@
             
             {% if request.user.is_authenticated %} 
 
-                {% if request.user.is_authenticated and request.user|has_group:"job_admin" %}
+                {% if request.user.is_authenticated and not request.user.userreg.group %}
                 
                     <div class="row-align">
                         {% include "admin.html" %}
@@ -316,11 +326,11 @@
 
 
 
-{% if request.user.is_authenticated and request.user|has_group:"job_admin" %}
+{% if request.user.is_authenticated and not request.user.userreg.group %}
 <script type="module" src="{% static '/scripts/admin.js' %}"> </script>
 {% endif %}
 
-{% if request.user.is_authenticated and not request.user|has_group:"job_admin" %}
+{% if request.user.is_authenticated and request.user.userreg.group %}
 <script type="module" src="{% static '/scripts/project_manager.js' %}"></script>
 <script type="module" src="{% static '/scripts/video_qa.js' %}"></script>
 {% endif %}
