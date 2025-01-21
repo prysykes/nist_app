@@ -7,7 +7,9 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.models import User
 from django.contrib.auth.models import Group, Permission
 from django.http import JsonResponse, HttpResponse
+from pages.models import VideoGroup
 import math
+import random
 import json
 import pandas as pd
 import numpy as np
@@ -21,8 +23,8 @@ from registration.models import Userreg
 
 
 
-cluster_csv_file = 'media/cluster_csv/full_cluster_csv.csv'
-
+# cluster_csv_file = 'media/cluster_csv/full_cluster_csv.csv'
+csv_base_dir = os.path.join('media', 'cluster_csv')
 parent_dir = os.getcwd()
 media_dir = os.path.join(parent_dir, 'media')
 finished_jobs_dir = os.path.join(media_dir, "finished_jobs")
@@ -36,11 +38,9 @@ def export_job(project_type):
     # print("export job hit")
     # user_fields = ['id', 'finished_job', 'admin_approved']
     assoc_project = ProjectTitle.objects.get(project_type=project_type)
-    print("assoc_project", assoc_project)
     payload = []
     try:
         all_approved_users = Userreg.objects.filter(admin_approved=True, project=assoc_project)
-        print("len all_approved_users", len(all_approved_users), all_approved_users)
         assoc_categories = None
         assoc_videos = None
         top_category = None
@@ -48,7 +48,8 @@ def export_job(project_type):
         for userreg_instance in all_approved_users:
             cur_payload = {}
             user = userreg_instance.user
-            assoc_group = user.groups.all().first()
+            assoc_group = userreg_instance.group
+            
             # print("user", user, '\n', 'assoc_group', assoc_group)
             assoc_categories = Category.objects.filter(group=assoc_group, admin_approved=True) 
             assoc_videos = get_list_or_404(Videos, category__admin_approved=True, checked_by=user, status=True)
@@ -84,29 +85,56 @@ def create_groups(num_annotators, project_name):
     """
     groups = []
     for idx in range(1, num_annotators+1):
-        cur_group, created = Group.objects.get_or_create(name=f'{project_name}_grp_{idx}')
+        cur_group, created = VideoGroup.objects.get_or_create(name=f'{project_name}_grp_{idx}', project_name=project_name)
         groups.append(cur_group)
         # group_name = Group
    
     return groups
 
-def create_categories(new_project, num_annotators, groups, cluster_keyword_id_similarity_pair):
-        """
-            creates video clusters/category objects based on user provided cluster_csv files
-            Params: num_annotators: int number of annotators for the current job
-                    groups: array a list of groups to assign each category to
-                    cluster_keyword_id_similarity_pair: array an array of a tupple of cluster_keyword, cluster_id,
-                                                        cluster_similarity_score
-            Returns: an array of catergories
-        """
-        categories = []
+def helper_category_creation(new_project, num_annotators, groups, total_videos=None, cluster_keyword_id_similarity_pair=None):
+    categories = []
+    if not cluster_keyword_id_similarity_pair:
+        ratio = 0.05
+        categories_names = []
+        video_per_category = int(total_videos * ratio)
+        num_categories = int(total_videos/video_per_category)
+        group_alias = new_project.project_name + "_" + new_project.project_type + "_group"
+        # populate category names
+        # print("total_video", total_videos,\"video_per_category", video_per_category, "num_categories", num_categories)
+        for i in range(num_categories):
+            cat_name = group_alias + f"_{i}"
+            categories_names.append(cat_name)
+        
+        categories_names_indices = range(len(categories_names))
+        quota = math.ceil(len(categories_names)/num_annotators)
+        min_idx = 0
+        max_idx = quota
+        # create category instances
+        for i in range(num_annotators):
+            cur_group = groups[i]
+            assoc_category_names = categories_names[min_idx:max_idx]
+            for j, cat_name in enumerate(assoc_category_names):
+                assoc_cluster_keywords = cat_name
+                cluster_id = sum(random.sample(range(101), 3))
+                new_category = Category()
+                new_category.cluster_keywords = assoc_cluster_keywords
+                new_category.cluster_id = cluster_id + i + j # to ensure the is unique
+                new_category.group = cur_group
+                new_category.project = new_project
+                new_category.save()
+                categories.append(new_category)
+            min_idx = max_idx
+            max_idx += quota
+        return categories, video_per_category
+
+
+    else:
         total_categories = len(cluster_keyword_id_similarity_pair)
         range_total_categories = range(total_categories)
         quota = math.ceil(total_categories/num_annotators)
         min_idx = 0
         max_idx = quota
 
-        # pick an annotator and assign videos to her
         for idx in range(num_annotators):
             cur_group = groups[idx]
             assoc_category_keyword_idx = range_total_categories[min_idx:max_idx]
@@ -114,8 +142,7 @@ def create_categories(new_project, num_annotators, groups, cluster_keyword_id_si
                 assoc_cluster_keyword_id_similarity = cluster_keyword_id_similarity_pair[idx_cat]
                 assoc_keyword = assoc_cluster_keyword_id_similarity[0]
                 assoc_cluster_id = int(assoc_cluster_keyword_id_similarity[1])
-                assoc_cluster_similarity_score = round(float(assoc_cluster_keyword_id_similarity[2]), 2)
-                # print("assoc_cluster_similarity_score", assoc_cluster_similarity_score)
+                assoc_cluster_similarity_score =  round(float(assoc_cluster_keyword_id_similarity[2]), 2)
                 new_category = Category()
                 new_category.cluster_keywords = assoc_keyword
                 new_category.cluster_id = assoc_cluster_id
@@ -128,24 +155,55 @@ def create_categories(new_project, num_annotators, groups, cluster_keyword_id_si
             max_idx += quota
         return categories
 
-def handle_upload_videos(request, project_type, num_annotators, project_name, uploaded_videos, cluster_csv):
-    if project_type == "video_qa":
-        print("do process videos as image QA")
-    elif project_type == "annotation":
-        print("do process videos as annotation")
-    # print(f"handle upload video hit {project_type}")
-    
-    new_project = ProjectTitle(project_type=project_type, cluster_csv=cluster_csv, project_name=project_name, number_of_annotators=num_annotators, user=request.user)
-    new_project.save()
-    # return {"status": "just hit"}
 
-    groups = create_groups(num_annotators, project_name)
-     # return {"status": "just hit"}
+def create_categories(new_project, num_annotators, groups, total_videos=None, cluster_keyword_id_similarity_pair=None):
+        """
+            creates video clusters/category objects based on user provided cluster_csv files
+            Params: num_annotators: int number of annotators for the current job
+                    groups: array a list of groups to assign each category to
+                    cluster_keyword_id_similarity_pair: array an array of a tupple of cluster_keyword, cluster_id,
+                                                        cluster_similarity_score
+            Returns: an array of catergories
+        """
+        if not cluster_keyword_id_similarity_pair:
+            return helper_category_creation(new_project, num_annotators, groups, total_videos=total_videos)
+            
+        else:
+            return helper_category_creation(new_project, num_annotators, groups, cluster_keyword_id_similarity_pair=cluster_keyword_id_similarity_pair)
+            # create groups without ML Pipeline
+            # categories = []
+            # total_categories = len(cluster_keyword_id_similarity_pair)
+            # range_total_categories = range(total_categories)
+            # quota = math.ceil(total_categories/num_annotators)
+            # min_idx = 0
+            # max_idx = quota
 
-    cluster_csv_df = pd.read_csv(cluster_csv_file, index_col=0)
+            # # pick an annotator and assign videos to her
+            # for idx in range(num_annotators):
+            #     cur_group = groups[idx]
+            #     assoc_category_keyword_idx = range_total_categories[min_idx:max_idx]
+            #     for idx_cat in assoc_category_keyword_idx:
+            #         assoc_cluster_keyword_id_similarity = cluster_keyword_id_similarity_pair[idx_cat]
+            #         assoc_keyword = assoc_cluster_keyword_id_similarity[0]
+            #         assoc_cluster_id = int(assoc_cluster_keyword_id_similarity[1])
+            #         assoc_cluster_similarity_score = round(float(assoc_cluster_keyword_id_similarity[2]), 2)
+            #         # print("assoc_cluster_similarity_score", assoc_cluster_similarity_score)
+            #         new_category = Category()
+            #         new_category.cluster_keywords = assoc_keyword
+            #         new_category.cluster_id = assoc_cluster_id
+            #         new_category.cluster_similarity_score = assoc_cluster_similarity_score
+            #         new_category.group = cur_group
+            #         new_category.project = new_project
+            #         new_category.save()
+            #         categories.append(new_category)
+            #     min_idx = max_idx
+            #     max_idx += quota
+        
+
+def pipeline_with_cluster_csv(new_project, num_annotators, groups, cluster_csv, video_path):
+    cluster_csv_df = pd.read_csv(cluster_csv, index_col=0)
     cluster_keywords = np.unique(cluster_csv_df['cluster_keywords'])
     cluster_keyword_id_similarity_pair = []
-
     for keyword in cluster_keywords:
         assoc_cluster_id = cluster_csv_df.loc[cluster_csv_df['cluster_keywords']==keyword, 'cluster_ids']
         assoc_cluster_id = assoc_cluster_id.iloc[0]
@@ -154,13 +212,18 @@ def handle_upload_videos(request, project_type, num_annotators, project_name, up
         
         cur_pair = (keyword, assoc_cluster_id, assoc_cluster_similarity_score)
         cluster_keyword_id_similarity_pair.append(cur_pair)
-    
-    #create categories for videos
-    create_categories(new_project, num_annotators, groups, cluster_keyword_id_similarity_pair)
-
     #create videos and assign to categories
-    for video in uploaded_videos:
-        vid_name = int(str(video).split('.')[0])
+    assoc_video_path = os.path.join(media_dir, video_path)
+    video_files = os.listdir(assoc_video_path)
+    total_videos = len(video_files) 
+    # create categories for videos based on the csv_file
+    create_categories(new_project, num_annotators, groups, cluster_keyword_id_similarity_pair=cluster_keyword_id_similarity_pair)
+    
+    
+    for video in video_files:
+        if video == '.DS_Store':
+            continue
+        vid_name = int(video.split('.')[0])
         assoc_df_row = cluster_csv_df[cluster_csv_df['filename'] == vid_name]
         cluster_id  = int(assoc_df_row['cluster_ids'].values[0])
         cluster_keywords = assoc_df_row['cluster_keywords'].values[0]
@@ -170,7 +233,7 @@ def handle_upload_videos(request, project_type, num_annotators, project_name, up
         #retrieve category
         assoc_category = get_object_or_404(Category, cluster_keywords=cluster_keywords, cluster_id=cluster_id, project=new_project)
         
-        cur_vid = Videos(video=video, checked_by=None, file_name=vid_name)
+        cur_vid = Videos(video_path=video_path, checked_by=None, file_name=video)
         cur_vid.category = assoc_category
         cur_vid.project = new_project
         cur_vid.keywords = keywords
@@ -179,6 +242,60 @@ def handle_upload_videos(request, project_type, num_annotators, project_name, up
         cur_vid.description = description
         cur_vid.save()
 
+    return None
+
+def pipeline_without_cluster_csv(new_project, num_annotators, groups, video_path):
+    assoc_video_path = os.path.join(media_dir, video_path)
+    video_files = os.listdir(assoc_video_path)
+    total_videos = len(video_files)
+    categories, videos_per_category = create_categories(new_project, num_annotators, groups, total_videos=total_videos)
+    # divide the total_videos  by the total category to 
+    # get the size of videos per category
+    # videos_per_category = math.floor(total_videos/len(categories))
+    min_idx = 0
+    max_idx = videos_per_category
+    for idx in range(len(categories)):
+        assoc_category = categories[idx]
+        # select matching bucket of videos
+        # indexed by videos_per_category
+        cur_video_slice = video_files[min_idx:max_idx]
+        for idx_vid, video_name in enumerate(cur_video_slice):
+            file_name = video_name.split('/')[-1]
+            cur_video = Videos(video_path=video_path, checked_by=None, file_name=file_name)
+            cur_video.category = assoc_category
+            cur_video.project=new_project
+            cur_video.save()
+    
+        min_idx = max_idx
+        max_idx += videos_per_category
+
+    return None
+
+def handle_upload_videos(request, project_type, num_annotators, project_name, cluster_csv, video_path):
+    if project_type == "video_qa":
+        print("do process videos as Video QA")
+    elif project_type == "annotation":
+        print("do process videos as annotation")
+    # print(f"handle upload video hit {project_type}")
+  
+    new_project, _ = ProjectTitle.objects.get_or_create(user=request.user, project_type=project_type, project_name=project_name)
+    if cluster_csv and not new_project.cluster_csv:
+        new_project.cluster_csv = cluster_csv
+    
+    if not new_project.number_of_annotators:
+        new_project.number_of_annotators =  num_annotators
+    new_project.save()
+    # return {"status": "just hit"}
+
+    groups = create_groups(num_annotators, project_name)
+     # return {"status": "just hit"}
+    if cluster_csv:
+        cluster_csv = os.path.join(csv_base_dir, cluster_csv)
+        pipeline_with_cluster_csv(new_project, num_annotators, groups, cluster_csv, video_path)
+    else:
+        print("no CSV pipeline for Video QA")
+        pipeline_without_cluster_csv(new_project, num_annotators, groups, video_path)
+    
 
 def create_question_answers(question=None, answers=None):
     new_question = Question()
@@ -200,25 +317,33 @@ def prepare_processed_videos(request=None, user=None, project_type=None):
     from pages.models import ProjectTitle
     from django.db.models import Count, Q, F
     pay_load = {}
-    print(f"user {user}")
-    cur_project = ProjectTitle.objects.get(user=user, project_type=project_type)
-    all_groups = Group.objects.filter(name__icontains=cur_project)
+    assoc_userreg = Userreg.objects.get(user=user)
+    cur_project = assoc_userreg.project
+    project_name = cur_project.project_name
+    # all_groups = Group.objects.filter(name__icontains=cur_project)
+    all_groups = VideoGroup.objects.filter(project_name=project_name)
+    
     assoc_grp_users = []
     for group in all_groups:
-        assoc_user = group.user_set.all()[0]
-        assoc_grp_users.append(assoc_user)
+        assoc_user = group.userregs.all().first()
+        if assoc_user:
+            assoc_grp_users.append(assoc_user)
+
+    print("assoc_grp_users", assoc_grp_users)
 
   
     
     for user in assoc_grp_users:
         # retrieve user processed videos
+        user = User.objects.get(username=user)
+        assoc_userreg = Userreg.objects.get(user=user)
+        assoc_group = assoc_userreg.group
         try:
-            assoc_categories = Category.objects.filter(group__user__id=user.id).annotate(
+            assoc_categories = Category.objects.filter(group=assoc_group).annotate(
                 # count the num of associated videos where status=True
                 true_status_videos=Count('video_categories', filter=Q(video_categories__status=True))
             ).filter(true_status_videos__gt=0)
-            
-            
+
         except:
             assoc_categories = None
         
@@ -232,9 +357,9 @@ def display_categories(request=None):
         Displays categories of videos matching user group
     """
     if not request.user.is_anonymous:
-        user = request.user
+        assoc_user = Userreg.objects.get(user= request.user)
         try:
-            cur_group = Group.objects.get(user=user)
+            cur_group = assoc_user.group
             print("cur_group", cur_group )
             categories = Category.objects.all().filter(group=cur_group)
             print("len(categories)", len(categories))
@@ -282,7 +407,7 @@ def  get_video_list(term=None, category=None, cluster_group=None, annotator=None
 
     qs = videos
     # print('a qs', qs)
-    videos = serialize('json', qs, fields=('file_name', 'video', 'checked_by', 'status', 'keywords'))
+    videos = serialize('json', qs, fields=('file_name', 'video_path', 'checked_by', 'status', 'keywords'))
     
     return HttpResponse(videos, content_type='application/json')
 
@@ -293,13 +418,13 @@ def get_paginated_video_list(term, group):
     category = Category.objects.get(cluster_id=int(term), group=assoc_grp)
     qs = Videos.objects.all().filter(category=category).filter(checked_by=None)
 
-    videos = serialize('json', qs, fields=('file_name', 'video', 'checked_by', 'status'))
+    videos = serialize('json', qs, fields=('file_name', 'video_path', 'checked_by', 'status'))
     
     return HttpResponse(videos, content_type='application/json')
 
 def serialize_videos(videos):
     
-    serialized_videos = serialize('json', videos, fields=('file_name', 'video', 'checked_by', 'status', 'video_similarity_score', 'keywords', 'project_type'))
+    serialized_videos = serialize('json', videos, fields=('file_name', 'video_path', 'checked_by', 'status', 'video_similarity_score', 'keywords', 'project_type'))
     # print("serialized_videos", type(serialized_videos))
 
     return serialized_videos 

@@ -298,7 +298,8 @@ function create_vidlist_disp_span(file_name, checked_by, status, video_url, vide
         vid_tag.innerHTML = ""
         
         const video = create_video_tag()
-        video.src =  base_vid_src+video_url
+        let video_path = base_vid_src+video_url+'/'+`${file_name}`
+        video.src = video_path
         vid_tag.appendChild(video)
 
         span_heading.textContent = file_name
@@ -387,13 +388,9 @@ function allow_edit_and_show_qa({checked_by=null, project_type=null,
 
 
 function fecth_all_videos_in_category(endpoint, assoc_category){
-    
     endpoint = endpoint+assoc_category
     let video_list_disp = document.getElementById('video_list_disp')
     video_list_disp.innerHTML = ""
-    
-
-
     const response = fetch(endpoint, {
         method: 'GET'
     })
@@ -408,7 +405,8 @@ function fecth_all_videos_in_category(endpoint, assoc_category){
             let checked_by = video_fields['checked_by']
             let file_name = video_fields['file_name']
             let status = video_fields['status'] //normall null
-            let video_url = video_fields['video']
+            let video_url = video_fields['video_path']
+            
             let video_similarity_score = video_fields['video_similarity_score']
             let keywords = video_fields['keywords']
             let cur_span = create_vidlist_disp_span(file_name, checked_by, status,
@@ -418,6 +416,7 @@ function fecth_all_videos_in_category(endpoint, assoc_category){
             
         })  
         // Function that gets the next unprocessed video and displays it 
+        // Once a category is clicked
         get_next_video({assoc_category:assoc_category, project_type:project_type})
     })  
 }
@@ -557,7 +556,7 @@ function show_video_in_preview({prev_file_name=null, assoc_category = null, data
 
     let video_fields = next_video['fields']
     let file_name = video_fields['file_name']
-    let video_url = video_fields['video'] 
+    let video_url = video_fields['video_path'] 
     let vid_keywords = video_fields['keywords']
     let keyword_tag = document.getElementById('video_keywords')
     
@@ -570,7 +569,8 @@ function show_video_in_preview({prev_file_name=null, assoc_category = null, data
     video_name.appendChild(span_category)
 
     const video = create_video_tag()
-    video.src =  base_vid_src+video_url
+    let source = video_url + "/" + `${file_name}`
+    video.src =  base_vid_src+source
     
     vid_tag.appendChild(video)
     if (project_type=='video_qa'){
@@ -730,7 +730,6 @@ function get_next_video({file_name=null, assoc_category=null, appr_rej=null, pro
     let isAdmin = false
     let admin_project_type_span = document.getElementById('project_type')
     if (admin_project_type_span){
-        console.log("admin_project_type_span", admin_project_type_span);
         
         isAdmin = true
 
@@ -742,14 +741,12 @@ function get_next_video({file_name=null, assoc_category=null, appr_rej=null, pro
         let kwargs = {file_name:file_name, assoc_category:assoc_category,
              appr_rej:appr_rej, add_active_to_span:add_active_to_span, project_type:project_type, isAdmin:isAdmin}
             //  console.log("!!..", project_type);
-    
-        
-        
+ 
         let file_name_ = get_next_video_appr_rej(kwargs)
     }
     else{
         
-        // Get nexxt video when explore is clicked
+        // Get next video when explore is clicked
         
         let file_name_ = get_next_video_defualt({assoc_category:assoc_category, add_active_to_span:add_active_to_span, project_type:project_type, isAdmin:isAdmin})
        

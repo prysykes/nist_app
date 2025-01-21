@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Userreg
+from .models import Userreg, VideoGroup
 
 # Register your models here.
 class UserAdmin(admin.ModelAdmin):
@@ -8,3 +8,9 @@ class UserAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Userreg, UserAdmin)
+
+class VideoGroupAdmin(admin.ModelAdmin):
+    list_display = ('name', 'is_assigned')
+    search_fields = ['name']
+
+admin.site.register(VideoGroup, VideoGroupAdmin)

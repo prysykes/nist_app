@@ -488,7 +488,8 @@ function preview_video_admin({file_name=null, cluster_keywords=null, video_url=n
     vid_tag.innerHTML = ""
 
     const video = create_video_tag()
-    video.src =  base_vid_src+video_url
+    let source = video_url + '/' + `${file_name}`
+    video.src =  base_vid_src+source
     vid_tag.appendChild(video)
 
     span_heading.textContent = file_name
@@ -501,11 +502,8 @@ function preview_video_admin({file_name=null, cluster_keywords=null, video_url=n
     if (checked_by){
         var question_tag = document.querySelector('#question_tag')
         allow_edit_and_show_qa({checked_by:checked_by, project_type:project_type, 
-            file_name:file_name, cluster_keywords:cluster_keywords, question_tag:question_tag, annotator:annotator})
-        
+            file_name:file_name, cluster_keywords:cluster_keywords, question_tag:question_tag, annotator:annotator})     
     }
-   
-    
 
 }
 
@@ -536,12 +534,13 @@ function create_ul_elements_with_videos({data=null, cluster_keywords=null, proje
     for (const [key, value] of Object.entries(data)){
         let file_name = value['fields']['file_name']
         let keywords = value['fields']['keywords']
-        let video_url = value['fields']['video']
+        let video_url = value['fields']['video_path']
         let checked_by = value['fields']['checked_by']
         let li_elem = document.createElement('li')
         li_elem.id = `${file_name}`
         li_elem.innerText = file_name  
-
+        console.log("video_url", video_url);
+        
         let target_elem = li_elem
         if (count==0){
             // displays the first video once a category is clicked
@@ -555,8 +554,6 @@ function create_ul_elements_with_videos({data=null, cluster_keywords=null, proje
         
         li_elem.addEventListener('click', (e) => { 
             remove_active_marks(ul_elem)
-            
-            
             preview_video_admin({file_name:file_name, cluster_keywords:cluster_keywords, video_url:video_url, 
                 checked_by:checked_by, question_tag:question_tag, project_type:project_type, annotator:annotator})
             let target_elem = e.target

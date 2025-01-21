@@ -6,7 +6,7 @@ from django.shortcuts import render, redirect, get_list_or_404, get_object_or_40
 from django.contrib.auth.models import User, Group
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
-from .upload_form import VideoUploadForm, ProjectTitleForm
+from .upload_form import ProjectTitleForm
 from .models import Category, Videos
 from registration.models import Userreg
 from .utils import handle_upload_videos
@@ -31,11 +31,7 @@ finished_jobs_dir = os.path.join(media_dir, "finished_jobs")
 
 def index(request):
     from pages.utils import prepare_processed_videos
-    
-    
-    # avaliable_groups = Group.objects.all()
-    # print('request.user', request.user.is_anonymous)
-    video_upload_form = VideoUploadForm()
+
     project_title_form = ProjectTitleForm()
     categories = display_categories(request)
     # print("categories", categories)
@@ -44,36 +40,41 @@ def index(request):
     
     if not user.is_anonymous:
         
-        user_groups = str(user.groups.all())
+        # user_groups = str(user.groups.all())
         # print("user", user)
         user_object = User.objects.get(username=user)
         userreg_object = Userreg.objects.get(user=user_object) 
         assoc_project = userreg_object.project
         #ensures that only admin can upload videos
-        if "job_admin" in user_groups:
+        if userreg_object.is_job_admin:
             total_videos = Videos.objects.filter(project=assoc_project).count()
-            accepted_videos= Videos.objects.filter(project=assoc_project, status=True).count()
+            accepted_videos = Videos.objects.filter(project=assoc_project, status=True).count()
+            
             if request.method == "POST":
 
                 project_title_form = ProjectTitleForm(request.POST, request.FILES)
-                video_upload_form = VideoUploadForm(request.POST, request.FILES)
+                # video_upload_form = VideoUploadForm(request.POST, request.FILES)
                 uploaded_videos = request.FILES.getlist('video')
                 cluster_csv = request.FILES.get('cluster_csv')
                 num_annotators = int(request.POST.get('number_of_annotators'))
-                project_name = request.POST.get('project_name')
+                project_name = request.POST.get('project_name').lower()
+                video_path = request.POST.get('video_path')
+                cluster_csv = request.POST.get('cluster_csv')
                 project_type = request.POST.get('project_type')
-                # print(f"uploaded_videos {uploaded_videos} \n cluster_csv {cluster_csv} \n num_annotators {num_annotators} \n project_name {project_name}")
-                handle_upload_videos(request, project_type, num_annotators, project_name, uploaded_videos, cluster_csv)
+                if cluster_csv:
+                    print("cluster_csv")
+                handle_upload_videos(request, project_type, num_annotators, project_name, cluster_csv, video_path)
                 return redirect('/')
             else:
                 try:
                     project_type = assoc_project.project_type
+                    # print("this is admin IN")
                     users_processed_videos = prepare_processed_videos(request=None, user=user, project_type=project_type)
                 except:
                     users_processed_videos = None
                 context = {
                         'project_details': project_title_form,
-                        'video_upload': video_upload_form,
+                        # 'video_upload': video_upload_form,
                         'total_videos': total_videos,
                         'accepted_videos': accepted_videos,
                         'users_processed_videos': users_processed_videos
@@ -86,26 +87,24 @@ def index(request):
         user_object = User.objects.get(username=user)
         userreg_object = Userreg.objects.get(user=user_object) 
         assoc_project_type = userreg_object.project
-        # print("yoo")
         
         #TODO: redo logic for all processed videos
         # all_processed_videos = len(Videos.objects.all().filter(status=True, checked_by=str(user)))
         accepted_videos = Videos.objects.filter(project=assoc_project_type, status=True).count()
-        # print("yoo", assoc_project_type)
-        total_videos = len(get_list_or_404(Videos, project=assoc_project_type))
-
-        
+        total_videos =Videos.objects.filter(project=assoc_project_type).count()
+         
         try:
-            user_group = user.groups.all()[0]
+            user_group = userreg_object.group
             user_assigned_videos = []
             total_user_assigned_vids = 0
-            user_categories = get_list_or_404(Category, project=assoc_project_type, group=user_group)
-            
+            user_categories = Category.objects.filter(project=assoc_project_type, group=user_group)
             for cat in user_categories:
-                cur_cat_videos = get_list_or_404(Videos, project=assoc_project_type, category=cat)
+                
+                cur_cat_videos = Videos.objects.filter(project=assoc_project_type, category=cat)
                 len_vids = len(cur_cat_videos)
                 total_user_assigned_vids += len_vids
                 user_assigned_videos.append(cur_cat_videos)
+            # print("user_assigned_videos", user_assigned_videos)
             
         except IndexError:
             user_assigned_videos = []
@@ -137,7 +136,7 @@ def index(request):
         if categories == None or len(categories) == 0 :
             if percentage_remaining != None:
                 context = {
-                    'video_upload': video_upload_form,
+                    # 'video_upload': video_upload_form,
                     'percentage_rem_user': percentage_remaining,
                     'user_processed_videos': len(user_processed_videos),
                     'total_user_assigned_vids': total_user_assigned_vids,
@@ -147,7 +146,7 @@ def index(request):
                 }
             else:
                 context = {
-                    'video_upload': video_upload_form,
+                    # 'video_upload': video_upload_form,
                     # 'categories': categories
                 }
         else:
@@ -157,7 +156,7 @@ def index(request):
 
             if percentage_remaining!= None:
                 context = {
-                    'video_upload': video_upload_form,
+                    # 'video_upload': video_upload_form,
                     'categories': categories,
                     'percentage_rem_user': percentage_remaining,
                     'user_processed_videos': len(user_processed_videos),
@@ -168,7 +167,7 @@ def index(request):
                 }
             else:
                 context = {
-                    'video_upload': video_upload_form,
+                    # 'video_upload': video_upload_form,
                     'categories': categories,
                     'project_type': project_type 
                     # 'percentage_rem_user': len(user_process_videos),
@@ -372,8 +371,8 @@ def admin_approve(request):
         status = request.GET.get("status")
         assoc_category = Category.objects.get(cluster_keywords=cluster_keyword, project=project)
         assoc_group = assoc_category.group
-        assoc_user = assoc_group.user_set.all()[0]
-        assoc_user = Userreg.objects.filter(user=assoc_user)[0]
+        assoc_user = assoc_group.user
+        assoc_user = Userreg.objects.get(user=assoc_user)
         
         # print("len(all_user_approved_category)", len(all_user_approved_category))
         # print("assoc_users.admin_approved", assoc_users.admin_approved)
@@ -408,7 +407,6 @@ def admin_approve(request):
 def get_job_summary(request):
     project_type = request.GET.get("project_type")
     payload = export_job(project_type)
-    
     return JsonResponse(payload, safe=False)
 
 def export_all_videos(request):
@@ -542,6 +540,7 @@ def get_videos_per_category(request):
         # return
         videos = assoc_category.video_categories.all().order_by('-video_similarity_score')
         serialized_videos = serialize_videos(videos)
+        print("serialized_videos", serialized_videos)
         serialized_videos_json = json.loads(serialized_videos)
         # print("serialized_videos", serialized_videos_json)
         context = {"serialized_videos": serialized_videos_json,
