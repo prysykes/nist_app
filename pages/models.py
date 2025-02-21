@@ -38,13 +38,13 @@ class Category(models.Model):
         # while uploading it.
     def get_unprocessed_videos(self, user=None):
         # get all videos belonging to a user
-        assoc_videos = self.video_categories.exclude(status__isnull=True).order_by('id')
+        assoc_videos = self.video_categories.filter(is_available=True).exclude(status__isnull=True).order_by('id')
         
         return assoc_videos
     
     def get_next_video(self):
         try:
-            next_video = self.video_categories.filter(status=None).earliest('id')
+            next_video = self.video_categories.filter(status=None, is_available=True).earliest('id')
             # print('pre next_video', next_video)
             # next_video = next_video[0]
             # print('post next_video', next_video)
@@ -107,7 +107,9 @@ class Videos(models.Model):
     question = models.ForeignKey(Question, null=True, blank=True, on_delete=models.CASCADE)
     project = models.ForeignKey(ProjectTitle, default='', on_delete=models.CASCADE)
     # video = models.FileField(upload_to='videos', verbose_name='Trec Videos')
-    video_path = models.CharField(max_length=50)
+    video_path = models.CharField(max_length=50) 
+    youtube_vid_id = models.CharField(max_length=50, null=True, blank=True)
+    is_available = models.BooleanField(default=True)
     file_name = models.CharField(max_length=50, null=True, blank=True)
     description = models.CharField(max_length=500, null=True, blank=True)
     keywords = models.CharField(max_length=250, null=True, blank=True)
@@ -121,7 +123,7 @@ class Videos(models.Model):
         return self.file_name
     
     def get_unprocessed_videos(self):
-        return self.objects.all().filter(checked_by='')
+        return self.objects.all().filter(checked_by='', is_available=True)
     
     class Meta:
         ordering = ['-video_similarity_score'] 

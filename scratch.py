@@ -1,50 +1,91 @@
-categories = []
-        total_categories = len(cluster_keyword_id_similarity_pair)
-        range_total_categories = range(total_categories)
-        quota = math.ceil(total_categories/num_annotators)
-        min_idx = 0
-        max_idx = quota
-
-        # pick an annotator and assign videos to her
-        for idx in range(num_annotators):
-            cur_group = groups[idx]
-            assoc_category_keyword_idx = range_total_categories[min_idx:max_idx]
-            for idx_cat in assoc_category_keyword_idx:
-                assoc_cluster_keyword_id_similarity = cluster_keyword_id_similarity_pair[idx_cat]
-                assoc_keyword = assoc_cluster_keyword_id_similarity[0]
-                assoc_cluster_id = int(assoc_cluster_keyword_id_similarity[1])
-                assoc_cluster_similarity_score = round(float(assoc_cluster_keyword_id_similarity[2]), 2)
-                # print("assoc_cluster_similarity_score", assoc_cluster_similarity_score)
-                new_category = Category()
-                new_category.cluster_keywords = assoc_keyword
-                new_category.cluster_id = assoc_cluster_id
-                new_category.cluster_similarity_score = assoc_cluster_similarity_score
-                new_category.group = cur_group
-                new_category.project = new_project
-                new_category.save()
-                categories.append(new_category)
-            min_idx = max_idx
-            max_idx += quota
-
-
-for video in video_files:
-        if video == '.DS_Store':
-            continue
-        vid_name = int(video.split('.')[0])
-        assoc_df_row = cluster_csv_df[cluster_csv_df['filename'] == vid_name]
-        cluster_id  = int(assoc_df_row['cluster_ids'].values[0])
-        cluster_keywords = assoc_df_row['cluster_keywords'].values[0]
-        video_similarity_score = round(float(assoc_df_row['video_similarity_score'].values[0]), 2)
-        description = assoc_df_row['captions'].values[0]
-        keywords = assoc_df_row['keywords'].values[0]
-        #retrieve category
-        assoc_category = get_object_or_404(Category, cluster_keywords=cluster_keywords, cluster_id=cluster_id, project=new_project)
+# if video_path:
+#         assoc_video_path = os.path.join(media_dir, video_path)
+#         video_files = os.listdir(assoc_video_path)
+#         total_videos = len(video_files)
+#         categories, videos_per_category = create_categories(new_project, num_annotators, groups, total_videos=total_videos)
+#         # divide the total_videos  by the total category to 
+#         # get the size of videos per category
+#         # videos_per_category = math.floor(total_videos/len(categories))
+#         min_idx = 0
+#         max_idx = videos_per_category
+#         for idx in range(len(categories)):
+#             assoc_category = categories[idx]
+#             # select matching bucket of videos
+#             # indexed by videos_per_category
+#             cur_video_slice = video_files[min_idx:max_idx]
+#             for idx_vid, video_name in enumerate(cur_video_slice):
+#                 file_name = video_name.split('/')[-1]
+#                 cur_video = Videos(video_path=video_path, checked_by=None, file_name=file_name)
+#                 cur_video.category = assoc_category
+#                 cur_video.project=new_project
+#                 cur_video.save()
         
-        cur_vid = Videos(video_path=video_path, checked_by=None, file_name=video)
-        cur_vid.category = assoc_category
-        cur_vid.project = new_project
-        cur_vid.keywords = keywords
-        cur_vid.video_similarity_score = video_similarity_score
-        # print("video_similarity_score", video_similarity_score)
-        cur_vid.description = description
-        cur_vid.save()
+#             min_idx = max_idx
+#             max_idx += videos_per_category
+
+#         return None
+
+# class Videos(models.Model):
+#     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="video_categories")
+#     checked_by = models.ForeignKey(User, on_delete=models.DO_NOTHING, blank=True, null=True)
+#     question = models.ForeignKey(Question, null=True, blank=True, on_delete=models.CASCADE)
+#     project = models.ForeignKey(ProjectTitle, default='', on_delete=models.CASCADE)
+#     # video = models.FileField(upload_to='videos', verbose_name='Trec Videos')
+#     video_path = models.CharField(max_length=50) 
+#     youtube_vid_id = models.CharField(max_length=50, null=True, blank=True)
+#     is_available = models.BooleanField(default=True)
+#     file_name = models.CharField(max_length=50, null=True, blank=True)
+#     description = models.CharField(max_length=500, null=True, blank=True)
+#     keywords = models.CharField(max_length=250, null=True, blank=True)
+#     status = models.BooleanField(default=None, blank=True, null=True)
+#     video_similarity_score = models.FloatField(default=0.0)
+#     admin_approve = models.BooleanField(default=False, null=True, blank=True)
+
+#     date_uploaded = models.DateField(auto_now_add=True)
+
+#     def __str__(self):
+#         return self.file_name
+    
+#     def get_unprocessed_videos(self):
+#         return self.objects.all().filter(checked_by='')
+    
+#     class Meta:
+#         ordering = ['-video_similarity_score'] 
+
+#  is_admin = request.GET.get('is_admin')
+    
+#     cur_user = request.user
+#     user_object = User.objects.get(username=cur_user )
+#     userreg_object = Userreg.objects.get(user=user_object)
+#     assoc_project = userreg_object.project
+#     if request.method == 'GET':
+#         if request.GET.get('category'):
+#             cluster_keywords = request.GET.get('category')
+#             assoc_category = Category.objects.get(cluster_keywords=cluster_keywords, project=assoc_project)
+#             next_video = assoc_category.video_categories.filter(status__isnull=True, is_available=True).order_by('-video_similarity_score').first()
+#             serialized_next_video = serialize_videos([next_video])
+#             print('serialized_next_video', serialized_next_video)
+#             serialized_next_video = json.loads(serialized_next_video)
+#             context = {"serialized_next_video": serialized_next_video}
+#             context = JsonResponse(context)
+#         else:
+
+# is_available
+
+'json, txt'
+show_mark_unavailable(project_type, filename, category)
+
+if yt_file_type == 'json':
+    #     print('json')
+    #     return
+    #     print("json path available", yt_file_type)
+    #     youtube_json_path = os.path.join(media_dir, youtube_json_file)
+    #     # youtube_json = os.listdir(youtube_json_path)[0]
+    #     # yt_json_file_path = os.path.join(youtube_json_path, youtube_json)
+    # if yt_file_type == 'text':
+    #     print('text')
+    #     return 
+  
+
+#   let project_name = category.split('_')[0]
+#         console.log("project_name", project_name);

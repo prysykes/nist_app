@@ -1,4 +1,4 @@
-import {base_url, get_next_video_appr_rej, add_active_to_span, prepare_quest_answer_resp} from './main.js'
+import {base_url, get_next_video_appr_rej, add_active_to_span, prepare_quest_answer_resp, show_mark_unavailable} from './main.js'
 
 let skip_btn_qa = document.querySelector('#skip_btn_qa')
 console.log("hello", skip_btn_qa );

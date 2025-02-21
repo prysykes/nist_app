@@ -507,6 +507,14 @@ ul li:hover {
     height: fit-content;
     justify-content: center;
 }
+#submit_qs_btn_div {
+    display: flex;
+    flex-direction: row;
+    
+}
+#submit_qs_btn_div :first-child{
+    margin-right: 10px;
+}
 /* .edit_qa_div {
     padding: 20px;
     border: 1px solid #ddd;
