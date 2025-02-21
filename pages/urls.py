@@ -17,6 +17,7 @@ urlpatterns = [
     path('get_job_summary', views.get_job_summary, name="get_job_summary"),
     path('export_all_videos', views.export_all_videos, name='export_all_videos'),
     path('submit_vid_qa', views.submit_vid_qa, name="submit_vid_qa"),
-    path('retrieve_video_qa', views.retrieve_video_qa, name='retrieve_video_qa')
+    path('retrieve_video_qa', views.retrieve_video_qa, name='retrieve_video_qa'),
+    path('mark_as_unavailable', views.mark_as_unavailable, name='mark_as_unavailable')
     
 ]

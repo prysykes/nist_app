@@ -1,4 +1,5 @@
 import os
+import json
 import pandas as pd
 
 from django.shortcuts import render
@@ -7,7 +8,7 @@ from django.contrib.auth.models import User, Group
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from .upload_form import ProjectTitleForm
-from .models import Category, Videos
+from .models import Category, Videos, ProjectTitle
 from registration.models import Userreg
 from .utils import handle_upload_videos
 from .utils import (export_job, display_categories, get_rem_total_per_category, 
@@ -16,7 +17,6 @@ from .utils import (export_job, display_categories, get_rem_total_per_category,
                     move_selected_videos, create_question_answers)
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse, HttpResponse
-import json
 from pages.utils import serialize_objects
 from pages.models import Question, Answer
 
@@ -47,8 +47,8 @@ def index(request):
         assoc_project = userreg_object.project
         #ensures that only admin can upload videos
         if userreg_object.is_job_admin:
-            total_videos = Videos.objects.filter(project=assoc_project).count()
-            accepted_videos = Videos.objects.filter(project=assoc_project, status=True).count()
+            total_videos = Videos.objects.filter(project=assoc_project, is_available=True).count()
+            accepted_videos = Videos.objects.filter(project=assoc_project, status=True, is_available=True).count()
             
             if request.method == "POST":
 
@@ -61,9 +61,12 @@ def index(request):
                 video_path = request.POST.get('video_path')
                 cluster_csv = request.POST.get('cluster_csv')
                 project_type = request.POST.get('project_type')
-                if cluster_csv:
-                    print("cluster_csv")
-                handle_upload_videos(request, project_type, num_annotators, project_name, cluster_csv, video_path)
+                yt_file_type = request.POST.get('yt_file_type')
+
+                if video_path:
+                    handle_upload_videos(request, project_type, num_annotators, project_name, cluster_csv, video_path=video_path)
+                elif yt_file_type:
+                    handle_upload_videos(request, project_type, num_annotators, project_name, cluster_csv, yt_file_type=yt_file_type)
                 return redirect('/')
             else:
                 try:
@@ -90,8 +93,8 @@ def index(request):
         
         #TODO: redo logic for all processed videos
         # all_processed_videos = len(Videos.objects.all().filter(status=True, checked_by=str(user)))
-        accepted_videos = Videos.objects.filter(project=assoc_project_type, status=True).count()
-        total_videos =Videos.objects.filter(project=assoc_project_type).count()
+        accepted_videos = Videos.objects.filter(project=assoc_project_type, status=True, is_available=True).count()
+        total_videos =Videos.objects.filter(project=assoc_project_type, is_available=True).count()
          
         try:
             user_group = userreg_object.group
@@ -100,7 +103,7 @@ def index(request):
             user_categories = Category.objects.filter(project=assoc_project_type, group=user_group)
             for cat in user_categories:
                 
-                cur_cat_videos = Videos.objects.filter(project=assoc_project_type, category=cat)
+                cur_cat_videos = Videos.objects.filter(project=assoc_project_type, category=cat, is_available=True)
                 len_vids = len(cur_cat_videos)
                 total_user_assigned_vids += len_vids
                 user_assigned_videos.append(cur_cat_videos)
@@ -109,7 +112,7 @@ def index(request):
         except IndexError:
             user_assigned_videos = []
 
-        user_processed_videos = Videos.objects.filter(project=assoc_project_type, checked_by=user, status=True)
+        user_processed_videos = Videos.objects.filter(project=assoc_project_type, checked_by=user, status=True, is_available=True)
         try:
             percentage_remaining = (len(user_processed_videos)/total_user_assigned_vids) *100
             percentage_remaining = round(percentage_remaining, 2)
@@ -193,12 +196,12 @@ def retrieve_video_qa(request):
     # print(file_name,"-", assoc_project, "-", assoc_category)
     if not annotator:
         # called from user page
-        assoc_video = Videos.objects.get(file_name=file_name, checked_by=user, project=assoc_project, category=assoc_category)
+        assoc_video = Videos.objects.get(file_name=file_name, checked_by=user, project=assoc_project, category=assoc_category, is_available=True)
 
     else:
         # called from admin page
         user = User.objects.get(username=annotator)
-        assoc_video = Videos.objects.get(file_name=file_name, project=assoc_project, category=assoc_category)
+        assoc_video = Videos.objects.get(file_name=file_name, project=assoc_project, category=assoc_category, is_available=True)
 
     try:
         assoc_question = assoc_video.question
@@ -231,7 +234,7 @@ def submit_vid_qa(request):
         userreg_object = Userreg.objects.get(user=user_object)
         assoc_project = userreg_object.project
         assoc_category = Category.objects.get(cluster_keywords=cluster_keywords, project=assoc_project)
-        cur_video = Videos.objects.get(category=assoc_category, project=assoc_project, file_name=video_filename)
+        cur_video = Videos.objects.get(category=assoc_category, project=assoc_project, file_name=video_filename, is_available=True)
         
         if is_edit:
             print("is edit", cur_video)
@@ -432,7 +435,7 @@ def export_all_videos(request):
                 assoc_cluster_keywords = assoc_cat.cluster_keywords
                 
 
-                assoc_videos = list(Videos.objects.filter(category=assoc_cat, checked_by=user_object, status=True).values_list('file_name', flat=True))
+                assoc_videos = list(Videos.objects.filter(category=assoc_cat, checked_by=user_object, is_available=True, status=True).values_list('file_name', flat=True))
                 assoc_total_videos = len(assoc_videos)
 
                 users_list = [user]
@@ -522,34 +525,27 @@ def display_videos(request):
 
 def get_videos_per_category(request):
     if request.method == 'GET':
-        import json
+        # print("get videos cat callled")
         
         from registration.models import Userreg
         term = request.GET.get('term')
         user = request.user
         assoc_usereg_instance = Userreg.objects.get(user=user)
         assoc_proj = assoc_usereg_instance.project
-        # print("assoc_proj", assoc_proj)
+        
 
         assoc_category = get_object_or_404(Category, cluster_keywords=term, project=assoc_proj)
-        # assoc_vid = Videos.objects.get(category=assoc_category, project=assoc_proj, file_name="24964")
-        # assoc_vid.checked_by = None
-        # assoc_vid.status = None
-        # assoc_vid.question = None
-        # assoc_vid.save()
-        # return
-        videos = assoc_category.video_categories.all().order_by('-video_similarity_score')
+        
+        videos = assoc_category.video_categories.filter(is_available=True).order_by('-video_similarity_score')
+     
         serialized_videos = serialize_videos(videos)
-        print("serialized_videos", serialized_videos)
+       
         serialized_videos_json = json.loads(serialized_videos)
-        # print("serialized_videos", serialized_videos_json)
         context = {"serialized_videos": serialized_videos_json,
                    "project_type": assoc_proj.project_type}
         # print("context", context)
         serialized_videos = JsonResponse(context, safe=False)
-      
-        # group = request.GET.get('group')
-        # videos = get_paginated_video_list(term, group)
+
     # print('videos.get_unprocessed_videos()', videos)
     return serialized_videos
 
@@ -561,7 +557,7 @@ def get_unprocessed_vids(request):
     cur_user = request.user
     if request.method == "GET":
         file_name = request.GET.get('file_name')
-        assoc_video = get_object_or_404(Videos, file_name=file_name)
+        assoc_video = get_object_or_404(Videos, file_name=file_name, is_available=True)
         assoc_category = assoc_video.category
         videos = assoc_category.get_unprocessed_videos(cur_user)
         serialized_videos = serialize_videos(videos)
@@ -586,17 +582,15 @@ def process_user_decision(request):
 def get_next_video(request):
     is_admin = request.GET.get('is_admin')
     
-    
     cur_user = request.user
     user_object = User.objects.get(username=cur_user )
     userreg_object = Userreg.objects.get(user=user_object)
     assoc_project = userreg_object.project
     if request.method == 'GET':
         if request.GET.get('category'):
-            
             cluster_keywords = request.GET.get('category')
             assoc_category = Category.objects.get(cluster_keywords=cluster_keywords, project=assoc_project)
-            next_video = assoc_category.video_categories.filter(status__isnull=True).order_by('-video_similarity_score').first()
+            next_video = assoc_category.video_categories.filter(status__isnull=True, is_available=True).order_by('-video_similarity_score').first()
             serialized_next_video = serialize_videos([next_video])
             serialized_next_video = json.loads(serialized_next_video)
             context = {"serialized_next_video": serialized_next_video}
@@ -607,7 +601,7 @@ def get_next_video(request):
             appr_rej = request.GET.get('appr_rej')
             
             check_user_decision(file_name, cur_user, appr_rej, assoc_project, is_admin)
-            assoc_video = get_object_or_404(Videos, file_name=file_name, project=assoc_project)
+            assoc_video = get_object_or_404(Videos, file_name=file_name, project=assoc_project, is_available=True)
             assoc_category = assoc_video.category
             project_type = assoc_project.project_type
             
@@ -615,11 +609,11 @@ def get_next_video(request):
             if is_admin:
                 from_admin_edit = request.GET.get('from_admin_edit')
                 if from_admin_edit:
-                    next_video = assoc_category.video_categories.filter(status=True, admin_approve=True, question__isnull=False).order_by('id').first()
+                    next_video = assoc_category.video_categories.filter(status=True, admin_approve=True, question__isnull=False, is_available=True).order_by('id').first()
                 else:
-                    next_video = assoc_category.video_categories.filter(status=True, admin_approve=False).order_by('id').first()
+                    next_video = assoc_category.video_categories.filter(status=True, admin_approve=False, is_available=True).order_by('id').first()
             else:
-                next_video = assoc_category.video_categories.filter(status__isnull=True).order_by('-video_similarity_score').first()
+                next_video = assoc_category.video_categories.filter(status__isnull=True, is_available=True).order_by('-video_similarity_score').first()
             
             serialized_next_video = serialize_videos([next_video])
             serialized_next_video = json.loads(serialized_next_video)
@@ -647,6 +641,23 @@ def get_next_video(request):
         
     return context
 
+def mark_as_unavailable(request):
+    filename = request.GET.get('filename')
+    category = request.GET.get('category').strip()
+    project_name = request.GET.get('project_name')
+
+    assoc_project = ProjectTitle.objects.get(project_name=project_name)
+ 
+    assoc_category = Category.objects.get(project=assoc_project, cluster_keywords=category)
+   
+    assoc_video = Videos.objects.get(category=assoc_category, file_name=filename)
+    print('assoc_video >>', assoc_video )
+    assoc_video.is_available = False
+    assoc_video.save()
+    # print('mark unavailable clicked', assoc_video)
+    return JsonResponse({'filename': filename,
+                         'info': 'success',
+                         'status': 200})
 
 def reject_all(request, *args, **kwargs):
     # get request.user

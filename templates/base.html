@@ -20,24 +20,15 @@
    
     {% block header %}   
         <header>
-            <!-- <div>
+           <div>
                 
-                <iframe width="560" height="315" 
-                src="https://www.youtube.com/embed/YVQwAEKZpaU?si=AID4kFGq8mcMy4MY&output=embed"
-                 title="YouTube video player" frameborder="0"
-                  allow="accelerometer; autoplay; 
-                    clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-                    referrerpolicy="strict-origin-when-cross-origin" 
-                    allowfullscreen></iframe>
+                {% comment %} <iframe width="560" height="315" 
+                    src="https://www.youtube.com/embed/PAEPpXwVXXQ?si=AID4kFGq8mcMy4MY&output=embed"
+                    title="YouTube video player"
+                    referrerpolicy="strict-origin-when-cross-origin">
+                </iframe> {% endcomment %}
                 
-                <iframe width="560" height="315" 
-                    src="https://www.youtube.com/embed/M3QYDtSbhrA?si=FBmvT0BMcUJFUEmL" 
-                    title="YouTube video player" frameborder="0" 
-                    allow="accelerometer; autoplay; 
-                    clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-                    referrerpolicy="strict-origin-when-cross-origin" 
-                    allowfullscreen></iframe>
-            </div> -->
+            </div> 
             <div class="tm_banner">
                 <div id="logo-nist">
                     <img src="{{ STATIC_URL }}/static/media\nist_logo.jpg" alt="nist logo">
@@ -161,6 +152,18 @@
                                 </div>
                                 <div class="row-align">
                                     <div class="form-label">
+                                        Select youtube source type
+                                    </div>
+                                    <div class="form-text-input">
+                                        <select name="yt_file_type" id="yt_file_type_select">
+                                            <option value="json">JSON Files</option>
+                                            <option value="text">TXT Files</option>
+                                        </select>
+                                        <!-- <input type="text" name="youtube_json_file" id="youtube_json_file"> -->
+                                    </div>
+                                </div>
+                                <div class="row-align">
+                                    <div class="form-label">
                                         {{video_upload.video.label}}
                                     </div>
                                     <div class="form-text-input">
@@ -168,7 +171,7 @@
                                     </div>
                                 </div>
                                 <div style="justify-content: center;" class="row-align">
-                                    <input name="upload_videos" class="nist-button" type="submit" value="Upload Videos"/> 
+                                    <input name="upload_videos" class="nist-button" type="submit" value="Create Job"/> 
                                 </div>
                                 
                                 
@@ -308,7 +311,7 @@
         
         
         
-    {% block footer %}
+    {% comment %} {% block footer %}
     <footer>
         <div id="footer">
             Lorem ipsum dolor sit amet consectetur adipisicing elit.
@@ -316,7 +319,7 @@
             vitae quas dolor, nihil, libero quasi porro ratione aut!
         </div>
     </footer>
-    {% endblock footer %}
+    {% endblock footer %} {% endcomment %}
     
     
     
