@@ -81,6 +81,7 @@ class ProjectTitle(models.Model):
     project_type = models.CharField(max_length=10, choices=PROJECT_TYPE, default="annotation")
     project_name = models.CharField(max_length=100, unique=True)
     user = models.ForeignKey(User, on_delete=models.DO_NOTHING)
+    is_link = models.BooleanField(default=False)
     cluster_csv = models.FileField(upload_to='cluster_csv', verbose_name='Trec Videos Cluster Info', null=True, blank=True)
     number_of_annotators = models.IntegerField(null=True, blank=True)
 

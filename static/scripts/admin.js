@@ -6,7 +6,7 @@ var per_cluster_approve = document.querySelectorAll('.per-cluster-approve')
 
 import {create_apr_rej, allow_edit_and_show_qa, create_vidname_category_spans,
     create_video_tag, prepare_quest_answer_resp, create_edit_btn, create_qa_btn_controls,
-   create_video_QA_form} from './main.js'
+   create_video_QA_form, create_youtube_iframe} from './main.js'
 
 
 
@@ -28,8 +28,6 @@ function handle_export_all_videos(){
             usernames_str += "_"
         }
     }
-    console.log("usernames_str", usernames_str);
-    
     
     let endpoint = `${root_url}/export_all_videos?usernames=${usernames_str}`
     let response = fetch(endpoint, {
@@ -38,7 +36,7 @@ function handle_export_all_videos(){
     .then(response => response.json())
     .then((data)=> {
         let data_finished_job_csv = data['finished_job_csv']
-        let data_finished_job_zip = data['zip_file_path']
+        let data_finished_job_videos_zip = data['zip_file_path']
 
         let download_jobs_div = document.getElementById('download-jobs') 
         download_jobs_div.classList.toggle('display-none')
@@ -54,10 +52,13 @@ function handle_export_all_videos(){
         a_tag_csv.innerText = "Download CSV"
         csv_file.appendChild(a_tag_csv) 
 
-        let a_tag_zip = document.createElement('a')
-        a_tag_zip.href = data_finished_job_zip
-        a_tag_zip.innerText = "Download compressed videos"
-        videos_zip.appendChild(a_tag_zip) 
+        if (data_finished_job_videos_zip){
+            let a_tag_zip = document.createElement('a')
+            a_tag_zip.href = data_finished_job_videos_zip
+            a_tag_zip.innerText = "Download compressed videos"
+            videos_zip.appendChild(a_tag_zip)
+        } 
+         
         
         
     })
@@ -225,10 +226,13 @@ function handle_show_job_summary(){
     }
     // populate_and_show_annotation_stats(annotation_stats)
     // fetch endport for job summary
+    let username = document.querySelector('#username').innerText.split(' ')[1]
+    // console.log('username', username);
+    
     let project_type = document.querySelector('#project_type').innerText
     console.log("project_type", project_type);
     
-     let endpoint = `${root_url}/get_job_summary?project_type=${project_type}`
+     let endpoint = `${root_url}/get_job_summary?admin_username=${username}`
 
     let response = fetch(endpoint, {
         method: "GET"
@@ -392,7 +396,7 @@ function approve_all_videos({endpoint=endpoint,category_list_ul=category_list_ul
     .then(response => response.json())
     .then((data)=>{
         // do something on export jobs based on returned data
-        console.log('!!>>', data);
+        
         populate_and_show_annotation_stats(data)
         // return data
         // response_data = data
@@ -477,7 +481,7 @@ function create_video_element(){
     return video
 }
 
-function preview_video_admin({file_name=null, cluster_keywords=null, video_url=null, 
+function preview_video_admin({file_name=null, cluster_keywords=null, video_url=null, youtube_vid_id=null,
                                 checked_by=null, question_tag=null, project_type=null, annotator=null}){
 
     const[span_heading, br_elem, span_category] = create_vidname_category_spans(cluster_keywords)
@@ -487,15 +491,28 @@ function preview_video_admin({file_name=null, cluster_keywords=null, video_url=n
     video_name.innerHTML = ""
     vid_tag.innerHTML = ""
 
-    const video = create_video_tag()
-    let source = video_url + '/' + `${file_name}`
-    video.src =  base_vid_src+source
-    vid_tag.appendChild(video)
-
     span_heading.textContent = file_name
     video_name.appendChild(span_heading)
     video_name.appendChild(br_elem)
     video_name.appendChild(span_category)
+
+    if (video_url){
+        const video = create_video_tag()
+        let source = video_url + '/' + `${file_name}`
+        video.src =  base_vid_src+source
+        vid_tag.appendChild(video)
+        
+    }
+    else if (youtube_vid_id) {
+        // console.log('youtube_vid_id', youtube_vid_id);
+        let iframe = create_youtube_iframe(youtube_vid_id)
+        vid_tag.appendChild(iframe)
+        
+    }
+
+    
+
+    
 
     let keyword_tag = document.getElementById('video_keywords')
 
@@ -518,9 +535,10 @@ function remove_active_marks(parent_elem){
 function create_ul_elements_with_videos({data=null, cluster_keywords=null, project_type=null, annotator=null}){
     // console.log("response_data", response_data);
     // check if the ul element is already create, else create it
+    // console.log("data2", data);
+    
     let ul_elem = document.getElementById('admin_video_ul')
     let video_list_admin = document.querySelector('#video_list_admin')
-    console.log("annotator", annotator);
     
 
     if (ul_elem == null) {
@@ -531,15 +549,17 @@ function create_ul_elements_with_videos({data=null, cluster_keywords=null, proje
     }
 
     let count = 0
+    
     for (const [key, value] of Object.entries(data)){
         let file_name = value['fields']['file_name']
+        let is_available = value['fields']['is_available']
         let keywords = value['fields']['keywords']
+        let youtube_vid_id = value['fields']['youtube_vid_id']
         let video_url = value['fields']['video_path']
         let checked_by = value['fields']['checked_by']
         let li_elem = document.createElement('li')
         li_elem.id = `${file_name}`
         li_elem.innerText = file_name  
-        console.log("video_url", video_url);
         
         let target_elem = li_elem
         if (count==0){
@@ -547,14 +567,15 @@ function create_ul_elements_with_videos({data=null, cluster_keywords=null, proje
             target_elem = li_elem
             remove_active_marks(ul_elem)
             
-            preview_video_admin({file_name:file_name, cluster_keywords:cluster_keywords, video_url:video_url, 
+            
+            preview_video_admin({file_name:file_name, cluster_keywords:cluster_keywords, video_url:video_url, youtube_vid_id:youtube_vid_id, 
                 checked_by:checked_by, question_tag:question_tag, project_type:project_type, annotator:annotator})
             target_elem.classList = 'active'
         }
         
         li_elem.addEventListener('click', (e) => { 
             remove_active_marks(ul_elem)
-            preview_video_admin({file_name:file_name, cluster_keywords:cluster_keywords, video_url:video_url, 
+            preview_video_admin({file_name:file_name, cluster_keywords:cluster_keywords, video_url:video_url, youtube_vid_id:youtube_vid_id, 
                 checked_by:checked_by, question_tag:question_tag, project_type:project_type, annotator:annotator})
             let target_elem = e.target
             target_elem.classList = 'active'
@@ -607,6 +628,7 @@ user_processed_categories.forEach((category)=>{
         let admin_project_type_span = document.getElementById('project_type')
         
         if (admin_project_type_span){
+            
             // console.log("for admin", "annptator", annotator, "cluster_kw", cluster_keywords, "project_type", project_type);
             isAdmin = true
             var get_category_endpoint = `${root_url}/display_videos?category=${cluster_keywords}&annotator=${annotator}&project_type=${project_type}&is_admin=${isAdmin}`
@@ -623,6 +645,7 @@ user_processed_categories.forEach((category)=>{
         })
         .then(response => response.json())
         .then((data)=>{
+            // console.log(`endpoint:${get_category_endpoint}`, `data1: ${data}`);
             
             let video_list_admin = document.querySelector('#video_list_admin')
 

@@ -1,9 +1,6 @@
 import {base_url, get_next_video_appr_rej, add_active_to_span, prepare_quest_answer_resp, show_mark_unavailable} from './main.js'
 
 let skip_btn_qa = document.querySelector('#skip_btn_qa')
-console.log("hello", skip_btn_qa );
-
-
 
 
 function create_qa_btn_controls(){
@@ -18,6 +15,11 @@ function create_qa_btn_controls(){
 
     skip.addEventListener('click', ()=>{
         let project_type_div = document.querySelector('#project_type_user_pg')
+    
+        let vid_tag = document.getElementById('vid_tag')
+        // let vid_tag_children = vid_tag.childNodes
+        // console.log(('vid_tag_children', vid_tag_children));
+        
         let cat_name_div = document.querySelector('#cat_name')
         let file_name_div = document.querySelector('#video_name_value')
 
@@ -26,10 +28,11 @@ function create_qa_btn_controls(){
         let assoc_category = cat_name_div.textContent.split('|').at(0).trim()
         let appr_rej = 'reject'
         let project_type = project_type_div.textContent
+        
 
         let kwargs = {file_name:file_name, assoc_category:assoc_category, appr_rej:appr_rej, add_active_to_span:add_active_to_span, project_type:project_type}
         get_next_video_appr_rej(kwargs)
-        console.log("kwargs skip",kwargs);
+       
         
     })
     
@@ -40,6 +43,7 @@ function create_qa_btn_controls(){
 }
 
 function submit_video_qa_form({isEdit=null}){
+    
     let form_csrf_token = document.querySelector('#form-csrf-token')
     // console.log("submit form clicked", form_csrf_token);
     let csrf_token_element = form_csrf_token.elements[0]
@@ -94,7 +98,6 @@ function submit_video_qa_form({isEdit=null}){
     new_form_data.append(csrf_token_name, csrf_token)
 
     // let endpoint = base_url+"/submit_vid_qa"
-    console.log("endpoint>>", endpoint);
     
     let response = fetch(endpoint,{
         method: 'POST',
@@ -102,41 +105,23 @@ function submit_video_qa_form({isEdit=null}){
     })
     .then((response)=> response.json())
     .then((data)=>{
+        
         let parent_div = document.querySelector('#question_tag')
+        
         parent_div.classList.add("qs_default")
         parent_div.innerHTML = ""
         let div = prepare_quest_answer_resp({quest_ans_data:data, isEdit:isEdit})
+        // class="nist-button skip_btn_qa"
         
         parent_div.appendChild(div)
-        let edit_btn = document.querySelector('#edit_res input')
-        edit_btn.value = "edit response"
+        // let edit_btn = document.querySelectorAll('.skip_btn_qa')[0]
+        // console.log("edit_btn", edit_btn);
         
-        // remove the class list
-        parent_div.classList.add('qs_default')
-                
-        // console.log("data", data);
-        // Object.entries(data).forEach(([key, value])=>{
-        //     if (key.includes("question")){
-        //         let assoc_id = value[0]
-        //         let inner_text = value[1]
-        //         console.log("met question", assoc_id, inner_text);
-
-        //     }else{
-        //         if (key.includes("correct")){
-        //             let assoc_id = value[0]
-        //             let inner_text = value[1]
-        //             console.log("met correct", assoc_id, inner_text);
-                    
-        //         }else{
-        //             let assoc_id = value[0]
-        //             let inner_text = value[1]
-        //             console.log("not qs not correct", assoc_id, inner_text);
-                    
-        //         }
-        //     }
-            
-        // })
+        // edit_btn.value = "edit response"
         
+        // // remove the class list
+        // parent_div.classList.add('qs_default')
+                     
     })
     .catch(error => {
         console.log("error22", error);
@@ -146,7 +131,6 @@ function submit_video_qa_form({isEdit=null}){
 }
 
 function retrieve_next_video_qa({isEdit=isEdit}){
-    console.log("is edit>>", isEdit);
     
     let project_type_div = document.querySelector('#project_type_user_pg')
     let cat_name_div = document.querySelector('#cat_name')
@@ -164,12 +148,14 @@ function retrieve_next_video_qa({isEdit=isEdit}){
     let project_type = project_type_div.textContent
     let assoc_category = document.querySelector('#cluster_keyword')
     let IsAdminPage = false
-    if (assoc_category){
-        assoc_category = assoc_category.innerText.split(':').at(1).trim()
-        IsAdminPage = true
+      
+    if (assoc_category.innerText == ""){
+        assoc_category = document.querySelector('#cat_name').innerText.split('|').at(0).trim()
+        
     }
     else{
-        assoc_category = document.querySelector('#cat_name').innerText.split('|').at(0).trim() 
+        assoc_category = assoc_category.innerText.split(':').at(1).trim()
+        IsAdminPage = true
     }
 
 
@@ -181,6 +167,7 @@ function retrieve_next_video_qa({isEdit=isEdit}){
     let kwargs = {file_name:file_name, assoc_category:assoc_category, 
         appr_rej:appr_rej, add_active_to_span:add_active_to_span,
          project_type:project_type, IsAdminPage:IsAdminPage}
+    
     get_next_video_appr_rej(kwargs)
 
 }
@@ -212,6 +199,7 @@ function create_form_elements({elem_name=null, elem_id=null, elem_inner_text=nul
             e.preventDefault()
             let isEdit = false
             submit_video_qa_form({isEdit:isEdit})
+
 
             
             // retrieve next video 

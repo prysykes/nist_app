@@ -36,10 +36,9 @@ APP_LABEL = 'pages'
 
 
 
-def export_job(project_type):
+def export_job(assoc_project):
     # print("export job hit")
     # user_fields = ['id', 'finished_job', 'admin_approved']
-    assoc_project = ProjectTitle.objects.get(project_type=project_type)
     payload = []
     try:
         all_approved_users = Userreg.objects.filter(admin_approved=True, project=assoc_project)
@@ -75,6 +74,7 @@ def export_job(project_type):
         all_approved_users = None
     # print("payload", payload)
     return payload
+    
     return JsonResponse(payload, safe=False)
 
 def create_groups(num_annotators, project_name):
@@ -305,18 +305,7 @@ def pipeline_without_cluster_csv(new_project, num_annotators, groups, video_path
 
 
 def handle_upload_videos(request, project_type, num_annotators, project_name, cluster_csv, video_path=None, yt_file_type=None):
-    # print(f"handle upload video hit {project_type}")
-    # if yt_file_type == 'json':
-    #     print('json')
-    #     return
-    #     print("json path available", yt_file_type)
-    #     youtube_json_path = os.path.join(media_dir, youtube_json_file)
-    #     # youtube_json = os.listdir(youtube_json_path)[0]
-    #     # yt_json_file_path = os.path.join(youtube_json_path, youtube_json)
-    # if yt_file_type == 'text':
-    #     print('text')
-    #     return 
-  
+    
     new_project, _ = ProjectTitle.objects.get_or_create(user=request.user, project_type=project_type, project_name=project_name)
     if cluster_csv and not new_project.cluster_csv:
         new_project.cluster_csv = cluster_csv
@@ -334,12 +323,16 @@ def handle_upload_videos(request, project_type, num_annotators, project_name, cl
         if video_path:
             pipeline_with_cluster_csv(new_project, num_annotators, groups, cluster_csv, video_path=video_path)
         elif yt_file_type:
+            new_project.is_link = True
+            new_project.save()
             pipeline_with_cluster_csv(new_project, num_annotators, groups, cluster_csv, yt_file_type=yt_file_type)
     else:
         print("no CSV pipeline for Video QA")
         if video_path:
             pipeline_without_cluster_csv(new_project, num_annotators, groups, video_path=video_path)
         elif yt_file_type:
+            new_project.is_link = True
+            new_project.save()
             pipeline_without_cluster_csv(new_project, num_annotators, groups, yt_file_type=yt_file_type)
     
 
@@ -440,16 +433,16 @@ def  get_video_list(term=None, category=None, cluster_group=None, annotator=None
             )
         ).filter(is_available=True).order_by('-checked', 'id')
     else:
-        
         cluster_keywords = category.strip()
         assoc_category = get_object_or_404(Category, cluster_keywords=cluster_keywords, project=assoc_project)
         annotator = get_object_or_404(User, username=annotator)
         videos = Videos.objects.filter(category=assoc_category, is_available=True, checked_by__username=annotator, status=True).order_by('id')
-        
+        print("videos", videos)
 
     qs = videos
     # print('a qs', qs)
-    videos = serialize('json', qs, fields=('file_name', 'video_path', 'checked_by', 'status', 'keywords', 'is_available'))
+    videos = serialize('json', qs, fields=('file_name', 'video_path', 'checked_by', 'status', 'video_similarity_score', 'keywords', 'project_type', 'youtube_vid_id', 'is_available'))
+    # videos = serialize('json', qs, fields=('file_name', 'video_path', 'checked_by', 'status', 'keywords', 'is_available'))
     
     return HttpResponse(videos, content_type='application/json')
 
@@ -566,3 +559,106 @@ def get_rem_and_total(category, cur_user):
     # context = json.dumps(context, indent=2)
     # print(context, 'hii')
     return context
+
+def prepare_export_data(request, usernames, is_youtube_link):
+    if usernames:
+        usernames_list = usernames.split('_')
+        data = {}
+        if is_youtube_link:
+            sn_counter = 1
+            serial_nums = []
+            username_col = []
+            video_ids = []
+            video_links = []
+            assoc_qs = []
+            assoc_ans_1s = []
+            assoc_ans_2s = []
+            assoc_ans_3s = []
+            assoc_ans_4s = []
+            correct_ans = []
+            for user in usernames_list:
+                assoc_user = User.objects.get(username=user)
+                #retrieve users videos
+                user_videos = Videos.objects.filter(checked_by=assoc_user)
+                for user_video in user_videos:
+                    
+                    # retrived assoc_qs
+                    cur_qs = user_video.question
+                    if not cur_qs:
+                        continue
+                    else:
+                        serial_nums.append(sn_counter)
+                        username_col.append(user)
+                        youtube_vid_id = user_video.youtube_vid_id
+                        video_ids.append(youtube_vid_id)
+                        default_link  = f"https://www.youtube.com/embed/{youtube_vid_id}?si=AID4kFGq8mcMy4MY&output=embed"
+                        video_links.append(default_link)
+                        assoc_qs.append(cur_qs.question)
+                        # retrieve ans
+                        cur_answers = Answer.objects.filter(question=cur_qs)
+
+                        ans1 = cur_answers[0]
+                        assoc_ans_1s.append(ans1.answer)
+                        if ans1.correct:
+                            correct_ans.append(1)
+
+                        ans2 = cur_answers[1]
+                        assoc_ans_2s.append(ans2.answer)
+                        if ans2.correct:
+                            correct_ans.append(2)
+
+                        ans3 = cur_answers[2]
+                        assoc_ans_3s.append(ans3.answer)
+                        if ans3.correct:
+                            correct_ans.append(3)
+
+                        ans4 = cur_answers[3]
+                        assoc_ans_4s.append(ans4.answer)
+                        if ans4.correct:
+                            correct_ans.append(4)
+                    sn_counter += 1
+            data['SN'] = serial_nums
+            data['Usernames'] = username_col   
+            data['Video IDs'] = video_ids 
+            data['Video Links'] = video_links
+            data['Questions'] = assoc_qs  
+            data['Answer One'] = assoc_ans_1s
+            data['Answer Two'] = assoc_ans_2s   
+            data['Answer Three'] = assoc_ans_2s
+            data['Answer Four'] = assoc_ans_4s   
+            data['Correct'] = correct_ans
+
+        else:
+            username_col_vals = []
+            category_col_vals = []
+            file_name_col_vals = []
+            # videos = [FIELDS]
+            users_categories_videos = {}
+            
+            for user in usernames_list:
+                users_categories_videos.setdefault(user, {})
+
+                user_object = User.objects.get(username=user)
+                assoc_group = user_object.groups.all().first()
+                assoc_categories = Category.objects.filter(group=assoc_group, admin_approved=True)
+                for assoc_cat in assoc_categories:
+                    assoc_cluster_keywords = assoc_cat.cluster_keywords
+                    
+
+                    assoc_videos = list(Videos.objects.filter(category=assoc_cat, checked_by=user_object, is_available=True, status=True).values_list('file_name', flat=True))
+                    assoc_total_videos = len(assoc_videos)
+
+                    users_list = [user]
+                    assoc_cluster_keywords_list = [assoc_cluster_keywords]
+                    users_list *=assoc_total_videos
+                    assoc_cluster_keywords_list *= assoc_total_videos
+                    # print("users_list", users_list, assoc_cluster_keywords_list)
+                    username_col_vals.extend(users_list)
+                    category_col_vals.extend(assoc_cluster_keywords_list)
+                    file_name_col_vals.extend(assoc_videos)
+                    
+            data["Users"] = username_col_vals
+            data["Video Categories"] = category_col_vals
+            data["Filenames"] = file_name_col_vals
+        
+        return data
