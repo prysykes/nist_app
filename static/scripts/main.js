@@ -64,7 +64,7 @@ function handle_confirm_yes_or_no({caller1=null, caller2=null, value=null, targe
         if (value){
             // mark job_finished in user model to false
             // change the annotation ended text to end-annotation 
-            let user = document.getElementById('last_name').innerText.split(' ')[1]
+            let user = document.getElementById('username').innerText.split(' ')[1]
             let end_annotation_endpoint = `${base_url}/end_annotation?user=${user}&restart_end=true`
                 let response = fetch(end_annotation_endpoint, {
                     method: 'GET'
@@ -133,7 +133,9 @@ if ((btn_vid_upload == null) && (login==null)){
     // btn_vid_upload  is only in the admin page
     let end_annotation = document.querySelector('#end-annotation')
     end_annotation.addEventListener('click', (e)=> {
-        let target_elem = e.target
+        console.log(end_annotation);
+        
+        let target_elem = end_annotation
         
     
         if (target_elem.innerText.trim().includes('Restart Annotation')){
@@ -144,7 +146,7 @@ if ((btn_vid_upload == null) && (login==null)){
             
             
         }else{
-            let user = document.getElementById('last_name').innerText.split(' ')[1]
+            let user = document.getElementById('username').innerText.split(' ')[1]
             let end_annotation_endpoint = `${base_url}/end_annotation?user=${user}&restart_end=false`
             let response = fetch(end_annotation_endpoint, {
                 method: 'GET'
@@ -408,6 +410,9 @@ function allow_edit_and_show_qa({checked_by=null, project_type=null,
         if (project_type == 'video_qa'){
             // adds mark as unavailable when a video is clicked
             let category = document.querySelector('#cat_name').innerText.split('|')[0].trim()
+        //     const category_h3 = document.getElementById('cat_name')
+        // const category = category_h3.textContent.split('|')[0]
+            let project_name = category.split('_')[0]
       
             let kwargs = {project_type:project_type, project_name:project_name, file_name:file_name, category:category}
             
@@ -519,6 +524,7 @@ cat_headings.forEach((elem)=>{
 
 function add_active_to_span(span_id, caller=''){
     function add_active(){
+        
         let cur_span_id = 'li_'+span_id
         let cur_span_tag = document.getElementById(cur_span_id)
         // get parent of cur_span_tag, get her children and remove active class
@@ -533,6 +539,7 @@ function add_active_to_span(span_id, caller=''){
         // console.log('cur_span_tag', cur_span_tag.parentElement.childNodes);
     }
     if (caller=='default'){
+        // delay adding active until page is loaded
         setTimeout(add_active, 600)
     }else{
         add_active()
@@ -595,7 +602,6 @@ function show_mark_unavailable({project_type, project_name, file_name, category}
     button.classList.add('nist-button')
 
     button.addEventListener('click', ()=>{
-        console.log('filename', file_name, 'category', category, 'project_name', project_name);
         
         let full_mark_unavailable_url = mark_unavailable_url + `?category=${category}&filename=${file_name}&project_name=${project_name}`
         
@@ -606,7 +612,6 @@ function show_mark_unavailable({project_type, project_name, file_name, category}
         .then((data)=>{
             let isAdmin = false
             let file_name = data['filename']
-            console.log(data['filename'])
             const span_id = `li_${file_name}`
             let vid_filename_span = document.getElementById(span_id)
             vid_filename_span.classList.add('display-none')
@@ -623,9 +628,7 @@ function show_mark_unavailable({project_type, project_name, file_name, category}
 
 }
 
-function show_video_in_preview({prev_file_name=null, assoc_category = null, data=null, appr_rej=null, caller='', project_type=null, isAdmin=null}){
-    // console.log("logic for showing video in vid tag");
-    
+function show_video_in_preview({prev_file_name=null, assoc_category = null, data=null, appr_rej=null, caller='', project_type=null, isAdmin=null}){    
     const[span_heading, br_elem, span_category] = create_vidname_category_spans(assoc_category)
     let vid_preview = document.getElementById('vid_preview')
     let vid_tag = document.getElementById('vid_tag')
@@ -664,8 +667,10 @@ function show_video_in_preview({prev_file_name=null, assoc_category = null, data
         let iframe = create_youtube_iframe(youtube_vid_id)
         vid_tag.appendChild(iframe)
     }
-
+ 
+    
     if (project_type=='video_qa'){
+        
         var action_div = create_qa_btn_controls()
         let question_tag = document.querySelector('#question_tag')
         question_tag.innerHTML = ""
@@ -675,6 +680,7 @@ function show_video_in_preview({prev_file_name=null, assoc_category = null, data
     
     }
     else{
+        
         let kwargs = {file_name:file_name, assoc_category:assoc_category, project_type:project_type}
         var action_div = create_apr_rej(kwargs) 
        
@@ -689,7 +695,6 @@ function show_video_in_preview({prev_file_name=null, assoc_category = null, data
         const category_h3 = document.getElementById('cat_name')
         const category = category_h3.textContent.split('|')[0]
         let project_name = category.split('_')[0]
-        console.log("project_name", project_name);
         
         let kwargs = {project_type:project_type, project_name:project_name, file_name:file_name, category:category}
         const mark_unavailable = show_mark_unavailable(kwargs)
@@ -734,7 +739,7 @@ function show_video_in_preview({prev_file_name=null, assoc_category = null, data
 
 function get_next_video_appr_rej({file_name=null, assoc_category=null, appr_rej=null, add_active_to_span=null, project_type=null, isAdmin=null, IsAdminPage=null}){
     // console.log("project_type!!!", project_type);
-
+    
     var prev_file_name = file_name
     if (isAdmin){
         if (IsAdminPage){
@@ -760,16 +765,20 @@ function get_next_video_appr_rej({file_name=null, assoc_category=null, appr_rej=
         var get_next_video_endpoint = base_url+`/get_next_video?file_name=${file_name}&appr_rej=${appr_rej}`
     }
     
-    
+    let isIframe = false
     // get_next_video_endpoint = get_next_video_endpoint+file_name
     return fetch(get_next_video_endpoint, {
         method: 'GET'
     })
     .then(response => response.json())
     .then((data)=>{
-
+        
         if (!isAdmin){
-            const[file_name_, unprocessed_vids, total_vids, html_node_vid_list, user_all_processed] = show_video_in_preview({prev_file_name:prev_file_name,  assoc_category:assoc_category, data:data, appr_rej:appr_rej, caller:'appr_rej', isAdmin:isAdmin})
+            let vid_tag = document.querySelector('#vid_tag')
+            if (vid_tag.contains(document.querySelector('iframe'))){
+                isIframe = true  
+            }
+            const[file_name_, unprocessed_vids, total_vids, html_node_vid_list, user_all_processed] = show_video_in_preview({prev_file_name:prev_file_name,  assoc_category:assoc_category, data:data, appr_rej:appr_rej, caller:'appr_rej', isAdmin:isAdmin, project_type:project_type})
             
             let all_processed = user_all_processed[1]
             let user_processed = user_all_processed[0]
@@ -777,7 +786,7 @@ function get_next_video_appr_rej({file_name=null, assoc_category=null, appr_rej=
             // replace the progress  span on video_list_disp div
             let processed_by_user_div = document.getElementById('processed_by_user_div')
             let processed_by_all_div = document.getElementById('processed_by_all_div')
-               
+            
             replace_rem_total_per_category({unprocessed_vids:unprocessed_vids, total_vids:total_vids})
             let html_node_category = document.getElementsByClassName('cat_headings active')[0]    
             
@@ -791,7 +800,7 @@ function get_next_video_appr_rej({file_name=null, assoc_category=null, appr_rej=
             let user_processed = user_all_processed[0]
             
             let processed_by_all_div = document.getElementById('processed_by_all_div')
-            console.log("all_processed", all_processed);
+           
             
             let kwargs = {all_processed:all_processed,  processed_by_all_div:processed_by_all_div, isAdmin:isAdmin}
             replace_processed_by_all_and_user(kwargs)
@@ -1136,4 +1145,4 @@ function create_edit_btn({file_name:file_name, cluster_keywords:cluster_keywords
 
 export {base_url, get_next_video_appr_rej, create_apr_rej, create_vidname_category_spans,
      create_video_tag, prepare_quest_answer_resp, create_edit_btn, create_qa_btn_controls,
-    create_video_QA_form, allow_edit_and_show_qa, add_active_to_span, show_mark_unavailable}
+    create_video_QA_form, allow_edit_and_show_qa, add_active_to_span, show_mark_unavailable, create_youtube_iframe}

@@ -22,11 +22,11 @@
         <header>
            <div>
                 
-                {% comment %} <iframe width="560" height="315" 
-                    src="https://www.youtube.com/embed/PAEPpXwVXXQ?si=AID4kFGq8mcMy4MY&output=embed"
+                <!-- <iframe width="560" height="315" 
+                    src="https://www.youtube.com/embed/zSaBtd4JHco?si=AID4kFGq8mcMy4MY&output=embed"
                     title="YouTube video player"
                     referrerpolicy="strict-origin-when-cross-origin">
-                </iframe> {% endcomment %}
+                </iframe>  -->
                 
             </div> 
             <div class="tm_banner">
@@ -38,7 +38,7 @@
                         {% if request.user.is_authenticated %}
                         <span id="project_type_user_pg" class="display-none">{{request.user.userreg.project.project_type}}</span>
                             <div id="name_plate">
-                                <p id="last_name">Welcome {{ request.user}}</p> &nbsp;&nbsp;
+                                <p id="username">Welcome {{ request.user}}</p> &nbsp;&nbsp;
                                 <a href="{% url 'user_logout' %}"> <input class="nist-button" type="button" value="logout"></a>
                                 
                             </div>

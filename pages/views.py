@@ -14,7 +14,7 @@ from .utils import handle_upload_videos
 from .utils import (export_job, display_categories, get_rem_total_per_category, 
                     get_video_list, check_user_decision, get_user_all_processed, 
                     get_paginated_video_list, serialize_videos,
-                    move_selected_videos, create_question_answers)
+                    move_selected_videos, create_question_answers, prepare_export_data)
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse, HttpResponse
 from pages.utils import serialize_objects
@@ -236,8 +236,8 @@ def submit_vid_qa(request):
         assoc_category = Category.objects.get(cluster_keywords=cluster_keywords, project=assoc_project)
         cur_video = Videos.objects.get(category=assoc_category, project=assoc_project, file_name=video_filename, is_available=True)
         
+        payload = {}
         if is_edit:
-            print("is edit", cur_video)
             # print("request.POST", request.POST)
             def populate_payload(assoc_id, key, value, payload, obj=None, isQuestion=False):
                 if isQuestion:
@@ -248,7 +248,7 @@ def submit_vid_qa(request):
                     else:
                         payload.setdefault(key, {"id": assoc_id, "value":value})
                 return payload
-            payload = {}
+            
 
             for key, value in request.POST.items():
                 # print(key, value)
@@ -300,17 +300,17 @@ def submit_vid_qa(request):
                    
                     assoc_ans.save()
                     populate_payload(assoc_id, new_key, value, payload, obj=assoc_ans, isQuestion=False)
-            #TODO: return a payload of the editted and replace the div
+            #return a payload of the editted video and replace the div
+            
             return JsonResponse(payload)
                    
         else:
-            question = request.POST.get('question')
-            correct_ans = request.POST.get('correct_ans')
-            answer_one = request.POST.get('opt_ans_one')
-            answer_two = request.POST.get('opt_ans_two')
-            answer_three = request.POST.get('opt_ans_three')
+            question = request.POST.get('question').lower()
+            correct_ans = request.POST.get('correct_ans').lower()
+            answer_one = request.POST.get('opt_ans_one').lower()
+            answer_two = request.POST.get('opt_ans_two').lower()
+            answer_three = request.POST.get('opt_ans_three').lower()
             answers = [correct_ans, answer_one, answer_two, answer_three]
-
             if question:
                 #process video question
                 question_obj = create_question_answers(question=question, answers=answers)
@@ -318,10 +318,21 @@ def submit_vid_qa(request):
                 cur_video.status = True
                 cur_video.checked_by = user
                 cur_video.save()
+
+                # build payload data
+                payload['question'] =  {'id': question_obj.id, 'value': question_obj.question}
+                question_answers = question_obj.question_answers.all()
+                for idx, ans in enumerate(question_answers):
+                    if ans.correct:
+                        payload[f'ans-{idx}-correct'] = {'id': ans.id, 'value': ans.answer}
+                    else:
+                        payload[f'ans-{idx}'] = {'id': ans.id, 'value': ans.answer}
             else:
                 cur_video.status = False
                 cur_video.checked_by = user
                 cur_video.save()
+            #TODO: retrieve QS and Ans details and send payload to user
+            return JsonResponse(payload)
         
 
        
@@ -377,11 +388,7 @@ def admin_approve(request):
         assoc_user = assoc_group.user
         assoc_user = Userreg.objects.get(user=assoc_user)
         
-        # print("len(all_user_approved_category)", len(all_user_approved_category))
-        # print("assoc_users.admin_approved", assoc_users.admin_approved)
-        
-        # print("assoc_users",  assoc_users)
-        # retrieve the user here and make the admin approve = True
+        # retrieve the user here and mark the admin approve = True
         if status == "approved":
             # print(">> approve per cluster")
             # print("sats", status)
@@ -403,81 +410,50 @@ def admin_approve(request):
         
         # return JsonResponse({"info": f"{cluster_keyword} {status}" })
     
-    payload = export_job(project_type)
+    payload = export_job(project)
     # print("payload", payload)
     return JsonResponse(payload, safe=False)
 
 def get_job_summary(request):
-    project_type = request.GET.get("project_type")
-    payload = export_job(project_type)
+    admin_username = request.GET.get('admin_username')
+    assoc_project = User.objects.get(username=admin_username).userreg.project
+    # project_type = request.GET.get("project_type")
+    payload = export_job(assoc_project)
     return JsonResponse(payload, safe=False)
 
 def export_all_videos(request):
+    """
+        exports user processed videos to a zil file
+        based on whether is a youtube link or local video
+    """
+    project_admin_user = request.user
+    is_youtube_link = project_admin_user.userreg.project.is_link
     usernames = request.GET.get("usernames")
-    FIELDS = ["Users", "Video Categories", "Filenames"]
-    username_col_vals = []
-    category_col_vals = []
-    file_name_col_vals = []
-    videos = [FIELDS]
-    users_categories_videos = {}
-    data = {}
-    if usernames:
-        usernames_list = usernames.split('_')
-        # print("usernames_list", usernames_list)
-        
-        for user in usernames_list:
-            users_categories_videos.setdefault(user, {})
-
-            user_object = User.objects.get(username=user)
-            assoc_group = user_object.groups.all().first()
-            assoc_categories = Category.objects.filter(group=assoc_group, admin_approved=True)
-            for assoc_cat in assoc_categories:
-                assoc_cluster_keywords = assoc_cat.cluster_keywords
-                
-
-                assoc_videos = list(Videos.objects.filter(category=assoc_cat, checked_by=user_object, is_available=True, status=True).values_list('file_name', flat=True))
-                assoc_total_videos = len(assoc_videos)
-
-                users_list = [user]
-                assoc_cluster_keywords_list = [assoc_cluster_keywords]
-                users_list *=assoc_total_videos
-                assoc_cluster_keywords_list *= assoc_total_videos
-                # print("users_list", users_list, assoc_cluster_keywords_list)
-                username_col_vals.extend(users_list)
-                category_col_vals.extend(assoc_cluster_keywords_list)
-                file_name_col_vals.extend(assoc_videos)
-                
-                # users_categories_videos[user].setdefault(assoc_cluster_keywords, None)
-                # users_categories_videos[user][assoc_cluster_keywords] = assoc_videos
-                # videos.append(list(assoc_videos))
-        
-
-    data["Users"] = username_col_vals
-    data["Video Categories"] = category_col_vals
-    data["Filenames"] = file_name_col_vals
-
-    df = pd.DataFrame(data)
-    finished_jobs_csv = os.path.join(finished_jobs_dir, "finished_jobs.csv")
-    df.to_csv(finished_jobs_csv, index=False)
-   
-    finished_jobs_csv = "media/finished_jobs/finished_jobs.csv"
-    destination_dir = os.path.join(finished_jobs_dir, "selected_videos")
-    source_dir = os.path.join(media_dir, "videos")
-    # print("is dir", os.path.isdir(destination_dir), os.path.isdir(source_dir))
-    if len(destination_dir) < 2:
-        zip_file_name = move_selected_videos(destination_dir, source_dir, finished_jobs_csv)
-        zip_file_path = f"media/finished_jobs/{zip_file_name}"
-    else:
-        zip_file_path = f"media/finished_jobs/compressed_videos.zip"
-   
-
-    # print("data", data)
-        
-        # print("assoc cat", len(assoc_categories))
-    # print("users_categories_videos", users_categories_videos)
+    data = prepare_export_data(request, usernames, is_youtube_link)
+    if data:
+        df = pd.DataFrame(data)
+        finished_jobs_csv = os.path.join(finished_jobs_dir, "finished_jobs.csv")
+        df.to_csv(finished_jobs_csv, index=False)
     
-    return JsonResponse({"finished_job_csv": finished_jobs_csv,
-                         "zip_file_path":zip_file_path})
+        finished_jobs_csv = "media/finished_jobs/finished_jobs.csv"
+        destination_dir = os.path.join(finished_jobs_dir, "selected_videos")
+        source_dir = os.path.join(media_dir, "videos")
+        # print("is dir", os.path.isdir(destination_dir), os.path.isdir(source_dir))
+        if len(destination_dir) < 2:
+            zip_file_name = move_selected_videos(destination_dir, source_dir, finished_jobs_csv)
+            zip_file_path = f"media/finished_jobs/{zip_file_name}"
+        else:
+            zip_file_path = f"media/finished_jobs/compressed_videos.zip"
+    
+        
+        return JsonResponse({"finished_job_csv": finished_jobs_csv,
+                            "zip_file_path":zip_file_path if not is_youtube_link else None})
+    else:
+       #TODO catch this in frontend and throw an alert to the user
+       return JsonResponse({
+            "message": "No processed video found",
+            "status": 500
+        })
 
 def end_annotation(request):
     user = request.GET.get('user')
@@ -520,7 +496,7 @@ def display_videos(request):
                 category = request.GET.get('category')
                 annotator = request.GET.get('annotator')
                 videos = get_video_list(category=category, annotator=annotator, assoc_project=assoc_project)
-
+    # print("ff", videos)
     return videos
 
 def get_videos_per_category(request):
@@ -651,7 +627,6 @@ def mark_as_unavailable(request):
     assoc_category = Category.objects.get(project=assoc_project, cluster_keywords=category)
    
     assoc_video = Videos.objects.get(category=assoc_category, file_name=filename)
-    print('assoc_video >>', assoc_video )
     assoc_video.is_available = False
     assoc_video.save()
     # print('mark unavailable clicked', assoc_video)

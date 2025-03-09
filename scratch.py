@@ -72,10 +72,10 @@
 
 # is_available
 
-'json, txt'
-show_mark_unavailable(project_type, filename, category)
+# 'json, txt'
+# show_mark_unavailable(project_type, filename, category)
 
-if yt_file_type == 'json':
+# if yt_file_type == 'json':
     #     print('json')
     #     return
     #     print("json path available", yt_file_type)
@@ -89,3 +89,36 @@ if yt_file_type == 'json':
 
 #   let project_name = category.split('_')[0]
 #         console.log("project_name", project_name);
+
+# class Answer(models.Model):
+#     answer = models.CharField(max_length=250)
+#     correct = models.BooleanField(default=False)
+#     question = models.ForeignKey('Question', on_delete=models.CASCADE, related_name="question_answers")
+
+#     def __str__(self):
+#         return self.answer
+    
+# class Question(models.Model):
+#     question = models.CharField(max_length=250)
+
+#     def __str__(self):
+#         return self.question
+
+# payload = {'question': {'id': 40, 'value': 'how many speakers are in the video'}, 
+#            'ans-0-correct': {'id': 133, 'value': '1'}, 'ans-1': {'id': 134, 'value': '2'}, 
+#            'ans-2': {'id': 135, 'value': '4'}, 'ans-3': {'id': 136, 'value': '3'}}
+
+# payload!! {'question': {'id': 43, 'value': 'what is the color of the facemask'}, 
+#            'ans-0-correct': {'id': 145, 'value': 'black'}, 'ans-1': {'id': 146, 'value': 'white'}, 
+#            'ans-2': {'id': 147, 'value': 'green'}, 'ans-3': {'id': 148, 'value': 'orange'}}
+
+
+# username_col = []
+# video_ids = []
+# video_links = []
+# assoc_qs = []
+# assoc_ans_1s = []
+# assoc_ans_2s = []
+# assoc_ans_3s = []
+# assoc_ans_4s = []
+# correct_ans = []
