@@ -917,7 +917,6 @@ var create_apr_rej = function appr_rej({file_name=null, assoc_category=null, cal
 
     approve_input.addEventListener('click', ()=>{
         
-        
         try {
             let end_annotation = document.getElementById('end-annotation')
             let end_annotation_inner_text = end_annotation.innerText.trim()
@@ -952,6 +951,7 @@ var create_apr_rej = function appr_rej({file_name=null, assoc_category=null, cal
     
 
     reject_input.addEventListener('click', ()=>{
+        
         try {
             let end_annotation = document.getElementById('end-annotation')
             let end_annotation_inner_text = end_annotation.innerText.trim()
@@ -971,8 +971,16 @@ var create_apr_rej = function appr_rej({file_name=null, assoc_category=null, cal
             get_next_video({file_name: file_name, assoc_category: assoc_category, appr_rej: 'reject'})
             
         }
-        // replaces the vlaye of job summary with current values
-        handle_show_job_summary()
+        // replaces the values of job summary with current values
+        // run thi callback only if called from admin page
+
+        // let project_type = document.querySelector('#project_type')
+        // console.log("project_type", project_type);
+        if (document.querySelector('#project_type')){
+            handle_show_job_summary()
+        }
+        
+        
         
         
       

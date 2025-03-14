@@ -38,19 +38,29 @@ function handle_export_all_videos(){
         let data_finished_job_csv = data['finished_job_csv']
         let data_finished_job_videos_zip = data['zip_file_path']
 
-        let download_jobs_div = document.getElementById('download-jobs') 
-        download_jobs_div.classList.toggle('display-none')
-
         let videos_zip = document.getElementById('videos-zip')
         let csv_file = document.getElementById('csv-file')
         csv_file.innerHTML = ""
         videos_zip.innerHTML = ""
         
-        // create a tag
-        let a_tag_csv = document.createElement('a')
-        a_tag_csv.href = data_finished_job_csv 
-        a_tag_csv.innerText = "Download CSV"
-        csv_file.appendChild(a_tag_csv) 
+        // create anchor tag to hold link to csv and zip file
+        if (data_finished_job_csv){
+            let a_tag_csv = document.createElement('a')
+            a_tag_csv.href = data_finished_job_csv 
+            a_tag_csv.innerText = "Download CSV"
+            csv_file.appendChild(a_tag_csv) 
+            let info_h3 = document.querySelectorAll('#download-jobs > .info-text')[0]
+            info_h3.innerText = "Done Exporting, click below to download files"
+            let download_jobs_div = document.getElementById('download-jobs') 
+            download_jobs_div.classList.toggle('display-none')
+        }
+        else {
+            let info_h3 = document.querySelectorAll('#download-jobs > .info-text')[0]
+            info_h3.innerText = "No approved videos..."
+            
+            let download_jobs_div = document.getElementById('download-jobs') 
+            download_jobs_div.classList.toggle('display-none')
+        }
 
         if (data_finished_job_videos_zip){
             let a_tag_zip = document.createElement('a')
@@ -230,9 +240,8 @@ function handle_show_job_summary(){
     // console.log('username', username);
     
     let project_type = document.querySelector('#project_type').innerText
-    console.log("project_type", project_type);
-    
-     let endpoint = `${root_url}/get_job_summary?admin_username=${username}`
+
+    let endpoint = `${root_url}/get_job_summary?admin_username=${username}`
 
     let response = fetch(endpoint, {
         method: "GET"
