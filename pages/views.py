@@ -348,13 +348,14 @@ def admin_approve(request):
     
     if request.GET.get('user_catergories'):
         # print("user_catergories hit")
+        
 
         user_catergories = request.GET.get('user_catergories').split('-')
         user = user_catergories[0].strip() # user is the first item in the user_categories list
         categories = user_catergories[1:]
         # print("categories", categories)
         status = request.GET.get('status')
-        # print(status, "status")
+        
         # return JsonResponse({"info": f"Accepted {user} videos"})
         user_object = User.objects.get(username=user)
         userreg_object = Userreg.objects.get(user=user_object) # userreg_object has a one-to-one to user_object
@@ -376,9 +377,6 @@ def admin_approve(request):
         elif status == "rejected":
             userreg_object.admin_approved = False
             userreg_object.save()
- 
-
-        # return JsonResponse({"info": f"Accepted {user} videos"})
     
     elif request.GET.get('cluster_keyword'):
         cluster_keyword = request.GET.get("cluster_keyword")
@@ -436,18 +434,19 @@ def export_all_videos(request):
         df.to_csv(finished_jobs_csv, index=False)
     
         finished_jobs_csv = "media/finished_jobs/finished_jobs.csv"
-        destination_dir = os.path.join(finished_jobs_dir, "selected_videos")
-        source_dir = os.path.join(media_dir, "videos")
+        # destination_dir = os.path.join(finished_jobs_dir, "selected_videos")
+        # source_dir = os.path.join(media_dir, "videos")
         # print("is dir", os.path.isdir(destination_dir), os.path.isdir(source_dir))
-        if len(destination_dir) < 2:
-            zip_file_name = move_selected_videos(destination_dir, source_dir, finished_jobs_csv)
-            zip_file_path = f"media/finished_jobs/{zip_file_name}"
-        else:
-            zip_file_path = f"media/finished_jobs/compressed_videos.zip"
+        # if len(destination_dir) < 2:
+        #     zip_file_name = move_selected_videos(destination_dir, source_dir, finished_jobs_csv)
+        #     zip_file_path = f"media/finished_jobs/{zip_file_name}"
+        # else:
+        #     zip_file_path = f"media/finished_jobs/compressed_videos.zip"
     
         
         return JsonResponse({"finished_job_csv": finished_jobs_csv,
-                            "zip_file_path":zip_file_path if not is_youtube_link else None})
+                            #"zip_file_path":zip_file_path if not is_youtube_link else None
+                            })
     else:
        #TODO catch this in frontend and throw an alert to the user
        return JsonResponse({

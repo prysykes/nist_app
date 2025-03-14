@@ -633,29 +633,17 @@ def prepare_export_data(request, usernames, is_youtube_link):
             category_col_vals = []
             file_name_col_vals = []
             # videos = [FIELDS]
-            users_categories_videos = {}
             
             for user in usernames_list:
-                users_categories_videos.setdefault(user, {})
-
-                user_object = User.objects.get(username=user)
-                assoc_group = user_object.groups.all().first()
-                assoc_categories = Category.objects.filter(group=assoc_group, admin_approved=True)
-                for assoc_cat in assoc_categories:
-                    assoc_cluster_keywords = assoc_cat.cluster_keywords
-                    
-
-                    assoc_videos = list(Videos.objects.filter(category=assoc_cat, checked_by=user_object, is_available=True, status=True).values_list('file_name', flat=True))
-                    assoc_total_videos = len(assoc_videos)
-
-                    users_list = [user]
-                    assoc_cluster_keywords_list = [assoc_cluster_keywords]
-                    users_list *=assoc_total_videos
-                    assoc_cluster_keywords_list *= assoc_total_videos
-                    # print("users_list", users_list, assoc_cluster_keywords_list)
-                    username_col_vals.extend(users_list)
-                    category_col_vals.extend(assoc_cluster_keywords_list)
-                    file_name_col_vals.extend(assoc_videos)
+                # users_categories_videos.setdefault(user, {})
+                base_user = User.objects.get(username=user)
+                user_object = base_user.userreg
+                assoc_project = user_object.project
+                assoc_videos = Videos.objects.all().filter(checked_by=base_user.id, project=assoc_project, status=True, category__admin_approved=True)
+                for vid in assoc_videos:
+                    username_col_vals.append(user)
+                    category_col_vals.append(vid.category)
+                    file_name_col_vals.append(vid.file_name)
                     
             data["Users"] = username_col_vals
             data["Video Categories"] = category_col_vals
