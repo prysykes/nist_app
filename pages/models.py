@@ -1,3 +1,4 @@
+import os
 from django.db import models
 from django.contrib.auth.models import Group, User
 from django.core.validators import MinValueValidator
@@ -6,7 +7,8 @@ from django.db.models import Case, When, Value, BooleanField
 
 
 # Create your models here.
-
+parent_dir = os.getcwd()
+media_dir = os.path.join(parent_dir, 'media')
     
 class VideoGroup(models.Model):
     #project = models.ForeignKey(ProjectTitle, blank=True, null=True, on_delete=models.CASCADE)
@@ -108,7 +110,7 @@ class Videos(models.Model):
     question = models.ForeignKey(Question, null=True, blank=True, on_delete=models.CASCADE)
     project = models.ForeignKey(ProjectTitle, default='', on_delete=models.CASCADE)
     # video = models.FileField(upload_to='videos', verbose_name='Trec Videos')
-    video_path = models.CharField(max_length=50) 
+    video_path = models.CharField(max_length=250) 
     youtube_vid_id = models.CharField(max_length=50, null=True, blank=True)
     is_available = models.BooleanField(default=True)
     file_name = models.CharField(max_length=50, null=True, blank=True)
@@ -117,7 +119,7 @@ class Videos(models.Model):
     status = models.BooleanField(default=None, blank=True, null=True)
     video_similarity_score = models.FloatField(default=0.0)
     admin_approve = models.BooleanField(default=False, null=True, blank=True)
-
+    # video = models.FileField(upload_to='videos', null=True, blank=True)
     date_uploaded = models.DateField(auto_now_add=True)
 
     def __str__(self):
