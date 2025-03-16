@@ -128,7 +128,7 @@
                                 </div>
                                 <div class="row-align">
                                     <div class="form-label">
-                                        CSV filename
+                                        CSV file path
                                     </div>
                                     <div class="form-text-input">
                                         <input type="text" name="cluster_csv" id="cluster_csv">
@@ -162,6 +162,25 @@
                                         <!-- <input type="text" name="youtube_json_file" id="youtube_json_file"> -->
                                     </div>
                                 </div>
+
+                                <div id="json_dir_input" class="row-align">
+                                    <div class="form-label youtube_source">
+                                        JSON Directory name
+                                    </div>
+                                    <div class="form-text-input">
+                                        <input type="text" name="youtube_json_path">
+                                    </div>
+                                </div>
+
+                                <div id="txt_dir_input" class="row-align display-none">
+                                    <div class="form-label youtube_source">
+                                        TEXT Directory name
+                                    </div>
+                                    <div class="form-text-input">
+                                        <input type="text" name="youtube_txt_path">
+                                    </div>
+                                </div>
+
                                 <div class="row-align">
                                     <div class="form-label">
                                         {{video_upload.video.label}}

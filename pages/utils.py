@@ -30,6 +30,7 @@ csv_base_dir = os.path.join('media', 'cluster_csv')
 parent_dir = os.getcwd()
 media_dir = os.path.join(parent_dir, 'media')
 finished_jobs_dir = os.path.join(media_dir, "finished_jobs")
+local_video_path = os.path.join(media_dir, 'videos')
 
 
 APP_LABEL = 'pages'
@@ -173,7 +174,9 @@ def create_categories(new_project, num_annotators, groups, total_videos=None, cl
         else:
             return helper_category_creation(new_project, num_annotators, groups, cluster_keyword_id_similarity_pair=cluster_keyword_id_similarity_pair)
 
-        
+def move_video_file(source_file, destination_path):
+    shutil.copy(source_file, destination_path)
+    return True       
 
 def pipeline_with_cluster_csv(new_project, num_annotators, groups, cluster_csv, video_path):
     cluster_csv_df = pd.read_csv(cluster_csv, index_col=0)
@@ -184,20 +187,22 @@ def pipeline_with_cluster_csv(new_project, num_annotators, groups, cluster_csv, 
         assoc_cluster_id = assoc_cluster_id.iloc[0]
         assoc_cluster_similarity_score = cluster_csv_df.loc[cluster_csv_df['cluster_keywords']==keyword, 'cluster_similarity_score']
         assoc_cluster_similarity_score  = assoc_cluster_similarity_score.iloc[0]
-        
         cur_pair = (keyword, assoc_cluster_id, assoc_cluster_similarity_score)
         cluster_keyword_id_similarity_pair.append(cur_pair)
     #create videos and assign to categories
-    assoc_video_path = os.path.join(media_dir, video_path)
-    video_files = os.listdir(assoc_video_path)
-    total_videos = len(video_files) 
+    # assoc_video_path = os.path.join(media_dir, video_path)
+    video_files = os.listdir(video_path)
+    total_videos = len(video_path) 
     # create categories for videos based on the csv_file
     create_categories(new_project, num_annotators, groups, cluster_keyword_id_similarity_pair=cluster_keyword_id_similarity_pair)
     
-    
+    project_name = new_project.project_name
+    destination_path = os.path.join(local_video_path, f'{project_name}')
+    os.makedirs(destination_path, exist_ok=True)
     for video in video_files:
         if video == '.DS_Store':
             continue
+        source_file = os.path.join(video_path, video)
         vid_name = int(video.split('.')[0])
         assoc_df_row = cluster_csv_df[cluster_csv_df['filename'] == vid_name]
         cluster_id  = int(assoc_df_row['cluster_ids'].values[0])
@@ -207,8 +212,8 @@ def pipeline_with_cluster_csv(new_project, num_annotators, groups, cluster_csv, 
         keywords = assoc_df_row['keywords'].values[0]
         #retrieve category
         assoc_category = get_object_or_404(Category, cluster_keywords=cluster_keywords, cluster_id=cluster_id, project=new_project)
-        
-        cur_vid = Videos(video_path=video_path, checked_by=None, file_name=video)
+        relative_video_path = f'videos/{project_name}'
+        cur_vid = Videos(video_path=relative_video_path, checked_by=None, file_name=video)
         cur_vid.category = assoc_category
         cur_vid.project = new_project
         cur_vid.keywords = keywords
@@ -216,13 +221,13 @@ def pipeline_with_cluster_csv(new_project, num_annotators, groups, cluster_csv, 
         # print("video_similarity_score", video_similarity_score)
         cur_vid.description = description
         cur_vid.save()
-
+        move_video_file(source_file, destination_path)
     return None
 
 
 def pipeline_without_cluster_csv(new_project, num_annotators, groups, video_path=None, yt_file_type=None):
     if video_path:
-        assoc_video_path = os.path.join(media_dir, video_path)
+        assoc_video_path = video_path #os.path.join(media_dir, video_path)
         video_files = os.listdir(assoc_video_path)
         total_videos = len(video_files)
         categories, videos_per_category = create_categories(new_project, num_annotators, groups, total_videos=total_videos)
@@ -231,6 +236,10 @@ def pipeline_without_cluster_csv(new_project, num_annotators, groups, video_path
         # videos_per_category = math.floor(total_videos/len(categories))
         min_idx = 0
         max_idx = videos_per_category
+
+        project_name = project_name.project_name
+        assoc_video_path = os.path.join(local_video_path, f'{project_name}')
+        os.makedirs(assoc_video_path, exist_ok=True)
         for idx in range(len(categories)):
             assoc_category = categories[idx]
             # select matching bucket of videos
@@ -238,7 +247,7 @@ def pipeline_without_cluster_csv(new_project, num_annotators, groups, video_path
             cur_video_slice = video_files[min_idx:max_idx]
             for idx_vid, video_name in enumerate(cur_video_slice):
                 file_name = video_name.split('/')[-1]
-                cur_video = Videos(video_path=video_path, checked_by=None, file_name=file_name)
+                cur_video = Videos(video_path=assoc_video_path, checked_by=None, file_name=file_name)
                 cur_video.category = assoc_category
                 cur_video.project=new_project
                 cur_video.save()
@@ -247,20 +256,21 @@ def pipeline_without_cluster_csv(new_project, num_annotators, groups, video_path
             max_idx += videos_per_category
 
     elif yt_file_type:
-        yt_file_dir = os.path.join(media_dir, 'youtube_files')
+        yt_file_dir = yt_file_type #os.path.join(media_dir, 'youtube_files')
         unique_vid_ids = set()
-        if yt_file_type == 'json':
+        if 'json' in str(yt_file_dir):
             json_files = glob.glob(os.path.join(yt_file_dir, '*.json'))
             txt_files = None
-        elif yt_file_type == 'text':
+        elif 'txt' in str(yt_file_dir):
             txt_files = glob.glob(os.path.join(yt_file_dir, '*.txt'))
             json_files = None
 
         if json_files:
             #json_files = os.listdir(yt_json_file_path)
             for file in json_files:
-                full_json_file_path = os.path.join(yt_file_dir, file)
-                with open(full_json_file_path, 'r') as yt_vids:
+                print("file>", file)
+                # full_json_file_path = os.path.join(yt_file_dir, file)
+                with open(file, 'r') as yt_vids:
                     data = json.load(yt_vids)
                     for idx, item in enumerate(data):
                         vid_id = item["id"]
@@ -269,8 +279,8 @@ def pipeline_without_cluster_csv(new_project, num_annotators, groups, video_path
         elif txt_files:
             # read txt file
             for file in txt_files:
-                full_txt_file_path = os.path.join(yt_file_dir, file) 
-                with open(full_txt_file_path, 'r') as yt_txt_file:
+                # full_txt_file_path = os.path.join(yt_file_dir, file) 
+                with open(file, 'r') as yt_txt_file:
                     txt_lines = yt_txt_file.readlines()
                 for txt_line in txt_lines:
                     vid_id = txt_line.split('=')[-1]
@@ -319,7 +329,7 @@ def handle_upload_videos(request, project_type, num_annotators, project_name, cl
      # return {"status": "just hit"}
     if cluster_csv: 
         # checks if videos have been preprocessed from ML pipeline
-        cluster_csv = os.path.join(csv_base_dir, cluster_csv)
+        # cluster_csv = os.path.join(csv_base_dir, cluster_csv)
         if video_path:
             pipeline_with_cluster_csv(new_project, num_annotators, groups, cluster_csv, video_path=video_path)
         elif yt_file_type:

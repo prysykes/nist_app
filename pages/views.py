@@ -54,15 +54,26 @@ def index(request):
 
                 project_title_form = ProjectTitleForm(request.POST, request.FILES)
                 # video_upload_form = VideoUploadForm(request.POST, request.FILES)
-                uploaded_videos = request.FILES.getlist('video')
-                cluster_csv = request.FILES.get('cluster_csv')
-                num_annotators = int(request.POST.get('number_of_annotators'))
-                project_name = request.POST.get('project_name').lower()
-                video_path = request.POST.get('video_path')
-                cluster_csv = request.POST.get('cluster_csv')
+                # uploaded_videos = request.FILES.getlist('video')
+                # cluster_csv_path = request.FILES.get('cluster_csv')
                 project_type = request.POST.get('project_type')
-                yt_file_type = request.POST.get('yt_file_type')
-
+                project_name = request.POST.get('project_name').lower()
+                cluster_csv_path = request.POST.get('cluster_csv')
+                if cluster_csv_path:
+                    cluster_csv = [os.path.join(cluster_csv_path, f) for f in os.listdir(cluster_csv_path)][0]
+                else:
+                    cluster_csv = None
+                num_annotators = int(request.POST.get('number_of_annotators'))
+                video_path = request.POST.get('video_path')
+                youtube_json_path = request.POST.get('youtube_json_path')
+                youtube_txt_path = request.POST.get('youtube_txt_path')
+                
+                if youtube_json_path:
+                    yt_file_type = youtube_json_path
+                    print("youtube_json_path", youtube_json_path)
+                elif youtube_txt_path:
+                    yt_file_type = youtube_txt_path
+          
                 if video_path:
                     handle_upload_videos(request, project_type, num_annotators, project_name, cluster_csv, video_path=video_path)
                 elif yt_file_type:

@@ -3,8 +3,6 @@ media/
 testy.py
 .DS_Store
 trial_videos
-nist_app/settings_copy.py
-nist_app/settings.py
 trial_vids
 __pycache__
 scratch.js
@@ -14,3 +12,8 @@ media/cluster_csv
 vids_clusters_keywords.csv
 2025_vids
 huggingface_vids/
+media/
+nist_trecvid_resources/
+resources/
+.env
+.env*

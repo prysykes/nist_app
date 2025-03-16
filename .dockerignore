@@ -1,0 +1,17 @@
+venv
+testy.py
+.DS_Store
+trial_videos
+trial_vids
+__pycache__
+scratch.js
+scratch.py
+scratch.html
+vids_clusters_keywords.csv
+2025_vids
+huggingface_vids/
+media/
+nist_trecvid_resources/
+resources/
+.env
+.env*
