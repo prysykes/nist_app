@@ -6,5 +6,11 @@ python manage.py collectstatic --noinput
 python manage.py makemigrations
 python manage.py migrate --noinput
 
+ls -l /app/static/
+ls -l /app/staticfiles
 
-gunicorn nist_app.wsgi:application --bind 0.0.0.0:8000 --workers 3 
+#start Gunicorn
+gunicorn nist_app.wsgi:application --bind 0.0.0.0:8000 --workers 3 &
+
+#start Nginx
+nginx -g "daemon off;"

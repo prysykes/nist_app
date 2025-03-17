@@ -14,7 +14,7 @@ AVCAS is a Django application and requires the following steps:
 A. Using Docker (recommended).
 1. Ensure you have docker installed in computer, start the docker deamon and follow these steps:
     a. Clone this repository on the machine: Run git clone https://github.com/prysykes/nist_app.git
-    b.  Build the image: Run: docker build --no-cache -t avcas-image .
+    b.  Build the image: Run: docker build --no-cache --progress=plain -t avcas-image .
     c. Start the container: Run: docker compose up.
     d. The application can be accessed at http://localhost:8000 
     e. Admin Site: can be access at: http://localhost:8000/admin

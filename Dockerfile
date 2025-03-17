@@ -73,6 +73,8 @@ RUN pip install --upgrade pip --no-cache-dir && pip install -r requirements.txt
 # Copy project files to work directory
 COPY . .
 
+COPY start.sh /app/start.sh
+
 RUN chmod +x start.sh
 
 EXPOSE 80
