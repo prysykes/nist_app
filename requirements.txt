@@ -13,3 +13,4 @@ pytz
 six
 sqlparse
 tzdata
+whitenoise
