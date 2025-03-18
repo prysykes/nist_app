@@ -58,10 +58,6 @@ FROM python:3.12.3-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-RUN apt update && apt install nginx -y
-
-COPY ./nginx/default.conf /etc/nginx/conf.d/default.conf
-
 #set work directory
 WORKDIR /app
 
