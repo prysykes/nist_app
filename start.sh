@@ -12,5 +12,6 @@ ls -l /app/staticfiles/
 #start Gunicorn
 gunicorn nist_app.wsgi:application --bind 0.0.0.0:8000 --workers 3 &
 
+sleep 5
 #start Nginx
 nginx -g "daemon off;"
