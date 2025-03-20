@@ -73,7 +73,7 @@ COPY start.sh /app/start.sh
 
 RUN chmod +x start.sh
 
-EXPOSE 8100
+EXPOSE 8080
 
 CMD ["sh", "./start.sh"]
 
