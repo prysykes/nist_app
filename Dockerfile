@@ -58,6 +58,7 @@ FROM python:3.12.3-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
+
 #set work directory
 WORKDIR /app
 
@@ -73,7 +74,7 @@ COPY start.sh /app/start.sh
 
 RUN chmod +x start.sh
 
-EXPOSE 8080
+EXPOSE 8000
 
 CMD ["sh", "./start.sh"]
 
