@@ -4,6 +4,7 @@ testy.py
 .DS_Store
 trial_videos
 trial_vids
+docker-compose.txt
 __pycache__
 scratch.js
 scratch.py

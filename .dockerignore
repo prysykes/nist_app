@@ -14,4 +14,5 @@ media/
 nist_trecvid_resources/
 resources/
 .env
+docker-compose.txt
 .env*
