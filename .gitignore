@@ -16,5 +16,5 @@ huggingface_vids/
 media/
 nist_trecvid_resources/
 resources/
-.env
-.env*
+# .env
+# .env*
