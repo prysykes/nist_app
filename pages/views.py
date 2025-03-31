@@ -445,16 +445,7 @@ def export_all_videos(request):
         df.to_csv(finished_jobs_csv, index=False)
     
         finished_jobs_csv = "media/finished_jobs/finished_jobs.csv"
-        # destination_dir = os.path.join(finished_jobs_dir, "selected_videos")
-        # source_dir = os.path.join(media_dir, "videos")
-        # print("is dir", os.path.isdir(destination_dir), os.path.isdir(source_dir))
-        # if len(destination_dir) < 2:
-        #     zip_file_name = move_selected_videos(destination_dir, source_dir, finished_jobs_csv)
-        #     zip_file_path = f"media/finished_jobs/{zip_file_name}"
-        # else:
-        #     zip_file_path = f"media/finished_jobs/compressed_videos.zip"
-    
-        
+     
         return JsonResponse({"finished_job_csv": finished_jobs_csv,
                             #"zip_file_path":zip_file_path if not is_youtube_link else None
                             })
@@ -643,16 +634,6 @@ def mark_as_unavailable(request):
     return JsonResponse({'filename': filename,
                          'info': 'success',
                          'status': 200})
-
-def reject_all(request, *args, **kwargs):
-    # get request.user
-    # get the user group
-    # get the cluster keyword
-    # pull all videos from the database matching this cluster
-    # set checkedby == request.user
-    # set status == False
-    # to reject all the videos
-    pass
 
 
 
