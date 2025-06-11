@@ -184,6 +184,8 @@ function create_video_tag(){
     return video
 }
 function create_quest_ans_div({label=null, value=null, assoc_id=null, correct=null}){
+   
+    
     let label_value_div = document.createElement('div')
     label_value_div.className = 'row-align'
 
@@ -209,11 +211,13 @@ function create_quest_ans_div({label=null, value=null, assoc_id=null, correct=nu
     value_div.className = 'qa_value'
     value_div.innerText = value
     label_value_div.appendChild(value_div)
-
+    
+    
     return label_value_div
 }
 // prepare_quest_answer_resp({data:data, isEdit:isEdit})
 function prepare_quest_answer_resp({quest_ans_data=null, isEdit=null}){
+    
     
     let question = quest_ans_data['question']
     
@@ -236,7 +240,9 @@ function prepare_quest_answer_resp({quest_ans_data=null, isEdit=null}){
                 let assoc_id = value['id']
                 let assoc_value = value["value"]
                 label = label.slice(0, second_hypen_index)
+                
                 var label_value_div = create_quest_ans_div({label:label, value:assoc_value, assoc_id:assoc_id, correct:true})
+                
                 
             }
             else{
@@ -250,6 +256,7 @@ function prepare_quest_answer_resp({quest_ans_data=null, isEdit=null}){
     }
     
     
+
     
     return div 
 }
@@ -298,17 +305,19 @@ function create_vidlist_disp_span(file_name, checked_by, status, video_url, vide
         
         if ((cur_span.textContent == 'done') || (cur_span.textContent == 'close')){
             //checks if the span has inline element, hence the parent elem changes
+            
             let parent_elem = cur_span.parentNode
             var file_name = parent_elem.id.split('_')[1]   
             processed = true 
         }
         else {
+            
             var file_name = cur_span.id.split('_')[1]
         }
 
         
         const[span_heading, br_elem, span_category] = create_vidname_category_spans(assoc_category)
-        
+                
         let vid_preview = document.getElementById('vid_preview')
         let vid_tag = document.getElementById('vid_tag')
         let video_name = document.querySelector('#video_name')
@@ -359,9 +368,11 @@ function allow_edit_and_show_qa({checked_by=null, project_type=null,
     
     if (checked_by){
         if (project_type == "video_qa"){
+            
+            
             // retrieve associated QA data for a particular video
             if (annotator==undefined){
-                
+                //run if not admin
                 var endpoint = `${base_url}/retrieve_video_qa?file_name=${file_name}&cluster_keywords=${cluster_keywords}`
             }else{
                 var endpoint = `${base_url}/retrieve_video_qa?file_name=${file_name}&cluster_keywords=${cluster_keywords}&annotator=${annotator}`
@@ -371,6 +382,7 @@ function allow_edit_and_show_qa({checked_by=null, project_type=null,
                 method: 'GET'
             }).then(response => response.json())
             .then((data)=>{
+                console.log("data", data);
                 
                 
                 let quest_ans_data = data['data']

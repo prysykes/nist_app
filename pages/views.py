@@ -167,7 +167,6 @@ def index(request):
             first_category = categories.first()
             project_type = first_category.project.project_type
             # print("project_type", project_type)
-
             if percentage_remaining!= None:
                 context = {
                     # 'video_upload': video_upload_form,
@@ -206,9 +205,10 @@ def retrieve_video_qa(request):
     assoc_category = Category.objects.get(project=assoc_project, cluster_keywords=cluster_keywords)
     # print(file_name,"-", assoc_project, "-", assoc_category)
     if not annotator:
+        
         # called from user page
         assoc_video = Videos.objects.get(file_name=file_name, checked_by=user, project=assoc_project, category=assoc_category, is_available=True)
-
+        
     else:
         # called from admin page
         user = User.objects.get(username=annotator)
@@ -216,6 +216,7 @@ def retrieve_video_qa(request):
 
     try:
         assoc_question = assoc_video.question
+        print("assoc_question", assoc_question)
         assoc_answers = assoc_question.question_answers.all()
         question_load = {"id": assoc_question.id,
                          "value": assoc_question.question}
@@ -231,6 +232,7 @@ def retrieve_video_qa(request):
                                "value":ans.answer}
                 payload[f'ans-{idx}'] = answer_load
     except:
+        print("not seen")
         payload['question'] = None
     return JsonResponse({"data": payload})
 
@@ -262,7 +264,6 @@ def submit_vid_qa(request):
             
 
             for key, value in request.POST.items():
-                # print(key, value)
                 if "question" in key:
                     assoc_id = int(key.split('-')[-1])
                     new_key = key.split('-')[0]
@@ -316,6 +317,7 @@ def submit_vid_qa(request):
             return JsonResponse(payload)
                    
         else:
+            
             question = request.POST.get('question').lower()
             correct_ans = request.POST.get('correct_ans').lower()
             answer_one = request.POST.get('opt_ans_one').lower()
@@ -323,13 +325,13 @@ def submit_vid_qa(request):
             answer_three = request.POST.get('opt_ans_three').lower()
             answers = [correct_ans, answer_one, answer_two, answer_three]
             if question:
+                
                 #process video question
                 question_obj = create_question_answers(question=question, answers=answers)
                 cur_video.question = question_obj
                 cur_video.status = True
                 cur_video.checked_by = user
                 cur_video.save()
-
                 # build payload data
                 payload['question'] =  {'id': question_obj.id, 'value': question_obj.question}
                 question_answers = question_obj.question_answers.all()
@@ -343,6 +345,7 @@ def submit_vid_qa(request):
                 cur_video.checked_by = user
                 cur_video.save()
             #TODO: retrieve QS and Ans details and send payload to user
+            
             return JsonResponse(payload)
         
 
@@ -426,8 +429,10 @@ def admin_approve(request):
 def get_job_summary(request):
     admin_username = request.GET.get('admin_username')
     assoc_project = User.objects.get(username=admin_username).userreg.project
+    
     # project_type = request.GET.get("project_type")
     payload = export_job(assoc_project)
+    print("payload", payload)
     return JsonResponse(payload, safe=False)
 
 def export_all_videos(request):

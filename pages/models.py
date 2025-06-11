@@ -22,7 +22,7 @@ class VideoGroup(models.Model):
         return self.name
 
 class Category(models.Model):
-    cluster_keywords = models.CharField(max_length=250)
+    cluster_keywords = models.CharField(max_length=150)
     cluster_id = models.IntegerField()
     group = models.ForeignKey("VideoGroup", on_delete=models.SET_NULL, null=True)
     admin_approved = models.BooleanField(default=False)
@@ -110,7 +110,7 @@ class Videos(models.Model):
     question = models.ForeignKey(Question, null=True, blank=True, on_delete=models.CASCADE)
     project = models.ForeignKey(ProjectTitle, default='', on_delete=models.CASCADE)
     # video = models.FileField(upload_to='videos', verbose_name='Trec Videos')
-    video_path = models.CharField(max_length=250) 
+    video_path = models.CharField(max_length=250, null=True, blank=True) 
     youtube_vid_id = models.CharField(max_length=50, null=True, blank=True)
     is_available = models.BooleanField(default=True)
     file_name = models.CharField(max_length=50, null=True, blank=True)

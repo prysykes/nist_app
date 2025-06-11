@@ -52,6 +52,7 @@ function submit_video_qa_form({isEdit=null}){
 
     let project_type = document.querySelector('#project_type')
     if (project_type){
+        // run when admin edits
         var video_filename = document.querySelector('#video_name_value').innerText.trim()
         var cluster_keyword = document.querySelector('#cluster_keyword').innerText.split(':').at(1).trim()
         
@@ -65,6 +66,7 @@ function submit_video_qa_form({isEdit=null}){
      
     let new_form_data = new FormData()
     if (!isEdit){
+        
         var endpoint = base_url+"/submit_vid_qa"
         for (let i=0; i < vid_qa_form.elements.length; i++){
             let element = vid_qa_form.elements[i]
@@ -73,7 +75,6 @@ function submit_video_qa_form({isEdit=null}){
             
         }
     }else{
-        console.log("is edit");
         let qa_ids = document.querySelectorAll('.qa_ids')
         let video_qa_vals = document.querySelectorAll('.video_qa_vals')    
         for (let i=0; i < qa_ids.length; i++){
@@ -199,8 +200,6 @@ function create_form_elements({elem_name=null, elem_id=null, elem_inner_text=nul
             e.preventDefault()
             let isEdit = false
             submit_video_qa_form({isEdit:isEdit})
-
-
             
             // retrieve next video 
             retrieve_next_video_qa({isEdit:isEdit})

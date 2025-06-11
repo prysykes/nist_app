@@ -194,6 +194,7 @@ function populate_and_show_annotation_stats(data){
     
     let thead = document.getElementById('admin-thead')
     let tbody = document.getElementById('admin-tbody')
+    
     tbody.innerHTML = ""
     if (thead.innerHTML == ""){
         set_default_th(thead)
@@ -226,11 +227,13 @@ function handle_show_job_summary(){
      // show_job_summary
      if (!IsJobSummaryShowing){
         annotation_stats.classList.add('align-items-center')
+        annotation_stats.classList.remove('display-none')
         IsJobSummaryShowing = true
         show_job_summary.innerText = 'Hide Job Summary'
     }
     else if(IsJobSummaryShowing){
         annotation_stats.classList.remove('align-items-center')
+        annotation_stats.classList.add('display-none')
         IsJobSummaryShowing = false
         show_job_summary.innerText = 'Show Job Summary'
     }

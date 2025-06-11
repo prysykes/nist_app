@@ -16,5 +16,10 @@ huggingface_vids/
 media/
 nist_trecvid_resources/
 resources/
+pages/migrations
+pages/__pycache__
+nist_app/__pycache__
+registration/migrations
+registration/__pycache__
 # .env
 # .env*

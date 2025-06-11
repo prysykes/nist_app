@@ -10,8 +10,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{% static '/css/styles.css' %}">
-    <link rel="stylesheet" href="{% static '/css/forms.css' %}">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <link rel="stylesheet" href="{% static 'css/forms.css' %}">
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
     <title>Video Anotation Framework</title>
@@ -43,7 +43,7 @@
                                 
                             </div>
                             
-                            {% if request.user.is_authenticated and not request.user.userreg.group %}
+                            {% if not request.user.userreg.group %}
                           
                                 <div> <button  class="nist-button" id="upload_videos"> click to upload videos </button></div>
                                 <div style="font-weight: 800;"> Completed - <i id="processed_by_all_div" style="color: darkred;">{{accepted_videos}}/{{total_videos}}</i> </div>
