@@ -18,7 +18,7 @@ from .utils import (export_job, display_categories, get_rem_total_per_category,
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse, HttpResponse
 from pages.utils import serialize_objects
-from pages.models import Question, Answer
+from pages.models import Question, Answer, Videos
 
 from django.db.models import Q, Count 
 
@@ -28,8 +28,15 @@ parent_dir = os.getcwd()
 media_dir = os.path.join(parent_dir, 'media')
 finished_jobs_dir = os.path.join(media_dir, "finished_jobs")
 
-
+# cur_video: 1141 
+#  cur_video.id: 9141 
+#  cur_v_qs: tell me
+# Refresh: cur_video: 1141 
+#  cur_video.id: 9141 
+#  cur_v_qs: tell me
 def index(request):
+    vv = Videos.objects.get(file_name="1141")
+    print(f"cur_video: {vv} \n cur_video.id: {vv.id} \n cur_v_qs: {vv.question}")
     from pages.utils import prepare_processed_videos
 
     project_title_form = ProjectTitleForm()
@@ -248,6 +255,7 @@ def submit_vid_qa(request):
         assoc_project = userreg_object.project
         assoc_category = Category.objects.get(cluster_keywords=cluster_keywords, project=assoc_project)
         cur_video = Videos.objects.get(category=assoc_category, project=assoc_project, file_name=video_filename, is_available=True)
+        print("cur video", cur_video,"assoc_category", assoc_category, "assoc_project", assoc_project, "video_filename", video_filename)
         
         payload = {}
         if is_edit:
@@ -315,9 +323,8 @@ def submit_vid_qa(request):
             #return a payload of the editted video and replace the div
             
             return JsonResponse(payload)
-                   
+                
         else:
-            
             question = request.POST.get('question').lower()
             correct_ans = request.POST.get('correct_ans').lower()
             answer_one = request.POST.get('opt_ans_one').lower()
@@ -332,7 +339,8 @@ def submit_vid_qa(request):
                 cur_video.status = True
                 cur_video.checked_by = user
                 cur_video.save()
-                # build payload data
+                # print(f"cur_video: {cur_video} \n cur_video.id: {cur_video.id} \n cur_v_qs: {cur_video.question}")
+                
                 payload['question'] =  {'id': question_obj.id, 'value': question_obj.question}
                 question_answers = question_obj.question_answers.all()
                 for idx, ans in enumerate(question_answers):
@@ -340,12 +348,17 @@ def submit_vid_qa(request):
                         payload[f'ans-{idx}-correct'] = {'id': ans.id, 'value': ans.answer}
                     else:
                         payload[f'ans-{idx}'] = {'id': ans.id, 'value': ans.answer}
+                # payload['video_id'] = cur_video.id
             else:
                 cur_video.status = False
                 cur_video.checked_by = user
                 cur_video.save()
             #TODO: retrieve QS and Ans details and send payload to user
-            
+            # cur_video.refresh_from_db()
+            # print(f"Refresh: cur_video: {cur_video} \n cur_video.id: {cur_video.id} \n cur_v_qs: {cur_video.question}")
+            print("question id", question_obj.id, "cur video id", cur_video.id)
+            cur_video.question = question_obj
+            cur_video.save()
             return JsonResponse(payload)
         
 
@@ -432,7 +445,6 @@ def get_job_summary(request):
     
     # project_type = request.GET.get("project_type")
     payload = export_job(assoc_project)
-    print("payload", payload)
     return JsonResponse(payload, safe=False)
 
 def export_all_videos(request):
@@ -580,8 +592,10 @@ def get_next_video(request):
         else:
             # print("is_admin!!", is_admin, file_name)
             file_name = request.GET.get('file_name')
-            appr_rej = request.GET.get('appr_rej')
             
+            appr_rej = request.GET.get('appr_rej')
+            video = get_object_or_404(Videos, file_name=file_name, project=assoc_project)
+           
             check_user_decision(file_name, cur_user, appr_rej, assoc_project, is_admin)
             assoc_video = get_object_or_404(Videos, file_name=file_name, project=assoc_project, is_available=True)
             assoc_category = assoc_video.category
@@ -620,7 +634,7 @@ def get_next_video(request):
             context = JsonResponse(context)
         # context = HttpResponse(context, content_type='application/json')
         
-        
+      
     return context
 
 def mark_as_unavailable(request):

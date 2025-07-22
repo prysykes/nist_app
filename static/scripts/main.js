@@ -262,6 +262,7 @@ function prepare_quest_answer_resp({quest_ans_data=null, isEdit=null}){
 }
 
 function create_youtube_iframe(youtube_vid_id){
+    
     let iframe = document.createElement('iframe')
     let iframe_src = `https://www.youtube.com/embed/${youtube_vid_id}?si=AID4kFGq8mcMy4MY&output=embed`
     let referrerpolicy = "strict-origin-when-cross-origin"
@@ -280,8 +281,7 @@ function create_youtube_iframe(youtube_vid_id){
 function create_vidlist_disp_span(file_name, checked_by, status, video_url, video_similarity_score, keywords, assoc_category, project_type, youtube_vid_id){
     
     // add video similarity confidence here.
-    
-    
+    // console.log("video url!!", video_url, youtube_vid_id);
     var inlines = create_inline_elemets()
     var inline_good = inlines[0]
     var inline_bad = inlines[1]
@@ -311,7 +311,7 @@ function create_vidlist_disp_span(file_name, checked_by, status, video_url, vide
             processed = true 
         }
         else {
-            
+                       
             var file_name = cur_span.id.split('_')[1]
         }
 
@@ -324,7 +324,8 @@ function create_vidlist_disp_span(file_name, checked_by, status, video_url, vide
         video_name.innerHTML = ""
         vid_tag.innerHTML = ""
         
-        if (video_url != ''){
+        if (video_url != null){
+            
             const video = create_video_tag()
             
             // console.log(`video_url: ${video_url} \n file_name : ${file_name}`);
@@ -335,6 +336,7 @@ function create_vidlist_disp_span(file_name, checked_by, status, video_url, vide
         }
         else{
             let iframe = create_youtube_iframe(youtube_vid_id)
+            
             vid_tag.appendChild(iframe)
         }
         
@@ -473,7 +475,8 @@ function fecth_all_videos_in_category(endpoint, assoc_category){
             let keywords = video_fields['keywords']
             let is_available = video_fields['is_available']
             // console.log('vid filename', file_name);
-
+            
+            
             let cur_span = create_vidlist_disp_span(file_name, checked_by, status,
                  video_url, video_similarity_score, keywords, assoc_category, project_type, youtube_vid_id)
           
@@ -485,6 +488,8 @@ function fecth_all_videos_in_category(endpoint, assoc_category){
         })  
         // Function that gets the next unprocessed video and displays it 
         // Once a category is clicked
+        
+        
         get_next_video({assoc_category:assoc_category, project_type:project_type})
     })  
 }
@@ -644,6 +649,8 @@ function show_mark_unavailable({project_type, project_name, file_name, category}
 }
 
 function show_video_in_preview({prev_file_name=null, assoc_category = null, data=null, appr_rej=null, caller='', project_type=null, isAdmin=null}){    
+    console.log("assoc_category show vid", assoc_category);
+    
     const[span_heading, br_elem, span_category] = create_vidname_category_spans(assoc_category)
     let vid_preview = document.getElementById('vid_preview')
     let vid_tag = document.getElementById('vid_tag')
@@ -672,7 +679,7 @@ function show_video_in_preview({prev_file_name=null, assoc_category = null, data
     video_name.appendChild(br_elem)
     video_name.appendChild(span_category)
 
-    if (video_url != ''){
+    if (video_url != null){
         const video = create_video_tag()
         let video_path = base_vid_src+video_url+'/'+`${file_name}`
         video.src = video_path
@@ -773,10 +780,11 @@ function get_next_video_appr_rej({file_name=null, assoc_category=null, appr_rej=
         
     }
     else if(project_type){
+            
         var get_next_video_endpoint = base_url+`/get_next_video?file_name=${file_name}&appr_rej=${appr_rej}&project_type=${project_type}`
     }
     else{
-        
+        console.log("else 2");
         var get_next_video_endpoint = base_url+`/get_next_video?file_name=${file_name}&appr_rej=${appr_rej}`
     }
     
@@ -789,6 +797,7 @@ function get_next_video_appr_rej({file_name=null, assoc_category=null, appr_rej=
     .then((data)=>{
         
         if (!isAdmin){
+            
             let vid_tag = document.querySelector('#vid_tag')
             if (vid_tag.contains(document.querySelector('iframe'))){
                 isIframe = true  
@@ -810,6 +819,7 @@ function get_next_video_appr_rej({file_name=null, assoc_category=null, appr_rej=
             add_active_to_span(file_name_)
         }
         else {
+            
             const[rem_total_per_category, user_all_processed] = show_video_in_preview({prev_file_name:prev_file_name,  assoc_category:assoc_category, data:data, appr_rej:appr_rej, caller:'appr_rej', isAdmin:isAdmin})
             let all_processed = user_all_processed[1]
             let user_processed = user_all_processed[0]
@@ -844,8 +854,8 @@ function get_next_video_defualt({assoc_category:assoc_category, add_active_to_sp
     })
     .then(response => response.json())
     .then((data)=>{
-        
-        let file_name_ = show_video_in_preview({data:data, project_type:project_type})
+        console.log(">>>", assoc_category);
+        let file_name_ = show_video_in_preview({assoc_category:assoc_category, data:data, project_type:project_type})
         
         add_active_to_span(file_name_,'default')      
     }).catch((error)=>{
@@ -876,7 +886,6 @@ function get_next_video({file_name=null, assoc_category=null, appr_rej=null, pro
         let file_name_ = get_next_video_appr_rej(kwargs)
     }
     else{
-        
         // Get next video when explore is clicked
         let file_name_ = get_next_video_defualt({assoc_category:assoc_category, add_active_to_span:add_active_to_span, project_type:project_type, isAdmin:isAdmin})
        

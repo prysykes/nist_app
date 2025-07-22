@@ -526,9 +526,9 @@ def move_selected_videos(destination_dir, source_dir, finished_jobs_csv):
 def check_user_decision(file_name, cur_user, appr_or_rej=None, assoc_project=None, is_admin=None):
    
     video = get_object_or_404(Videos, file_name=file_name, project=assoc_project)
-    # print("is_admin", is_admin, "file_name", file_name, "assoc_project",  assoc_project, "appr_or_rej", appr_or_rej)
-    
+   
     if appr_or_rej == 'approve':
+        
         if is_admin:
             # no need to change the user
             video.status = True

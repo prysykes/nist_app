@@ -108,7 +108,7 @@ class Videos(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="video_categories")
     checked_by = models.ForeignKey(User, on_delete=models.DO_NOTHING, blank=True, null=True)
     question = models.ForeignKey(Question, null=True, blank=True, on_delete=models.CASCADE)
-    project = models.ForeignKey(ProjectTitle, default='', on_delete=models.CASCADE)
+    project = models.ForeignKey(ProjectTitle, on_delete=models.CASCADE)
     # video = models.FileField(upload_to='videos', verbose_name='Trec Videos')
     video_path = models.CharField(max_length=250, null=True, blank=True) 
     youtube_vid_id = models.CharField(max_length=50, null=True, blank=True)
