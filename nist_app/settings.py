@@ -18,7 +18,9 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load environment variables
-load_dotenv('.env.local')
+# In Docker, env vars are injected via docker-compose env_file
+# Locally, load from .env.local for development (override=False preserves Docker env vars)
+load_dotenv('.env.local', override=False)
 
 # Helper function to parse boolean environment variables
 def parse_bool_env(var_name, default='0'):

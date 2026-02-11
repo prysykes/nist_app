@@ -12,40 +12,38 @@ AVCAS is an internal tool developed to streamline video understanding and annota
 ### Starting AVCAS - first steps
 AVCAS is a Django application and requires the following steps:
 A. Using Docker (recommended).
-1. Ensure you have docker installed in computer, start the docker deamon and follow these steps:
-    a. Clone this repository on the machine: Run git clone https://github.com/prysykes/nist_app.git
-    b.  Build the image: Run: docker build --no-cache --progress=plain -t avcas-image .
-    c. Start the container: Run: docker compose up.
-    d. The application can be accessed at http://localhost:8000 
-    e. Admin Site: can be access at: http://localhost:8000/admin
-    f. To create a superuser i.e an admin user: RUN: docker-compose exec web python manage.py createsuperuser and follow the prompt.
-    g. Visit the admin site to login into your application
-2. Once the application is running in docker, you will notice the following folders in the root directory
-    - nist_trecvid_resources
-        - cluster_csv #holds the output from the ML pipeline
-        - videos
-        - youtube_files_json
-        - youtube_files_txt
-3. Add:
-    a. Your cluster_csv files to the nist_trecvid_resources/cluster_csv (if any);
-    b. Your video files to the nist_trecvid_resources/videos (if any);
-    c. Your youtube_files_json files to the nist_trecvid_resources/youtube_files_json (if any);
-    d. Your youtube_files_txtfiles to the nist_trecvid_resources/youtube_files_txt (if any);
+1. Ensure you have Docker installed on your computer and the Docker daemon is running, then follow these steps:
+    a. Clone this repository: `git clone https://github.com/prysykes/nist_app.git`
+    b. Configure the environment: `cp .env.example .env.prod` and update `.env.prod` with your actual values (database password, secret key, etc.)
+    c. Create the resource directories that the application expects:
+       ```
+       mkdir -p nist_trecvid_resources/cluster_csv
+       mkdir -p nist_trecvid_resources/videos
+       mkdir -p nist_trecvid_resources/youtube_files_json
+       mkdir -p nist_trecvid_resources/youtube_files_txt
+       ```
+    d. Build and start the containers: `docker compose up --build`
+    e. The application can be accessed at http://localhost:8080 (served via nginx)
+    f. Django Admin Site: http://localhost:8080/admin
+    g. To create a superuser: `docker compose exec web python manage.py createsuperuser` and follow the prompt.
+    h. Visit the admin site to log into your application.
+2. Add your resource files to the appropriate directories:
+    a. Your cluster CSV files to `nist_trecvid_resources/cluster_csv` (if any);
+    b. Your video files to `nist_trecvid_resources/videos` (if any);
+    c. Your youtube JSON files to `nist_trecvid_resources/youtube_files_json` (if any);
+    d. Your youtube TXT files to `nist_trecvid_resources/youtube_files_txt` (if any);
 
-B. Raw Flow 
-1. Run git clone https://github.com/prysykes/nist_app.git
-    to clone this repository.
-2. Run pip install -r requirements.txt
-    to install the requirements file.
-3. Set up postgreSQL database using the credentials available in local env file.
-3. Run python manage.py makemigrations and Python manage.py migrate 
-    to migrate data models to the database (The DB must be set up before this command).
-4. Run python manage.py createsuperuser and follow the prompts
-    to create an admin user for user and group management.
-5. Run python manage.py runserver
-    to start the application.
-6. The development server is mapped to localhost and port 8000 by default i.e. http://localhost:8000/
-7. Visit http://localhost:8000/admin, login using the superuser credential to explore the admin.
+B. Local Development (without Docker)
+1. Clone: `git clone https://github.com/prysykes/nist_app.git`
+2. Create a virtual environment: `python -m venv .venv && source .venv/bin/activate`
+3. Install dependencies: `pip install -r requirements.txt`
+4. Configure the environment: `cp .env.example .env.local` and update with your values.
+5. Set up a PostgreSQL database using the credentials in your `.env.local` file.
+6. Run migrations: `python manage.py makemigrations && python manage.py migrate`
+7. Create a superuser: `python manage.py createsuperuser`
+8. Start the server: `python manage.py runserver`
+9. Access the application at http://localhost:8000/
+10. Access the Django admin at http://localhost:8000/admin
 
 
 ### Machine Learning (ML) Pipeline
@@ -62,7 +60,7 @@ To use AVCAS for ***video annotation***, kindly follow  these steps
 1. Create an annotator admin account using the user registration form
 2. Choose Video Annotation (default) as the Project type
 3. The "is job admin" check box should only be selected when creating an admin account.
-4. Login to the application (http://localhost:8000/) using the annotator admin credentials
+4. Login to the application (http://localhost:8080/) using the annotator admin credentials
 5. Click upload videos
 6. Choose 'Video Annotation' in the 'select project type'
 7. Enter project name e.g. 'Trecvid 2025'. This must match the project name chosen during admin account creation.
@@ -86,7 +84,7 @@ To use AVCAS for ***video question and answering***, kindly follow  these steps
 1. Create a video question and answering admin account using the user registration form
 2. Choose Video Question Answering as the Project type.
 3. The "is job admin" check box should only be selected when creating an admin account.
-4. Login to the application (http://127.0.0.1:8000/) using this video QA admin credentials
+4. Login to the application (http://localhost:8080/) using this video QA admin credentials
 5. Click upload videos
 6. Choose 'Video Question Answering' in the 'Select project type'
 7. Enter project name e.g. 'TrecvidVQA2025'. This must match the project name chosen during admin account creation.
@@ -104,7 +102,7 @@ To use AVCAS for ***videos from youtube for video question and answering***, kin
 1. Create a video question and answering admin account using the user registration form
 2. Choose Video Question Answering as the Project type.
 3. The "is job admin" check box should only be selected when creating an admin account.
-4. Login to the application (http://127.0.0.1:8000/) using this video QA admin credentials
+4. Login to the application (http://localhost:8080/) using this video QA admin credentials
 5. Choose 'Video Question Answering' in the 'Select project type'
 6. Enter project name e.g. 'TrecvidVQA2025'. This must match the project name chosen during admin account creation.
 7. Enter the number of annotators e.g. 3 (number of annotators are the number of people to assign the current job).
