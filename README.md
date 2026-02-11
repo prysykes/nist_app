@@ -35,7 +35,7 @@ A. Using Docker (recommended).
 B. Raw Flow 
 1. Run git clone https://github.com/prysykes/nist_app.git
     to clone this repository.
-2. Run pip install requirements.txt
+2. Run pip install -r requirements.txt
     to install the requirements file.
 3. Set up postgreSQL database using the credentials available in local env file.
 3. Run python manage.py makemigrations and Python manage.py migrate 

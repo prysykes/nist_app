@@ -16,5 +16,9 @@ huggingface_vids/
 media/
 nist_trecvid_resources/
 resources/
+nist_trecvid_resources
+IMPROVEMENTS_SUMMARY.md
+QUICK_REFERENCE.md
+PRODUCTION_DEPLOYMENT.md
 # .env
 # .env*

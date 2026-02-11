@@ -1,16 +1,36 @@
-asgiref
-Django
-django-debug-toolbar
-gunicorn
-numpy
-packaging
-pandas
-pillow
-psycopg2-binary
-python-dateutil
-python-dotenv
-pytz
-six
-sqlparse
-tzdata
-whitenoise
+# Core Django and ASGI
+asgiref==3.8.1
+Django==5.0.1
+sqlparse==0.4.4
+
+# Production server
+gunicorn==21.2.0
+
+# Database
+psycopg2-binary==2.9.9
+
+# Data processing
+numpy==2.2.1  # Updated for Python 3.13 compatibility
+pandas==2.2.3  # Updated for Python 3.13 compatibility
+python-dateutil==2.9.0
+
+# Image processing
+Pillow==11.0.0  # Updated for Python 3.13 compatibility
+
+# Configuration
+python-dotenv==1.0.1
+
+# Static files
+whitenoise==6.6.0
+
+# Utilities
+packaging==23.2
+pytz==2024.1
+six==1.16.0
+tzdata==2024.1
+
+# Development/Debug (remove in production)
+django-debug-toolbar==4.3.0
+
+# HTTP requests for healthcheck
+requests==2.31.0

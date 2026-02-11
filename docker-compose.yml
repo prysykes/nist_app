@@ -1,45 +1,88 @@
+version: '3.8'
 
 services:
   db:
-    image: postgres
+    image: postgres:15-alpine
+    container_name: nist_postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    restart: always
+    restart: unless-stopped
     env_file:
       - ./.env.prod
     ports:
-      - 5434:5432
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nist_network
 
   web:
-    build: .
-    #command: gunicorn nist_app.wsgi:application --bind 0.0.0.0:8000
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nist_web
+    restart: unless-stopped
     volumes:
-      - .:/app
-      - ./media:/app/media
-      - ./nist_trecvid_resources/videos:/app/videos
-      - ./nist_trecvid_resources/youtube_files_json:/app/youtube_files_json
-      - ./nist_trecvid_resources/cluster_csv:/app/cluster_csv
-      - ./nist_trecvid_resources/youtube_files_txt:/app/youtube_files_txt
+      # Remove source code mounting in production for security
+      # - .:/app  # Comment this out in production
+      - media_data:/app/media
+      - static_data:/app/staticfiles
+      - logs_data:/app/logs
+      - ./nist_trecvid_resources/videos:/app/videos:ro
+      - ./nist_trecvid_resources/youtube_files_json:/app/youtube_files_json:ro
+      - ./nist_trecvid_resources/cluster_csv:/app/cluster_csv:ro
+      - ./nist_trecvid_resources/youtube_files_txt:/app/youtube_files_txt:ro
     expose:
       - "8000"
     env_file:
       - .env.prod
     depends_on:
-      - db
-  
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - nist_network
+
   nginx:
     image: nginx:alpine
+    container_name: nist_nginx
+    restart: unless-stopped
     ports:
-      - "8080:80" #maps system port 8080 -> 80; nginx listens on this port and takes it from there
+      - "8080:80"
       - "8443:443"
     volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
-      - ./staticfiles:/app/staticfiles 
-      - ./media:/app/media
-      - ./static:/app/static
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - static_data:/app/staticfiles:ro
+      - media_data:/app/media:ro
     depends_on:
-      - web
+      web:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - nist_network
 
 volumes:
   postgres_data:
+    driver: local
+  media_data:
+    driver: local
+  static_data:
+    driver: local
+  logs_data:
+    driver: local
 
+networks:
+  nist_network:
+    driver: bridge

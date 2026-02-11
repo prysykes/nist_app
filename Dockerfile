@@ -1,80 +1,67 @@
-# # Stage1: builder state base image alias this stage as builder 
-# FROM python:3.13-slim AS builder 
+# Multi-stage build for production-ready Docker image
+# Stage 1: Builder - Install dependencies
+FROM python:3.12.3-slim AS builder
 
-# #create the app directory
-# RUN mkdir /app
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# #Set the working direcory
-# WORKDIR /app
+# Install system dependencies required for Python packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# #Set ENV variables to optimize python
-# ENV PYTHONDONTWRITEBYTECODE=1
-# ENV PYTHONUNBUFFERED=1 
-
-# #Install dependencies
-# RUN pip install --upgrade pip
-# COPY requirements.txt /app/
-# RUN pip install --no-cache-dir -r requirements.txt
-
-# #Stage 2: Production stage
-# FROM python:3.13-slim
-
-# RUN useradd -m -r appuser && \
-#     mkdir /app && \
-#     chown -R appuser /app
-
-# #Copy the python dependencies from the builder stage
-# COPY --from=builder /usr/local/lib/python3.13/site-packages/ /usr/local/lib/python3.13/site-packages/
-# COPY --from=builder /usr/local/bin/ /usr/local/bin/
-
-# #Set the working directory
-# WORKDIR /app
-
-# #copy application code
-# COPY --chown=appuser:appuser . .
-
-# #Set ENV variables to optimize python
-# ENV PYTHONDONTWRITEBYTECODE=1
-# ENV PYTHONUNBUFFERED=1 
-
-# # switch to non root user for security
-# USER appuser
-
-# # Expose the application port
-# EXPOSE 8000
-
-# RUN chmod +x /app/start.sh
-
-# # Start the application
-# CMD [ "/app/start.sh" ]
-
-
-# Use Python 3.12.2 image based on Debian in its slim variant as the base image
-FROM python:3.12.3-slim
-
-# access of app in docker is through this link: http://0.0.0.0:8000
-
-# Set an environment variable to unbuffer Python output, aiding in logging and debugging
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-
-#set work directory
+# Create app directory
 WORKDIR /app
 
-#install dependencies
+# Install Python dependencies
 COPY requirements.txt .
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
-RUN pip install --upgrade pip --no-cache-dir && pip install -r requirements.txt
+# Stage 2: Production - Minimal image
+FROM python:3.12.3-slim
 
-# Copy project files to work directory
-COPY . .
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/home/appuser/.local/bin:$PATH"
 
-COPY start.sh /app/start.sh
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN chmod +x start.sh
+# Create non-root user for security
+RUN useradd -m -u 1000 -r appuser && \
+    mkdir -p /app /app/logs /app/media /app/staticfiles && \
+    chown -R appuser:appuser /app
 
+# Copy Python dependencies from builder stage
+COPY --from=builder /usr/local/lib/python3.12/site-packages/ /usr/local/lib/python3.12/site-packages/
+COPY --from=builder /usr/local/bin/ /usr/local/bin/
+
+# Set working directory
+WORKDIR /app
+
+# Copy application code with proper ownership
+COPY --chown=appuser:appuser . .
+
+# Make start script executable
+RUN chmod +x /app/start.sh
+
+# Switch to non-root user
+USER appuser
+
+# Expose application port
 EXPOSE 8000
 
-CMD ["sh", "./start.sh"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD python -c "import requests; requests.get('http://localhost:8000/', timeout=5)" || exit 1
 
+# Start the application
+CMD ["/app/start.sh"]

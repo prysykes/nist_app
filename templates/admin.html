@@ -1,118 +1,329 @@
 {% if users_processed_videos == None %}
 <div class="admin-dashboard">
-    
-    <h2 style="text-align: center;"> Please click upload Videos button above to begin...</h2>
+    <div class="admin-empty-state">
+        <div class="empty-state-icon">
+            <span class="material-icons">video_library</span>
+        </div>
+        <h2>Welcome to the Admin Dashboard</h2>
+        <p>Click the "Upload Videos" button above to begin adding videos for annotation.</p>
+    </div>
 </div>
 
 {% else %}
 <div class="admin-dashboard">
-    <div id="show_job_summary" class="job-action-btn"> Show Job Summary </div> 
-    
-    <!-- <h2 style="text-align: center;"> Summary of Selected Video by Users</h2> -->
-    <div id="annotation-stats" class="display-none">
-        <h3 class="text-align-center">Summary of Selected Video by Users</h3>
-        <div class="annotation-stats-display">
-            <table id="annotation-stats-table">
-                <thead id="admin-thead">
-                    <tr>
-                        <th>Annotator</th>
-                        <th>Top Category (TC)</th>
-                        <th>Number of Video in TC</th>
-                        <th>Total Accepted Videos </th>
-                    </tr>
-                </thead>
-                <tbody id="admin-tbody">
-
-                </tbody>
-                
-            </table>
-            
-        </div>
-        
-        <button id="export-all-videos" class="nist-button "> Export All Videos</button>
-        <div id="download-jobs" class="display-none">
-            <h3 class="info-text"></h3>
-            <p class="download-files" id="csv-file"></p>
-            <p class="download-files" id="videos-zip"></p>
-        </div>
-    </div>
-    <div id="custom-confirm" class="confirm-overlay">
-        <div class="confirm-box">
-            <p id="confirm-message"> </p>
-            <button  id="confirm-yes" class="confirm-btn nist-button">Yes</button>
-            <button id="confirm-cancel" class="confirm-btn nist-button">No</button>
-        </div>
+    <!-- Header Section -->
+    <div class="admin-header">
+        <h1 class="admin-title">Annotation Dashboard</h1>
     </div>
 
-    <div class="row-align_base">
-        <!-- <div> haha</div>
-        <div>hana</div>
-        <div>hagi</div> -->
-        <div id="project_type" class="display-none">{{request.user.userreg.project.project_type}}</div>
-        
-        {% for user, categories in users_processed_videos.items %}
-        {%if forloop.first %}
-        <!-- <span id="project_type" class="display-none">{{user.userreg.project.project_type}}</span> -->
-        {% endif %}
-        
-      
-            
-            <div  class="video_categories"> 
-                <div style="text-align: center; margin: auto;" class="process_all_videos display-none">
-                    <span id="approve_all_videos" class="nist-button">approve all</span> <span id="reject_all_videos" class="nist-button"> reject all</span>
+    <!-- Toggle Buttons Row -->
+    <div class="panel-toggle-row">
+        <!-- Job Summary Toggle Button -->
+        <div class="panel-toggle-container">
+            <button id="show_job_summary" class="panel-toggle-btn" aria-expanded="false">
+                <div class="toggle-btn-content">
+                    <div class="toggle-btn-icon">
+                        <span class="material-icons icon-main">analytics</span>
+                    </div>
+                    <div class="toggle-btn-text">
+                        <span class="toggle-btn-title">Job Summary</span>
+                        <span class="toggle-btn-subtitle">View annotation statistics</span>
+                    </div>
                 </div>
-                <h3 class="user-videos-list"> Video Categories - {{user}}</h3>
-                <ul>
-                    {% for category in categories %} 
-                    <li>
-                        <span class="user-processed-categories">{{category}}</span>
-                        {% if category.admin_approved%} <span class="cat-approve-status-true per-cluster-approve">reject</span>
-                        {% else %} <span class="cat-approve-status-false per-cluster-approve">approve</span>
+                <div class="toggle-btn-arrow">
+                    <span class="material-icons">expand_more</span>
+                </div>
+            </button>
+        </div>
+
+        <!-- List Annotators Toggle Button -->
+        <div class="panel-toggle-container">
+            <button id="show_annotators" class="panel-toggle-btn" aria-expanded="false">
+                <div class="toggle-btn-content">
+                    <div class="toggle-btn-icon icon-annotators">
+                        <span class="material-icons icon-main">group</span>
+                    </div>
+                    <div class="toggle-btn-text">
+                        <span class="toggle-btn-title">Annotators</span>
+                        <span class="toggle-btn-subtitle">View assigned annotators</span>
+                    </div>
+                </div>
+                <div class="toggle-btn-arrow">
+                    <span class="material-icons">expand_more</span>
+                </div>
+            </button>
+        </div>
+    </div>
+
+    <!-- Job Summary Section (Collapsible) -->
+    <div id="annotation-stats" class="admin-card collapsible-panel">
+        <div class="admin-card-header">
+            <h3>
+                <span class="material-icons">assessment</span>
+                Annotation Summary
+            </h3>
+            <button class="panel-close-btn" data-target="annotation-stats">
+                <span class="material-icons">close</span>
+            </button>
+        </div>
+        <div class="admin-card-body">
+            <div class="stats-table-wrapper">
+                <table id="annotation-stats-table" class="admin-table">
+                    <thead id="admin-thead">
+                        <tr>
+                            <th>Annotator</th>
+                            <th>Top Category</th>
+                            <th>Videos in Top Category</th>
+                            <th>Total Accepted</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-tbody">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="admin-card-actions">
+                <button id="export-all-videos" class="admin-btn admin-btn-secondary">
+                    <span class="material-icons">download</span>
+                    Export All Videos
+                </button>
+                <button id="delete-all-videos" class="admin-btn admin-btn-danger">
+                    <span class="material-icons">delete_forever</span>
+                    Delete All Videos
+                </button>
+            </div>
+
+            <div id="download-jobs" class="download-section display-none">
+                <h4 class="info-text"></h4>
+                <div class="download-links">
+                    <p class="download-files" id="csv-file"></p>
+                    <p class="download-files" id="videos-zip"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Annotators Panel (Collapsible) -->
+    <div id="annotators-panel" class="admin-card collapsible-panel">
+        <div class="admin-card-header">
+            <h3>
+                <span class="material-icons">group</span>
+                Project Annotators
+            </h3>
+            <button class="panel-close-btn" data-target="annotators-panel">
+                <span class="material-icons">close</span>
+            </button>
+        </div>
+        <div class="admin-card-body">
+            <div class="annotators-summary" id="annotators-summary">
+                <div class="summary-stat">
+                    <span class="material-icons">people</span>
+                    <span class="stat-number" id="total-annotators-count">0</span>
+                    <span class="stat-label">Total Annotators</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="material-icons">check_circle</span>
+                    <span class="stat-number" id="active-annotators-count">0</span>
+                    <span class="stat-label">Active</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="material-icons">done_all</span>
+                    <span class="stat-number" id="finished-annotators-count">0</span>
+                    <span class="stat-label">Completed</span>
+                </div>
+            </div>
+            <div class="annotators-table-wrapper">
+                <table id="annotators-table" class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Assigned Group</th>
+                            <th>Status</th>
+                            <th>Progress</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="annotators-tbody">
+                        <tr class="loading-row">
+                            <td colspan="6" class="loading-cell">
+                                <span class="material-icons spinning">refresh</span>
+                                Loading annotators...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="annotators-empty-state display-none" id="no-annotators-message">
+                <span class="material-icons">person_off</span>
+                <p>No annotators have been assigned to this project yet.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="custom-confirm" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-icon">
+                <span class="material-icons">help_outline</span>
+            </div>
+            <p id="confirm-message" class="modal-message"></p>
+            <div class="modal-actions">
+                <button id="confirm-yes" class="admin-btn admin-btn-success">Yes, Proceed</button>
+                <button id="confirm-cancel" class="admin-btn admin-btn-outline">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden project type -->
+    <div id="project_type" class="display-none">{{request.user.userreg.project.project_type}}</div>
+
+    <!-- Annotators Section -->
+    <div class="admin-section">
+        <h2 class="section-title">
+            <span class="material-icons">people</span>
+            Annotator Categories
+        </h2>
+
+        <div class="annotators-grid">
+            {% for user, categories in users_processed_videos.items %}
+            <div class="annotator-card video_categories">
+                <div class="process_all_videos display-none bulk-actions-bar">
+                    <span id="approve_all_videos" class="admin-btn admin-btn-success admin-btn-sm">
+                        <span class="material-icons">done_all</span>
+                        Approve All
+                    </span>
+                    <span id="reject_all_videos" class="admin-btn admin-btn-danger admin-btn-sm">
+                        <span class="material-icons">close</span>
+                        Reject All
+                    </span>
+                </div>
+                <h3 class="user-videos-list annotator-header">
+                    <span class="annotator-avatar">
+                        <span class="material-icons">person</span>
+                    </span>
+                    <span class="annotator-info">
+                        <span class="annotator-name-text">Video Categories - {{user}}</span>
+                        <span class="category-count">{{categories|length}} categories</span>
+                    </span>
+                </h3>
+                <ul class="category-list">
+                    {% for category in categories %}
+                    <li class="category-item">
+                        <span class="user-processed-categories">
+                            <span class="material-icons category-icon">folder</span>
+                            {{category}}
+                        </span>
+                        {% if category.admin_approved %}
+                        <span class="cat-approve-status-true per-cluster-approve status-badge">
+                            <span class="material-icons">check_circle</span>
+                            reject
+                        </span>
+                        {% else %}
+                        <span class="cat-approve-status-false per-cluster-approve status-badge">
+                            <span class="material-icons">pending</span>
+                            approve
+                        </span>
                         {% endif %}
                     </li>
                     {% endfor %}
-
                 </ul>
-                
             </div>
-        {% endfor %}
-    </div>
-    <div id="video_inspection" class="display-none">
-        <div id="video_list_admin">
-            <h2> Video List </h2>
-            
-        </div>
-        <div id="admin-video-preview">
-
-            <h4 style="text-align: center;" id="video_name"></h4>
-            <h4 style="text-align: center;" id="video_keywords"></h4>
-            <div  id="vid_preview">
-                <form id="form-csrf-token" action="" method="post">{% csrf_token %}</form>
-                <h3 style="text-align: center; margin-top: 10px;" id="video-qa-h3" ></h3>
-                <div id="job-preview">
-                    <div id="vid_tag">
-                        
-                    </div>
-                    <div id="question_tag">
-                        
-                    
-                    </div>
-                </div>
-                <div id="edit-reponse" style="text-align: center;">
-
-                </div>
-    
-                <div id="action-control">
-                    
-                </div>
-
-                
-                
-                
-            </div>
+            {% endfor %}
         </div>
     </div>
-    
+
+    <!-- Video Inspection Panel Toggle -->
+    <div id="video-inspection-toggle" class="panel-toggle-container video-panel-toggle display-none">
+        <button id="toggle_video_inspection" class="panel-toggle-btn panel-toggle-active" aria-expanded="true">
+            <div class="toggle-btn-content">
+                <div class="toggle-btn-icon icon-video">
+                    <span class="material-icons icon-main">movie_filter</span>
+                </div>
+                <div class="toggle-btn-text">
+                    <span class="toggle-btn-title">Video Preview</span>
+                    <span class="toggle-btn-subtitle" id="current-category-name">Select a category to view videos</span>
+                </div>
+            </div>
+            <div class="toggle-btn-arrow">
+                <span class="material-icons">expand_less</span>
+            </div>
+        </button>
+    </div>
+
+    <!-- Video Inspection Panel -->
+    <div id="video_inspection" class="admin-card video-inspection-panel collapsible-panel">
+        <div class="video-inspection-layout">
+            <!-- Enhanced Video List Sidebar -->
+            <div id="video_list_admin" class="video-list-sidebar-pro">
+                <div class="sidebar-header-pro">
+                    <div class="sidebar-header-content">
+                        <span class="material-icons sidebar-icon">playlist_play</span>
+                        <div class="sidebar-header-text">
+                            <h2>Video List</h2>
+                            <span class="video-list-count" id="video-list-count">0 videos</span>
+                        </div>
+                    </div>
+                    <button class="sidebar-collapse-btn" id="collapse-video-list" title="Collapse video list">
+                        <span class="material-icons">chevron_left</span>
+                    </button>
+                </div>
+                <div class="video-list-search">
+                    <span class="material-icons search-icon">search</span>
+                    <input type="text" id="video-search-input" placeholder="Filter videos..." class="video-search-input">
+                </div>
+                <div class="video-list-container" id="video-list-container">
+                    <!-- Videos will be populated here dynamically -->
+                </div>
+            </div>
+
+            <!-- Enhanced Video Preview Section -->
+            <div id="admin-video-preview" class="video-preview-main-pro">
+                <div class="preview-header-pro">
+                    <div class="preview-header-info">
+                        <span class="material-icons preview-icon">smart_display</span>
+                        <div class="preview-header-text">
+                            <h4 id="video_name" class="video-title-display"></h4>
+                            <span id="video_keywords" class="video-keywords-badge"></span>
+                        </div>
+                    </div>
+                    <div class="preview-header-actions">
+                        <button class="preview-action-btn" id="fullscreen-video" title="Fullscreen">
+                            <span class="material-icons">fullscreen</span>
+                        </button>
+                        <button class="panel-close-btn preview-close" id="close-video-preview" title="Close preview">
+                            <span class="material-icons">close</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="vid_preview" class="preview-content-pro">
+                    <form id="form-csrf-token" action="" method="post">{% csrf_token %}</form>
+
+                    <div class="video-player-wrapper">
+                        <div id="vid_tag" class="video-player-container-pro">
+                            <div class="video-placeholder">
+                                <span class="material-icons placeholder-icon">play_circle</span>
+                                <p>Select a video from the list</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="qa-section">
+                        <h3 id="video-qa-h3" class="qa-title-pro"></h3>
+                        <div id="question_tag" class="qa-container-pro">
+                        </div>
+                    </div>
+
+                    <div id="edit-reponse" class="edit-response-section-pro">
+                    </div>
+
+                    <div id="action-control" class="action-controls-pro">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 {% endif %}

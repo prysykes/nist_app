@@ -1,36 +1,124 @@
-from pages.models import Videos, Category, ProjectTitle, Question, Answer
-from django.shortcuts import get_list_or_404, get_object_or_404
-from django.core.serializers import serialize
-from django.db.models import Q, Count 
-from django.http import HttpResponse
-from django.contrib.contenttypes.models import ContentType
-from django.contrib.auth.models import User
-from django.contrib.auth.models import Group, Permission
-from django.http import JsonResponse, HttpResponse
-from pages.models import VideoGroup
-from settings.config import BASE_ID_START_POINT
 import glob
 import math
 import random
 import json
-import pandas as pd
-import numpy as np
+import logging
 import os
 import shutil
 
-from django.db.models import F
+import pandas as pd
+import numpy as np
 
+from django.shortcuts import get_list_or_404, get_object_or_404
+from django.core.serializers import serialize
+from django.db.models import Q, Count, F
+from django.http import HttpResponse, JsonResponse
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.auth.models import User, Group, Permission
+from django.core.exceptions import ValidationError
+
+from pages.models import Videos, Category, ProjectTitle, Question, Answer, VideoGroup
 from registration.models import Userreg
+from settings.config import BASE_ID_START_POINT
+
+logger = logging.getLogger(__name__)
 
 
 
 
-# cluster_csv_file = 'media/cluster_csv/full_cluster_csv.csv'
-csv_base_dir = os.path.join('media', 'cluster_csv')
+# Directory paths - using nist_trecvid_resources for source files
 parent_dir = os.getcwd()
 media_dir = os.path.join(parent_dir, 'media')
 finished_jobs_dir = os.path.join(media_dir, "finished_jobs")
-local_video_path = os.path.join(media_dir, 'videos')
+
+# New resource directories for source files (input)
+resources_dir = os.path.join(parent_dir, 'nist_trecvid_resources')
+csv_base_dir = os.path.join(resources_dir, 'cluster_csv')
+source_video_path = os.path.join(resources_dir, 'videos')
+youtube_json_dir = os.path.join(resources_dir, 'youtube_files_json')
+youtube_txt_dir = os.path.join(resources_dir, 'youtube_files_txt')
+
+# Destination path for processed videos (in nist_trecvid_resources folder)
+local_video_path = os.path.join(resources_dir, 'videos')
+
+
+# Upload progress tracking
+class UploadProgressTracker:
+    """Thread-safe progress tracker for video uploads"""
+
+    def __init__(self):
+        self._progress = {}
+        import threading
+        self._lock = threading.Lock()
+
+    def create_task(self, task_id):
+        """Initialize a new upload task"""
+        with self._lock:
+            self._progress[task_id] = {
+                'status': 'initializing',
+                'percent': 0,
+                'processed': 0,
+                'total': 0,
+                'message': 'Initializing upload...'
+            }
+
+    def update(self, task_id, processed=None, total=None, message=None, status=None, percent=None):
+        """Update progress for a task"""
+        with self._lock:
+            if task_id not in self._progress:
+                return
+
+            if processed is not None:
+                self._progress[task_id]['processed'] = processed
+            if total is not None:
+                self._progress[task_id]['total'] = total
+            if message is not None:
+                self._progress[task_id]['message'] = message
+            if status is not None:
+                self._progress[task_id]['status'] = status
+
+            # Calculate percent if processed and total are available
+            if percent is not None:
+                self._progress[task_id]['percent'] = percent
+            elif self._progress[task_id]['total'] > 0:
+                self._progress[task_id]['percent'] = int(
+                    (self._progress[task_id]['processed'] / self._progress[task_id]['total']) * 100
+                )
+
+    def get(self, task_id):
+        """Get progress for a task"""
+        with self._lock:
+            return self._progress.get(task_id, {
+                'status': 'not_found',
+                'percent': 0,
+                'processed': 0,
+                'total': 0,
+                'message': 'Task not found'
+            }).copy()
+
+    def complete(self, task_id, message='Upload completed successfully'):
+        """Mark a task as completed"""
+        with self._lock:
+            if task_id in self._progress:
+                self._progress[task_id]['status'] = 'completed'
+                self._progress[task_id]['percent'] = 100
+                self._progress[task_id]['message'] = message
+
+    def error(self, task_id, message='An error occurred'):
+        """Mark a task as failed"""
+        with self._lock:
+            if task_id in self._progress:
+                self._progress[task_id]['status'] = 'error'
+                self._progress[task_id]['message'] = message
+
+    def cleanup(self, task_id):
+        """Remove a completed task from tracking"""
+        with self._lock:
+            if task_id in self._progress:
+                del self._progress[task_id]
+
+# Global progress tracker instance
+upload_progress_tracker = UploadProgressTracker()
 
 
 APP_LABEL = 'pages'
@@ -38,45 +126,75 @@ APP_LABEL = 'pages'
 
 
 def export_job(assoc_project):
-    # print("export job hit")
-    # user_fields = ['id', 'finished_job', 'admin_approved']
+    """Export job information for all approved users"""
     payload = []
     try:
-        all_approved_users = Userreg.objects.filter(admin_approved=True, project=assoc_project)
-        assoc_categories = None
-        assoc_videos = None
-        top_category = None
-        
-        for userreg_instance in all_approved_users:
-            cur_payload = {}
-            user = userreg_instance.user
-            assoc_group = userreg_instance.group
-            
-            # print("user", user, '\n', 'assoc_group', assoc_group)
-            assoc_categories = Category.objects.filter(group=assoc_group, admin_approved=True) 
-            assoc_videos = get_list_or_404(Videos, category__admin_approved=True, checked_by=user, status=True, is_available=True)
-            top_category = assoc_categories.annotate(
-                video_count=Count('video_categories', filter=Q(video_categories__status=True))
-            ).order_by('-video_count').first()
-            top_category_name = top_category.cluster_keywords
-            num_vids_tc = top_category.video_count
-            total_accepted_vids = len(assoc_videos)
-        
-            cur_payload['user'] = user.username
-            cur_payload["top_category"] = top_category_name
-            cur_payload["num_vids_tc"] = num_vids_tc
-            cur_payload["total_accepted_vids"] = total_accepted_vids
-            payload.append(cur_payload)
+        # Get all approved categories for this project
+        approved_categories = Category.objects.filter(
+            admin_approved=True,
+            project=assoc_project
+        )
 
-        # all_approved_users = serialize_objects(all_approved_users, *user_fields)
+        logger.info(f"Found {approved_categories.count()} approved categories for project {assoc_project.project_name}")
+
+        if not approved_categories.exists():
+            logger.info(f"No approved categories found for project {assoc_project.project_name}")
+            return payload
+
+        # Collect all users who are admin_approved and belong to this project
+        approved_userregs = Userreg.objects.filter(
+            admin_approved=True,
+            project=assoc_project
+        ).select_related('user', 'group')
+
+        logger.info(f"Found {approved_userregs.count()} approved userregs")
+
+        # Track users we've already processed to avoid duplicates
+        processed_users = set()
+
+        for userreg in approved_userregs:
+            user = userreg.user
+            if user.username in processed_users:
+                continue
+            processed_users.add(user.username)
+
+            try:
+                # Get approved videos for this user in the project's approved categories
+                assoc_videos = Videos.objects.filter(
+                    category__in=approved_categories,
+                    checked_by=user,
+                    status=True,
+                    is_available=True
+                )
+
+                # Find top category by video count for this user
+                top_category = approved_categories.annotate(
+                    video_count=Count(
+                        'video_categories',
+                        filter=Q(video_categories__status=True, video_categories__checked_by=user)
+                    )
+                ).filter(video_count__gt=0).order_by('-video_count').first()
+
+                # Build payload - show user if they have approved categories
+                cur_payload = {
+                    'user': user.username,
+                    'top_category': top_category.cluster_keywords if top_category else 'N/A',
+                    'num_vids_tc': top_category.video_count if top_category else 0,
+                    'total_accepted_vids': assoc_videos.count()
+                }
+                payload.append(cur_payload)
+
+                logger.info(f"Added user {user.username} to payload: {cur_payload}")
+
+            except Exception as e:
+                logger.error(f"Error processing user {user.username}: {str(e)}")
+                continue
+
     except Exception as e:
-        print("export_job could not find any approved users", e)
-        # print(e)
-        all_approved_users = None
-    # print("payload", payload)
+        logger.error(f"Error in export_job: {str(e)}", exc_info=True)
+
+    logger.info(f"export_job returning payload with {len(payload)} entries")
     return payload
-    
-    return JsonResponse(payload, safe=False)
 
 def create_groups(num_annotators, project_name):
     """
@@ -178,172 +296,449 @@ def move_video_file(source_file, destination_path):
     shutil.copy(source_file, destination_path)
     return True       
 
-def pipeline_with_cluster_csv(new_project, num_annotators, groups, cluster_csv, video_path):
-    cluster_csv_df = pd.read_csv(cluster_csv, index_col=0)
-    cluster_keywords = np.unique(cluster_csv_df['cluster_keywords'])
-    cluster_keyword_id_similarity_pair = []
-    for keyword in cluster_keywords:
-        assoc_cluster_id = cluster_csv_df.loc[cluster_csv_df['cluster_keywords']==keyword, 'cluster_ids']
-        assoc_cluster_id = assoc_cluster_id.iloc[0]
-        assoc_cluster_similarity_score = cluster_csv_df.loc[cluster_csv_df['cluster_keywords']==keyword, 'cluster_similarity_score']
-        assoc_cluster_similarity_score  = assoc_cluster_similarity_score.iloc[0]
-        cur_pair = (keyword, assoc_cluster_id, assoc_cluster_similarity_score)
-        cluster_keyword_id_similarity_pair.append(cur_pair)
-    #create videos and assign to categories
-    # assoc_video_path = os.path.join(media_dir, video_path)
-    video_files = os.listdir(video_path)
-    total_videos = len(video_path) 
-    # create categories for videos based on the csv_file
-    create_categories(new_project, num_annotators, groups, cluster_keyword_id_similarity_pair=cluster_keyword_id_similarity_pair)
-    
-    project_name = new_project.project_name
-    destination_path = os.path.join(local_video_path, f'{project_name}')
-    os.makedirs(destination_path, exist_ok=True)
-    for video in video_files:
-        if video == '.DS_Store':
-            continue
-        source_file = os.path.join(video_path, video)
-        vid_name = int(video.split('.')[0])
-        assoc_df_row = cluster_csv_df[cluster_csv_df['filename'] == vid_name]
-        cluster_id  = int(assoc_df_row['cluster_ids'].values[0])
-        cluster_keywords = assoc_df_row['cluster_keywords'].values[0]
-        video_similarity_score = round(float(assoc_df_row['video_similarity_score'].values[0]), 2)
-        description = assoc_df_row['captions'].values[0]
-        keywords = assoc_df_row['keywords'].values[0]
-        #retrieve category
-        assoc_category = get_object_or_404(Category, cluster_keywords=cluster_keywords, cluster_id=cluster_id, project=new_project)
-        relative_video_path = f'videos/{project_name}'
-        cur_vid = Videos(video_path=relative_video_path, checked_by=None, file_name=video)
-        cur_vid.category = assoc_category
-        cur_vid.project = new_project
-        cur_vid.keywords = keywords
-        cur_vid.video_similarity_score = video_similarity_score
-        # print("video_similarity_score", video_similarity_score)
-        cur_vid.description = description
-        cur_vid.save()
-        move_video_file(source_file, destination_path)
-    return None
+def pipeline_with_cluster_csv(new_project, num_annotators, groups, cluster_csv, video_path, task_id=None):
+    """Process videos with a cluster CSV file containing ML pipeline output"""
+    try:
+        # Validate inputs
+        if not os.path.exists(cluster_csv):
+            raise ValueError(f"Cluster CSV file not found: {cluster_csv}")
 
+        if not os.path.exists(video_path):
+            raise ValueError(f"Video path not found: {video_path}")
 
-def pipeline_without_cluster_csv(new_project, num_annotators, groups, video_path=None, yt_file_type=None):
-    if video_path:
-        assoc_video_path = video_path #os.path.join(media_dir, video_path)
-        video_files = os.listdir(assoc_video_path)
+        # Read cluster CSV
+        logger.info(f"Reading cluster CSV: {cluster_csv}")
+        if task_id:
+            upload_progress_tracker.update(task_id, message='Reading cluster CSV...', status='processing')
+        cluster_csv_df = pd.read_csv(cluster_csv, index_col=0)
+
+        # Validate required columns
+        required_columns = ['cluster_keywords', 'cluster_ids', 'cluster_similarity_score',
+                          'filename', 'video_similarity_score']
+        missing_columns = [col for col in required_columns if col not in cluster_csv_df.columns]
+        if missing_columns:
+            raise ValueError(f"Missing required columns in CSV: {missing_columns}")
+
+        # Extract unique cluster information
+        if task_id:
+            upload_progress_tracker.update(task_id, message='Extracting cluster information...')
+        cluster_keywords = np.unique(cluster_csv_df['cluster_keywords'])
+        cluster_keyword_id_similarity_pair = []
+
+        for keyword in cluster_keywords:
+            keyword_df = cluster_csv_df[cluster_csv_df['cluster_keywords'] == keyword]
+            assoc_cluster_id = keyword_df['cluster_ids'].iloc[0]
+            assoc_cluster_similarity_score = keyword_df['cluster_similarity_score'].iloc[0]
+            cur_pair = (keyword, assoc_cluster_id, assoc_cluster_similarity_score)
+            cluster_keyword_id_similarity_pair.append(cur_pair)
+
+        # Get video files
+        video_files = [f for f in os.listdir(video_path) if not f.startswith('.')]
         total_videos = len(video_files)
-        categories, videos_per_category = create_categories(new_project, num_annotators, groups, total_videos=total_videos)
-        # divide the total_videos  by the total category to 
-        # get the size of videos per category
-        # videos_per_category = math.floor(total_videos/len(categories))
-        min_idx = 0
-        max_idx = videos_per_category
+        logger.info(f"Found {total_videos} video files")
 
-        project_name = project_name.project_name
-        assoc_video_path = os.path.join(local_video_path, f'{project_name}')
-        os.makedirs(assoc_video_path, exist_ok=True)
-        for idx in range(len(categories)):
-            assoc_category = categories[idx]
-            # select matching bucket of videos
-            # indexed by videos_per_category
-            cur_video_slice = video_files[min_idx:max_idx]
-            for idx_vid, video_name in enumerate(cur_video_slice):
-                file_name = video_name.split('/')[-1]
-                cur_video = Videos(video_path=assoc_video_path, checked_by=None, file_name=file_name)
-                cur_video.category = assoc_category
-                cur_video.project=new_project
-                cur_video.save()
-        
-            min_idx = max_idx
-            max_idx += videos_per_category
+        if task_id:
+            upload_progress_tracker.update(task_id, total=total_videos, message='Creating categories...')
 
-    elif yt_file_type:
-        yt_file_dir = yt_file_type #os.path.join(media_dir, 'youtube_files')
-        unique_vid_ids = set()
-        if 'json' in str(yt_file_dir):
-            json_files = glob.glob(os.path.join(yt_file_dir, '*.json'))
-            txt_files = None
-        elif 'txt' in str(yt_file_dir):
-            txt_files = glob.glob(os.path.join(yt_file_dir, '*.txt'))
+        # Create categories
+        create_categories(
+            new_project, num_annotators, groups,
+            cluster_keyword_id_similarity_pair=cluster_keyword_id_similarity_pair
+        )
+
+        # Create destination directory
+        project_name = new_project.project_name
+        destination_path = os.path.join(local_video_path, project_name)
+        os.makedirs(destination_path, exist_ok=True)
+
+        if task_id:
+            upload_progress_tracker.update(task_id, message='Processing videos...')
+
+        # Process each video file
+        processed_count = 0
+        skipped_count = 0
+
+        for video in video_files:
+            if video.startswith('.'):
+                continue
+
+            try:
+                source_file = os.path.join(video_path, video)
+
+                # Extract video ID from filename
+                video_id_str = video.split('.')[0]
+                try:
+                    vid_name = int(video_id_str)
+                except ValueError:
+                    logger.warning(f"Could not parse video ID from filename: {video}")
+                    skipped_count += 1
+                    continue
+
+                # Find video in CSV
+                assoc_df_row = cluster_csv_df[cluster_csv_df['filename'] == vid_name]
+                if assoc_df_row.empty:
+                    logger.warning(f"Video {vid_name} not found in cluster CSV")
+                    skipped_count += 1
+                    continue
+
+                # Extract video metadata
+                cluster_id = int(assoc_df_row['cluster_ids'].values[0])
+                cluster_keywords_val = assoc_df_row['cluster_keywords'].values[0]
+                video_similarity_score = round(float(assoc_df_row['video_similarity_score'].values[0]), 2)
+
+                # Get optional fields
+                description = assoc_df_row.get('captions', pd.Series([None])).values[0]
+                keywords = assoc_df_row.get('keywords', pd.Series([None])).values[0]
+
+                # Retrieve category
+                try:
+                    assoc_category = Category.objects.get(
+                        cluster_keywords=cluster_keywords_val,
+                        cluster_id=cluster_id,
+                        project=new_project
+                    )
+                except Category.DoesNotExist:
+                    logger.error(f"Category not found for video {vid_name}")
+                    skipped_count += 1
+                    continue
+
+                # Create video record
+                relative_video_path = f'videos/{project_name}'
+                cur_vid = Videos(
+                    video_path=relative_video_path,
+                    checked_by=None,
+                    file_name=video
+                )
+                cur_vid.category = assoc_category
+                cur_vid.project = new_project
+                cur_vid.keywords = keywords if pd.notna(keywords) else None
+                cur_vid.video_similarity_score = video_similarity_score
+                cur_vid.description = description if pd.notna(description) else None
+                cur_vid.save()
+
+                # Copy video file
+                move_video_file(source_file, destination_path)
+                processed_count += 1
+
+                # Update progress
+                if task_id:
+                    upload_progress_tracker.update(
+                        task_id,
+                        processed=processed_count,
+                        message=f'Processing video {processed_count} of {total_videos}...'
+                    )
+
+                if processed_count % 100 == 0:
+                    logger.info(f"Processed {processed_count} videos")
+
+            except Exception as e:
+                logger.error(f"Error processing video {video}: {str(e)}")
+                skipped_count += 1
+                continue
+
+        logger.info(f"Pipeline completed. Processed: {processed_count}, Skipped: {skipped_count}")
+
+        if task_id:
+            upload_progress_tracker.complete(task_id, f'Completed! Processed {processed_count} videos.')
+
+        return None
+
+    except Exception as e:
+        logger.error(f"Error in pipeline_with_cluster_csv: {str(e)}", exc_info=True)
+        if task_id:
+            upload_progress_tracker.error(task_id, str(e))
+        raise
+
+
+def pipeline_without_cluster_csv(new_project, num_annotators, groups, video_path=None, yt_file_type=None, task_id=None):
+    """Process videos without a cluster CSV file"""
+    try:
+        if video_path:
+            if not os.path.exists(video_path):
+                logger.error(f"Video path does not exist: {video_path}")
+                raise ValueError(f"Video path does not exist: {video_path}")
+
+            assoc_video_path = video_path
+            video_files = [f for f in os.listdir(assoc_video_path) if not f.startswith('.')]
+            total_videos = len(video_files)
+
+            if total_videos == 0:
+                logger.error("No videos found in the specified path")
+                raise ValueError("No videos found in the specified path")
+
+            if task_id:
+                upload_progress_tracker.update(task_id, total=total_videos, message='Creating categories...', status='processing')
+
+            categories, videos_per_category = create_categories(
+                new_project, num_annotators, groups, total_videos=total_videos
+            )
+
+            min_idx = 0
+            max_idx = videos_per_category
+
+            # Fix: Use new_project.project_name instead of project_name.project_name
+            project_name = new_project.project_name
+            destination_path = os.path.join(local_video_path, project_name)
+            os.makedirs(destination_path, exist_ok=True)
+
+            if task_id:
+                upload_progress_tracker.update(task_id, message='Processing videos...')
+
+            processed_count = 0
+            for idx in range(len(categories)):
+                assoc_category = categories[idx]
+                cur_video_slice = video_files[min_idx:max_idx]
+
+                for idx_vid, video_name in enumerate(cur_video_slice):
+                    if video_name.startswith('.'):
+                        continue
+
+                    source_file = os.path.join(assoc_video_path, video_name)
+                    file_name = video_name.split('/')[-1]
+                    relative_video_path = f'videos/{project_name}'
+
+                    cur_video = Videos(
+                        video_path=relative_video_path,
+                        checked_by=None,
+                        file_name=file_name
+                    )
+                    cur_video.category = assoc_category
+                    cur_video.project = new_project
+                    cur_video.save()
+
+                    # Copy video file to destination
+                    try:
+                        move_video_file(source_file, destination_path)
+                    except Exception as e:
+                        logger.error(f"Error copying video file {video_name}: {str(e)}")
+
+                    processed_count += 1
+                    if task_id:
+                        upload_progress_tracker.update(
+                            task_id,
+                            processed=processed_count,
+                            message=f'Processing video {processed_count} of {total_videos}...'
+                        )
+
+                min_idx = max_idx
+                max_idx += videos_per_category
+
+            if task_id:
+                upload_progress_tracker.complete(task_id, f'Completed! Processed {processed_count} videos.')
+
+        elif yt_file_type:
+            if not os.path.exists(yt_file_type):
+                logger.error(f"YouTube file path does not exist: {yt_file_type}")
+                raise ValueError(f"YouTube file path does not exist: {yt_file_type}")
+
+            yt_file_dir = yt_file_type
+            unique_vid_ids = set()
             json_files = None
+            txt_files = None
 
-        if json_files:
-            #json_files = os.listdir(yt_json_file_path)
-            for file in json_files:
-                print("file>", file)
-                # full_json_file_path = os.path.join(yt_file_dir, file)
-                with open(file, 'r') as yt_vids:
-                    data = json.load(yt_vids)
-                    for idx, item in enumerate(data):
-                        vid_id = item["id"]
-                        unique_vid_ids.add(vid_id)
-            
-        elif txt_files:
-            # read txt file
-            for file in txt_files:
-                # full_txt_file_path = os.path.join(yt_file_dir, file) 
-                with open(file, 'r') as yt_txt_file:
-                    txt_lines = yt_txt_file.readlines()
-                for txt_line in txt_lines:
-                    vid_id = txt_line.split('=')[-1]
-                    unique_vid_ids.add(vid_id)
+            if 'json' in str(yt_file_dir) or os.path.isdir(yt_file_dir):
+                json_files = glob.glob(os.path.join(yt_file_dir, '*.json'))
+
+            if 'txt' in str(yt_file_dir) or (os.path.isdir(yt_file_dir) and not json_files):
+                txt_files = glob.glob(os.path.join(yt_file_dir, '*.txt'))
+
+            if json_files:
+                for file in json_files:
+                    logger.info(f"Processing JSON file: {file}")
+                    try:
+                        with open(file, 'r', encoding='utf-8') as yt_vids:
+                            data = json.load(yt_vids)
+                            for item in data:
+                                if isinstance(item, dict) and "id" in item:
+                                    vid_id = item["id"].strip()
+                                    if vid_id:
+                                        unique_vid_ids.add(vid_id)
+                    except Exception as e:
+                        logger.error(f"Error processing JSON file {file}: {str(e)}")
+                        continue
+
+            elif txt_files:
+                for file in txt_files:
+                    logger.info(f"Processing TXT file: {file}")
+                    try:
+                        with open(file, 'r', encoding='utf-8') as yt_txt_file:
+                            txt_lines = yt_txt_file.readlines()
+                        for txt_line in txt_lines:
+                            txt_line = txt_line.strip()
+                            if '=' in txt_line:
+                                vid_id = txt_line.split('=')[-1].strip()
+                            else:
+                                vid_id = txt_line
+                            if vid_id:
+                                unique_vid_ids.add(vid_id)
+                    except Exception as e:
+                        logger.error(f"Error processing TXT file {file}: {str(e)}")
+                        continue
+
+            if not unique_vid_ids:
+                logger.error("No YouTube video IDs found")
+                raise ValueError("No YouTube video IDs found in the provided files")
+
+            total_videos = len(unique_vid_ids)
+
+            if task_id:
+                upload_progress_tracker.update(task_id, total=total_videos, message='Creating categories...', status='processing')
+
+            categories, videos_per_category = create_categories(
+                new_project, num_annotators, groups, total_videos=total_videos
+            )
+            unique_vid_ids = list(unique_vid_ids)
+            random.shuffle(unique_vid_ids)
+
+            if task_id:
+                upload_progress_tracker.update(task_id, message='Processing YouTube videos...')
+
+            min_idx = 0
+            max_idx = videos_per_category
+            ID_START_POINT = BASE_ID_START_POINT
+            processed_count = 0
+
+            for idx in range(len(categories)):
+                assoc_category = categories[idx]
+                cur_video_slice = unique_vid_ids[min_idx:max_idx]
+
+                for idx_vid, vid_id in enumerate(cur_video_slice):
+                    ID_START_POINT += 1
+                    processed_count += 1
+
+                    if ID_START_POINT % 1000 == 0:
+                        logger.info(f"Processing video {ID_START_POINT}")
+
+                    file_name = str(ID_START_POINT)
+                    cur_video = Videos(
+                        youtube_vid_id=vid_id,
+                        file_name=file_name,
+                        video_path='youtube'
+                    )
+                    cur_video.category = assoc_category
+                    cur_video.project = new_project
+                    cur_video.save()
+
+                    if task_id:
+                        upload_progress_tracker.update(
+                            task_id,
+                            processed=processed_count,
+                            message=f'Processing video {processed_count} of {total_videos}...'
+                        )
+
+                min_idx = max_idx
+                max_idx += videos_per_category
+
+            if task_id:
+                upload_progress_tracker.complete(task_id, f'Completed! Processed {processed_count} YouTube videos.')
+
+        return None
+
+    except Exception as e:
+        logger.error(f"Error in pipeline_without_cluster_csv: {str(e)}", exc_info=True)
+        if task_id:
+            upload_progress_tracker.error(task_id, str(e))
+        raise    
 
 
-        total_videos = len(unique_vid_ids)
-        categories, videos_per_category = create_categories(new_project, num_annotators, \
-                                                            groups, total_videos=total_videos)
-        unique_vid_ids = list(unique_vid_ids)
-        random.shuffle(unique_vid_ids)
-        min_idx = 0
-        max_idx = videos_per_category
-        ID_START_POINT = BASE_ID_START_POINT
-        for idx in range(len(categories)):
-            assoc_category = categories[idx]
-            cur_video_slice = unique_vid_ids[min_idx:max_idx]
-            
-            for idx_vid, vid_id in enumerate(cur_video_slice):
-                ID_START_POINT += 1
-                if ID_START_POINT % 1000 == 0:
-                    print(ID_START_POINT, idx_vid)
-                file_name = ID_START_POINT # filename starts from 10
-                cur_video = Videos(youtube_vid_id=vid_id, file_name=file_name)
-                cur_video.category = assoc_category
-                cur_video.project = new_project
-                cur_video.save()
-            min_idx = max_idx
-            max_idx += videos_per_category
+def handle_upload_videos(user, project_type, num_annotators, project_name, cluster_csv, video_path=None, yt_file_type=None, task_id=None):
+    """Handle video upload processing with or without cluster CSV
 
-    return None    
+    Args:
+        user: Django User object (can be passed from request.user or directly)
+        project_type: Type of the project
+        num_annotators: Number of annotators for the project
+        project_name: Name of the project
+        cluster_csv: Path to cluster CSV file (optional)
+        video_path: Path to video files (optional)
+        yt_file_type: Path to YouTube file (optional)
+        task_id: Task ID for progress tracking (optional)
+    """
+    try:
+        # Validate inputs
+        if not project_name or not project_name.strip():
+            raise ValueError("Project name is required")
 
+        if num_annotators < 1:
+            raise ValueError("Number of annotators must be at least 1")
 
-def handle_upload_videos(request, project_type, num_annotators, project_name, cluster_csv, video_path=None, yt_file_type=None):
-    
-    new_project, _ = ProjectTitle.objects.get_or_create(user=request.user, project_type=project_type, project_name=project_name)
-    if cluster_csv and not new_project.cluster_csv:
-        new_project.cluster_csv = cluster_csv
-    
-    if not new_project.number_of_annotators:
-        new_project.number_of_annotators =  num_annotators
-    new_project.save()
-    # return {"status": "just hit"}
+        if not video_path and not yt_file_type:
+            raise ValueError("Either video_path or yt_file_type must be provided")
 
-    groups = create_groups(num_annotators, project_name)
-     # return {"status": "just hit"}
-    if cluster_csv: 
-        # checks if videos have been preprocessed from ML pipeline
-        # cluster_csv = os.path.join(csv_base_dir, cluster_csv)
-        if video_path:
-            pipeline_with_cluster_csv(new_project, num_annotators, groups, cluster_csv, video_path=video_path)
-        elif yt_file_type:
+        if task_id:
+            upload_progress_tracker.update(task_id, message='Creating project...', status='processing')
+
+        # Create or get project
+        new_project, created = ProjectTitle.objects.get_or_create(
+            user=user,
+            project_type=project_type,
+            project_name=project_name
+        )
+
+        if created:
+            logger.info(f"Created new project: {project_name}")
+        else:
+            logger.info(f"Using existing project: {project_name}")
+
+        # Update cluster CSV if provided
+        if cluster_csv and not new_project.cluster_csv:
+            if os.path.exists(cluster_csv):
+                new_project.cluster_csv = cluster_csv
+            else:
+                logger.warning(f"Cluster CSV path does not exist: {cluster_csv}")
+
+        # Update number of annotators if not set
+        if not new_project.number_of_annotators:
+            new_project.number_of_annotators = num_annotators
+
+        # Set is_link flag for YouTube videos
+        if yt_file_type:
             new_project.is_link = True
-            new_project.save()
-            pipeline_with_cluster_csv(new_project, num_annotators, groups, cluster_csv, yt_file_type=yt_file_type)
-    else:
-        print("no CSV pipeline for Video QA")
-        if video_path:
-            pipeline_without_cluster_csv(new_project, num_annotators, groups, video_path=video_path)
-        elif yt_file_type:
-            new_project.is_link = True
-            new_project.save()
-            pipeline_without_cluster_csv(new_project, num_annotators, groups, yt_file_type=yt_file_type)
+
+        new_project.save()
+
+        if task_id:
+            upload_progress_tracker.update(task_id, message='Creating annotator groups...')
+
+        # Create groups for annotators
+        groups = create_groups(num_annotators, project_name)
+        logger.info(f"Created {len(groups)} groups for project {project_name}")
+
+        # Process videos based on whether cluster CSV is provided
+        if cluster_csv and os.path.exists(cluster_csv):
+            logger.info("Processing videos with cluster CSV")
+            if video_path:
+                pipeline_with_cluster_csv(
+                    new_project, num_annotators, groups,
+                    cluster_csv, video_path=video_path, task_id=task_id
+                )
+            else:
+                # Cluster CSV only works with local videos, not YouTube
+                logger.warning("Cluster CSV provided but no video path. Using pipeline without CSV.")
+                pipeline_without_cluster_csv(
+                    new_project, num_annotators, groups,
+                    yt_file_type=yt_file_type, task_id=task_id
+                )
+        else:
+            logger.info("Processing videos without cluster CSV")
+            if video_path:
+                pipeline_without_cluster_csv(
+                    new_project, num_annotators, groups,
+                    video_path=video_path, task_id=task_id
+                )
+            elif yt_file_type:
+                pipeline_without_cluster_csv(
+                    new_project, num_annotators, groups,
+                    yt_file_type=yt_file_type, task_id=task_id
+                )
+
+        logger.info(f"Successfully processed videos for project {project_name}")
+
+    except Exception as e:
+        logger.error(f"Error in handle_upload_videos: {str(e)}", exc_info=True)
+        if task_id:
+            upload_progress_tracker.error(task_id, str(e))
+        raise
     
 
 def create_question_answers(question=None, answers=None):
@@ -444,10 +839,33 @@ def  get_video_list(term=None, category=None, cluster_group=None, annotator=None
         ).filter(is_available=True).order_by('-checked', 'id')
     else:
         cluster_keywords = category.strip()
-        assoc_category = get_object_or_404(Category, cluster_keywords=cluster_keywords, project=assoc_project)
-        annotator = get_object_or_404(User, username=annotator)
-        videos = Videos.objects.filter(category=assoc_category, is_available=True, checked_by__username=annotator, status=True).order_by('id')
-        print("videos", videos)
+        # Try to find category - first try exact match, then try contains
+        try:
+            assoc_category = Category.objects.get(cluster_keywords=cluster_keywords, project=assoc_project)
+        except Category.DoesNotExist:
+            # Try case-insensitive match
+            assoc_category = Category.objects.filter(
+                cluster_keywords__iexact=cluster_keywords,
+                project=assoc_project
+            ).first()
+            if not assoc_category:
+                # Try contains match as fallback
+                assoc_category = Category.objects.filter(
+                    cluster_keywords__icontains=cluster_keywords,
+                    project=assoc_project
+                ).first()
+            if not assoc_category:
+                print(f"Category not found: '{cluster_keywords}' for project {assoc_project}")
+                return HttpResponse(json.dumps([]), content_type='application/json')
+
+        try:
+            annotator_user = User.objects.get(username=annotator)
+        except User.DoesNotExist:
+            print(f"Annotator not found: '{annotator}'")
+            return HttpResponse(json.dumps([]), content_type='application/json')
+
+        videos = Videos.objects.filter(category=assoc_category, is_available=True, checked_by=annotator_user, status=True).order_by('id')
+        print(f"Found {videos.count()} videos for category '{cluster_keywords}' by annotator '{annotator}'")
 
     qs = videos
     # print('a qs', qs)
@@ -486,20 +904,34 @@ def get_rem_total_per_category(category):
     # context = {"rem_total_per_category": rem_total_per_category}
     return rem_total_per_category
 
-def get_user_all_processed(user, is_admin=None, category=None,project=None):
-
+def get_user_all_processed(user, is_admin=None, category=None, project=None):
+    """
+    Get count of processed videos for a user and total processed videos.
+    Returns a tuple of (user_processed_count, all_processed_count).
+    """
     if is_admin:
-        user_processed = len(get_list_or_404(Videos, category=category, checked_by=user, status=True))
-        # all_processed_videos = Videos.objects.filter(project=assoc_project_type).exclude(checked_by=None).count()
-        all_processed = Videos.objects.filter(project=project, status=True).count() #len(get_list_or_404(Videos, checked_by__isnull=False, status=True))
-        context = (user_processed, all_processed)
+        user_processed = Videos.objects.filter(
+            category=category,
+            checked_by=user,
+            status__isnull=False
+        ).count()
+        all_processed = Videos.objects.filter(
+            project=project,
+            status__isnull=False
+        ).count()
     else:
-        user_processed = len(get_list_or_404(Videos, checked_by=user, status=True, is_available=True))
-    
-        all_processed = Videos.objects.filter(project=project, status=True, is_available=True).count() #len(get_list_or_404(Videos, checked_by__isnull=False, status=True))
-        context = (user_processed, all_processed)
-    
-    return context
+        user_processed = Videos.objects.filter(
+            checked_by=user,
+            status__isnull=False,
+            is_available=True
+        ).count()
+        all_processed = Videos.objects.filter(
+            project=project,
+            status__isnull=False,
+            is_available=True
+        ).count()
+
+    return (user_processed, all_processed)
 
 def move_selected_videos(destination_dir, source_dir, finished_jobs_csv):
     finished_job_df = pd.read_csv(finished_jobs_csv)
@@ -524,32 +956,48 @@ def move_selected_videos(destination_dir, source_dir, finished_jobs_csv):
     return f"{zip_file_name}.zip"
 
 def check_user_decision(file_name, cur_user, appr_or_rej=None, assoc_project=None, is_admin=None):
-   
-    video = get_object_or_404(Videos, file_name=file_name, project=assoc_project)
-    # print("is_admin", is_admin, "file_name", file_name, "assoc_project",  assoc_project, "appr_or_rej", appr_or_rej)
-    
+    """
+    Process user's approve/reject decision for a video.
+    Admin users can process any video, regular users can only process available videos.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    # Validate required parameters
+    if not file_name or not appr_or_rej:
+        logger.warning(f"check_user_decision called with missing params: file_name={file_name}, appr_or_rej={appr_or_rej}")
+        return
+
+    # Admin can process any video, regular users only available videos
+    if is_admin:
+        video = get_object_or_404(Videos, file_name=file_name, project=assoc_project)
+    else:
+        video = get_object_or_404(Videos, file_name=file_name, project=assoc_project, is_available=True)
+
     if appr_or_rej == 'approve':
         if is_admin:
-            # no need to change the user
+            # Admin approval - no need to change the checked_by user
             video.status = True
             video.admin_approve = True
             video.save()
-            
+            logger.info(f"Admin {cur_user.username} approved video {file_name}")
         else:
-            
             video.checked_by = cur_user
             video.status = True
             video.save()
+            logger.info(f"User {cur_user.username} approved video {file_name}")
     elif appr_or_rej == 'reject':
         if is_admin:
             video.status = False
             video.admin_approve = False
             video.save()
+            logger.info(f"Admin {cur_user.username} rejected video {file_name}")
         else:
             video.checked_by = cur_user
             video.status = False
             video.save()
- 
+            logger.info(f"User {cur_user.username} rejected video {file_name}")
+
 
 def get_rem_and_total(category, cur_user):
     # Category.objects.all().filter(category=category)
@@ -573,6 +1021,7 @@ def get_rem_and_total(category, cur_user):
 def prepare_export_data(request, usernames, is_youtube_link):
     if usernames:
         usernames_list = usernames.split('_')
+        admin_project = request.user.userreg.project
         data = {}
         if is_youtube_link:
             sn_counter = 1
@@ -588,8 +1037,8 @@ def prepare_export_data(request, usernames, is_youtube_link):
             correct_ans = []
             for user in usernames_list:
                 assoc_user = User.objects.get(username=user)
-                #retrieve users videos
-                user_videos = Videos.objects.filter(checked_by=assoc_user)
+                #retrieve users videos scoped to admin's project
+                user_videos = Videos.objects.filter(checked_by=assoc_user, project=admin_project, status__isnull=False)
                 for user_video in user_videos:
                     
                     # retrived assoc_qs
@@ -645,11 +1094,8 @@ def prepare_export_data(request, usernames, is_youtube_link):
             # videos = [FIELDS]
             
             for user in usernames_list:
-                # users_categories_videos.setdefault(user, {})
                 base_user = User.objects.get(username=user)
-                user_object = base_user.userreg
-                assoc_project = user_object.project
-                assoc_videos = Videos.objects.all().filter(checked_by=base_user.id, project=assoc_project, status=True, category__admin_approved=True)
+                assoc_videos = Videos.objects.filter(checked_by=base_user, project=admin_project, status=True, category__admin_approved=True)
                 for vid in assoc_videos:
                     username_col_vals.append(user)
                     category_col_vals.append(vid.category)

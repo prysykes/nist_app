@@ -9,27 +9,23 @@ class ProjectTitleForm(forms.ModelForm):
         fields = ['project_type', 'project_name', 'cluster_csv', 'number_of_annotators']
         widgets = {
             'project_type': forms.Select(attrs={
-                'name': 'project_type',
                 'class': 'upload_form'
-            }) ,
+            }),
             'project_name': forms.TextInput(attrs={
-                "name": "project_name",
                 "type": "text",
                 "class": "upload_form",
-                "size": 20
+                "placeholder": "Enter project name"
             }),
             'cluster_csv': forms.FileInput(attrs={
-                "name": "cluster_csv",
-                "type": "File",
                 "class": "upload_form"
             }),
             'number_of_annotators': forms.NumberInput(attrs={
-                "name": "num_annotators",
-                "type": "text",
-                "class": "uplod_form",
-                "size": 2
+                "type": "number",
+                "class": "upload_form",
+                "min": "1",
+                "placeholder": "e.g., 3",
+                "required": "required"
             })
-
         }
         labels = {
             'project_type': 'Select project type',

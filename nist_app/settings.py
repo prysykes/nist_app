@@ -10,26 +10,53 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 import os
+import logging.config
 from pathlib import Path
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Load environment variables
 load_dotenv('.env.local')
+
+# Helper function to parse boolean environment variables
+def parse_bool_env(var_name, default='0'):
+    """
+    Parse boolean environment variables.
+    Accepts: 'True', 'true', '1', 'yes', 'on' as True
+    Accepts: 'False', 'false', '0', 'no', 'off' as False
+    """
+    value = os.getenv(var_name, default).strip()
+    if value.lower() in ('true', '1', 'yes', 'on'):
+        return True
+    elif value.lower() in ('false', '0', 'no', 'off', ''):
+        return False
+    else:
+        # Log warning and default to False for safety
+        print(f"Warning: Invalid boolean value '{value}' for {var_name}. Defaulting to False.")
+        return False
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-# SECRET_KEY = 'django-insecure-ecflca7khb4s^&98%t9q^zbkhdz241qv+vk*0ruztvff%x)d%w'
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    raise ValueError("DJANGO_SECRET_KEY environment variable is not set. Please configure it in your .env file.")
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False #bool(os.getenv('DEBUG', default=0))
+DEBUG = parse_bool_env('DEBUG', '0')
 
-ALLOWED_HOSTS = ['*', 'localhost', '127.0.0.1'] #os.getenv('DJANGO_ALLOWED_HOSTS', "127.0.0.1").split(',')
-CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8080', 'http://localhost:8080', 'http://129.6.101.58:8080'] #os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "https://127.0.0.1").split(",")
+# SECURITY: Restrict allowed hosts in production
+ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+
+# CSRF trusted origins should be loaded from environment
+CSRF_TRUSTED_ORIGINS = os.getenv(
+    'DJANGO_CSRF_TRUSTED_ORIGINS',
+    'http://127.0.0.1:8080,http://localhost:8080'
+).split(',')
 
 
 # Application definition
@@ -98,8 +125,10 @@ DATABASES = {
 }
 
 
-# disable max file upload limitation
+# File upload settings
 DATA_UPLOAD_MAX_NUMBER_FILES = None
+DATA_UPLOAD_MAX_MEMORY_SIZE = 26214400  # 25MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 26214400  # 25MB
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
@@ -144,6 +173,10 @@ MEDIA_URL = '/media/'
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+# Resources directory for video files
+RESOURCES_URL = '/nist_trecvid_resources/'
+RESOURCES_ROOT = os.path.join(BASE_DIR, 'nist_trecvid_resources')
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
@@ -152,3 +185,122 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 INTERNAL_IPS = [
     "127.0.0.1", "localhost"
 ]
+
+# Authentication URLs
+LOGIN_URL = '/'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
+
+# Security Settings
+if not DEBUG:
+    # HTTPS/SSL settings for production
+    SECURE_SSL_REDIRECT = parse_bool_env('SECURE_SSL_REDIRECT', '0')
+    SESSION_COOKIE_SECURE = parse_bool_env('SESSION_COOKIE_SECURE', '0')
+    CSRF_COOKIE_SECURE = parse_bool_env('CSRF_COOKIE_SECURE', '0')
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+# Session Security
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_AGE = 86400  # 24 hours
+SESSION_SAVE_EVERY_REQUEST = False
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+
+# CSRF Settings
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_USE_SESSIONS = False
+CSRF_FAILURE_VIEW = 'django.views.csrf.csrf_failure'
+
+# Database connection pooling settings
+DATABASES['default']['CONN_MAX_AGE'] = 600  # 10 minutes
+DATABASES['default']['OPTIONS'] = {
+    'connect_timeout': 10,
+}
+
+# Logging Configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '[{levelname}] {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '[{levelname}] {message}',
+            'style': '{',
+        },
+    },
+    'filters': {
+        'require_debug_false': {
+            '()': 'django.utils.log.RequireDebugFalse',
+        },
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+        'file': {
+            'level': 'WARNING',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs', 'django.log'),
+            'maxBytes': 1024 * 1024 * 15,  # 15MB
+            'backupCount': 10,
+            'formatter': 'verbose',
+        },
+        'error_file': {
+            'level': 'ERROR',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs', 'django_errors.log'),
+            'maxBytes': 1024 * 1024 * 15,  # 15MB
+            'backupCount': 10,
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['console', 'error_file'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.db.backends': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'pages': {
+            'handlers': ['console', 'file', 'error_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'registration': {
+            'handlers': ['console', 'file', 'error_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+    'root': {
+        'handlers': ['console', 'file'],
+        'level': 'INFO',
+    },
+}
+
+# Create logs directory if it doesn't exist
+LOGS_DIR = os.path.join(BASE_DIR, 'logs')
+os.makedirs(LOGS_DIR, exist_ok=True)

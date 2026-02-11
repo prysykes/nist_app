@@ -33,14 +33,95 @@ const base_url = window.location.origin
 const full_url_path = base_url+'/display_videos?term='
 const get_videos_per_category = base_url+'/get_videos_per_category?term='
 const process_user_decision = base_url+'/process_user_decision?selection='
-const base_vid_src = "media/"
+const base_vid_src = "nist_trecvid_resources/"
 const mark_unavailable_url = base_url + '/mark_as_unavailable'
 
 // let full_url_path = base_url+'/display_videos?term='
 let process_user_sel_url = base_url+'/process_user_selection?selection='
 
+// Calculate and update dashboard stats
+function updateDashboardStats() {
+    const totalCompletedElem = document.getElementById('total-completed')
+    const totalPendingElem = document.getElementById('total-pending')
 
+    if (!totalCompletedElem || !totalPendingElem) return
 
+    // Get all progress elements that show remaining/total format
+    const progressElements = document.querySelectorAll('.progress-text.progress')
+
+    let totalRemaining = 0
+    let totalVideos = 0
+
+    progressElements.forEach(elem => {
+        // Text format is "|remaining/total" - extract the numbers
+        const text = elem.textContent.trim()
+        const match = text.match(/\|?(\d+)\/(\d+)/)
+        if (match) {
+            const remaining = parseInt(match[1])
+            const total = parseInt(match[2])
+            totalRemaining += remaining
+            totalVideos += total
+        }
+    })
+
+    const totalCompleted = totalVideos - totalRemaining
+
+    totalCompletedElem.textContent = totalCompleted
+    totalPendingElem.textContent = totalRemaining
+}
+
+// Run stats update on page load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', updateDashboardStats)
+} else {
+    updateDashboardStats()
+}
+
+// Update preview status badge
+function updatePreviewStatus(status, text) {
+    const previewStatus = document.getElementById('preview_status')
+    if (!previewStatus) return
+
+    const statusClasses = ['status-idle', 'status-playing', 'status-loading']
+    const badge = previewStatus.querySelector('.status-badge')
+    if (badge) {
+        statusClasses.forEach(cls => badge.classList.remove(cls))
+        badge.classList.add(`status-${status}`)
+        badge.innerHTML = `<span class="status-dot"></span>${text}`
+    }
+}
+
+// Update video count label
+function updateVideoCountLabel(count) {
+    const label = document.getElementById('video_count_label')
+    if (label) {
+        label.textContent = count > 0 ? `${count} videos available` : ''
+    }
+}
+
+// Hide loading indicator
+function hideLoadingIndicator() {
+    const loadingIndicator = document.getElementById('videos_loading')
+    if (loadingIndicator) {
+        loadingIndicator.style.display = 'none'
+    }
+}
+
+// Hide video placeholder when video loads
+function hideVideoPlaceholder() {
+    const placeholder = document.getElementById('video_placeholder')
+    if (placeholder) {
+        placeholder.style.display = 'none'
+    }
+}
+
+// Show video placeholder
+function showVideoPlaceholder() {
+    const placeholder = document.getElementById('video_placeholder')
+    if (placeholder) {
+        placeholder.style.display = 'flex'
+    }
+}
 
 if (login != null) {
     login.addEventListener('click', ()=>{
@@ -52,38 +133,213 @@ if (login != null) {
 if ((end_annotation==null) && (login==null)){
     // checks if you are in the admin page
     let btn_vid_upload = document.querySelector('#upload_videos')
+    let closeUploadModal = document.querySelector('#close_upload_modal')
+    let cancelUpload = document.querySelector('#cancel_upload')
+
+    // Open modal
     btn_vid_upload.addEventListener('click', ()=>{
-        div_vid_upld.classList.toggle('display-none')
+        div_vid_upld.classList.remove('display-none')
     })
+
+    // Close modal with X button
+    if (closeUploadModal) {
+        closeUploadModal.addEventListener('click', ()=>{
+            div_vid_upld.classList.add('display-none')
+        })
+    }
+
+    // Close modal with Cancel button
+    if (cancelUpload) {
+        cancelUpload.addEventListener('click', ()=>{
+            div_vid_upld.classList.add('display-none')
+        })
+    }
+
+    // Close modal when clicking overlay background
+    div_vid_upld.addEventListener('click', (e)=>{
+        if (e.target === div_vid_upld) {
+            div_vid_upld.classList.add('display-none')
+        }
+    })
+
+    // Handle upload form submission with progress tracking
+    const uploadForm = document.querySelector('#upload_form')
+    if (uploadForm) {
+        uploadForm.addEventListener('submit', handleUploadFormSubmit)
+    }
+}
+
+// Upload progress tracking
+let uploadProgressInterval = null
+
+async function handleUploadFormSubmit(e) {
+    e.preventDefault()
+
+    const form = e.target
+    const formData = new FormData(form)
+    const progressSection = document.getElementById('upload_progress_section')
+    const progressBar = document.getElementById('upload_progress_bar')
+    const progressPercentage = document.getElementById('progress_percentage')
+    const progressCount = document.getElementById('progress_count')
+    const progressStatusText = document.getElementById('progress_status_text')
+    const formActions = document.getElementById('upload_form_actions')
+
+    // Show progress section and hide form actions
+    progressSection.classList.remove('display-none')
+    progressSection.classList.remove('completed', 'error')
+    formActions.style.display = 'none'
+
+    // Reset progress
+    progressBar.style.width = '0%'
+    progressPercentage.textContent = '0%'
+    progressCount.textContent = 'Initializing...'
+    progressStatusText.textContent = 'Starting upload...'
+
+    try {
+        // Start the upload via AJAX
+        const response = await fetch(form.action || window.location.href, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+
+        const data = await response.json()
+
+        if (data.status === 'processing' && data.task_id) {
+            // Upload started in background - poll for progress
+            progressStatusText.textContent = 'Processing videos...'
+            pollUploadProgress(data.task_id)
+        } else if (data.task_id) {
+            // Legacy: task_id returned after completion
+            pollUploadProgress(data.task_id)
+        } else if (data.status === 'success') {
+            // Upload completed immediately (e.g., small batch)
+            showUploadComplete(100, data.processed || 0, data.total || 0, data.message)
+        } else if (data.status === 'error') {
+            showUploadError(data.message || 'Upload failed')
+        } else {
+            // Fallback - redirect if no JSON response expected
+            window.location.reload()
+        }
+    } catch (error) {
+        console.error('Upload error:', error)
+        showUploadError('An error occurred during upload. Please try again.')
+    }
+}
+
+function pollUploadProgress(taskId) {
+    const progressBar = document.getElementById('upload_progress_bar')
+    const progressPercentage = document.getElementById('progress_percentage')
+    const progressCount = document.getElementById('progress_count')
+    const progressStatusText = document.getElementById('progress_status_text')
+
+    // Clear any existing interval
+    if (uploadProgressInterval) {
+        clearInterval(uploadProgressInterval)
+    }
+
+    uploadProgressInterval = setInterval(async () => {
+        try {
+            const response = await fetch(`${base_url}/upload_progress?task_id=${taskId}`)
+            const data = await response.json()
+
+            const percent = data.percent || 0
+            const processed = data.processed || 0
+            const total = data.total || 0
+            const status = data.status || 'processing'
+            const message = data.message || 'Processing videos...'
+
+            // Update progress UI
+            progressBar.style.width = `${percent}%`
+            progressPercentage.textContent = `${percent}%`
+            progressCount.textContent = `${processed} / ${total} videos`
+            progressStatusText.textContent = message
+
+            if (status === 'completed') {
+                clearInterval(uploadProgressInterval)
+                uploadProgressInterval = null
+                showUploadComplete(percent, processed, total, 'Videos uploaded successfully!')
+            } else if (status === 'error') {
+                clearInterval(uploadProgressInterval)
+                uploadProgressInterval = null
+                showUploadError(message)
+            }
+        } catch (error) {
+            console.error('Progress poll error:', error)
+        }
+    }, 500) // Poll every 500ms
+}
+
+function showUploadComplete(percent, processed, total, message) {
+    const progressSection = document.getElementById('upload_progress_section')
+    const progressBar = document.getElementById('upload_progress_bar')
+    const progressPercentage = document.getElementById('progress_percentage')
+    const progressCount = document.getElementById('progress_count')
+    const progressStatusText = document.getElementById('progress_status_text')
+
+    progressSection.classList.add('completed')
+    progressBar.style.width = '100%'
+    progressPercentage.textContent = '100%'
+    progressCount.textContent = `${processed} / ${total} videos`
+    progressStatusText.textContent = message || 'Upload completed successfully!'
+
+    // Reload page after a short delay to show the success state
+    setTimeout(() => {
+        window.location.reload()
+    }, 1500)
+}
+
+function showUploadError(message) {
+    const progressSection = document.getElementById('upload_progress_section')
+    const progressStatusText = document.getElementById('progress_status_text')
+    const formActions = document.getElementById('upload_form_actions')
+
+    progressSection.classList.add('error')
+    progressStatusText.textContent = message || 'An error occurred'
+
+    // Show form actions again after a delay so user can retry
+    setTimeout(() => {
+        formActions.style.display = 'flex'
+        progressSection.classList.remove('error')
+        progressSection.classList.add('display-none')
+    }, 3000)
 }
 
 // Beging function to allow a user end annotation
 
 function handle_confirm_yes_or_no({caller1=null, caller2=null, value=null, target_elem=null}){
-    if (caller1 == 'end_annotaion'){
+    if (caller1 == 'end_annotation'){
         if (value){
             // mark job_finished in user model to false
-            // change the annotation ended text to end-annotation 
-            let user = document.getElementById('username').innerText.split(' ')[1]
+            // change the annotation ended text to end-annotation
+            let usernameElem = document.querySelector('.user-name')
+            if (!usernameElem) {
+                console.error('Username element not found')
+                return
+            }
+            let user = usernameElem.innerText.trim()
             let end_annotation_endpoint = `${base_url}/end_annotation?user=${user}&restart_end=true`
-                let response = fetch(end_annotation_endpoint, {
-                    method: 'GET'
-                })
-                .then(response => response.json()) 
-                .then((data)=>{
-                    console.log(data['restarted']);
-                    if (data['restarted']){
-                        ANNOTATION_ENDED = false
-                        target_elem.textContent = 'End Annotation'
-                    }
-                    
-                    
-                })
-    
-        }else{
-            // handle end
+            fetch(end_annotation_endpoint, {
+                method: 'GET'
+            })
+            .then(response => response.json())
+            .then((data)=>{
+                console.log('Restart annotation response:', data['restarted']);
+                if (data['restarted']){
+                    // Reload the page to get fresh state after restart
+                    window.location.reload()
+                }
+            })
+            .catch(error => {
+                console.error('Restart annotation error:', error)
+            })
+
+        } else {
+            // handle cancel - do nothing
         }
-    }else{
+    } else {
         if (value){
 
         }
@@ -103,66 +359,72 @@ function customConfirm({message=null, target_elem=null, callback=null, appr_rej=
 
     confirm_overlay.querySelector('p').textContent = message;
 
+    // Clone and replace buttons to remove old event listeners (prevents accumulation)
+    const newRestartButton = restartButton.cloneNode(true);
+    const newCancelButton = cancelButton.cloneNode(true);
+    restartButton.parentNode.replaceChild(newRestartButton, restartButton);
+    cancelButton.parentNode.replaceChild(newCancelButton, cancelButton);
+
     // Handle OK button click
-    restartButton.addEventListener('click', ()=>{
+    newRestartButton.addEventListener('click', ()=>{
         confirm_overlay.style.display = 'none';  // Hide dialog
-        let caller1 = 'end_annotaion'
-        
+        let caller1 = 'end_annotation'
+
         callback({caller1:caller1, value:true, target_elem:target_elem});  // Pass true to callback (OK pressed)
         // handle when restart is called by appr or rej button
         if (appr_rej){
             // add logic to mark the video as approved or denied
             get_next_video_appr_rej(file_name, assoc_category, appr_rej, callback2)
-            callback({caller1:caller1, caller2:appr_rej, value:true, target_elem:target_elem}); 
-            
-            
+            callback({caller1:caller1, caller2:appr_rej, value:true, target_elem:target_elem});
+
+
         }
     });
 
     // Handle Cancel button click
-    cancelButton.addEventListener('click', ()=> {
+    newCancelButton.addEventListener('click', ()=> {
         confirm_overlay.style.display = 'none';  // Hide dialog
-        let caller = 'end_annotaion'
-        callback(caller, false, target_elem);  // Pass false to callback (Cancel pressed)
+        let caller1 = 'end_annotation'
+        callback({caller1:caller1, value:false, target_elem:target_elem});  // Pass false to callback (Cancel pressed)
     });
 
 }
 
-if ((btn_vid_upload == null) && (login==null)){
-    // checks if the displayed page is for admin
-    // btn_vid_upload  is only in the admin page
-    let end_annotation = document.querySelector('#end-annotation')
-    end_annotation.addEventListener('click', (e)=> {
-        console.log(end_annotation);
-        
-        let target_elem = end_annotation
-        
-    
+// End Annotation button handler
+let end_annotation_btn = document.querySelector('#end-annotation')
+if (end_annotation_btn) {
+    end_annotation_btn.addEventListener('click', (e)=> {
+        console.log('End annotation clicked');
+
+        let target_elem = end_annotation_btn
+
         if (target_elem.innerText.trim().includes('Restart Annotation')){
-            let message =  "You already finished annotation. Do you want to restart?" 
-            // {is_admin:is_admin_, prev_file_name:prev_file_name,  assoc_category:assoc_category, data:data, appr_rej:appr_rej, caller:'appr_rej'}
-            
-            customConfirm({message:message, target_elem:target_elem, callback:handle_confirm_yes_or_no}) ;
-            
-            
-        }else{
-            let user = document.getElementById('username').innerText.split(' ')[1]
+            let message = "You already finished annotation. Do you want to restart?"
+            customConfirm({message:message, target_elem:target_elem, callback:handle_confirm_yes_or_no});
+        } else {
+            let usernameElem = document.querySelector('.user-name')
+            if (!usernameElem) {
+                console.error('Username element not found')
+                return
+            }
+            let user = usernameElem.innerText.trim()
             let end_annotation_endpoint = `${base_url}/end_annotation?user=${user}&restart_end=false`
-            let response = fetch(end_annotation_endpoint, {
+
+            fetch(end_annotation_endpoint, {
                 method: 'GET'
             })
-            .then(response => response.json()) 
+            .then(response => response.json())
             .then((data)=>{
-                console.log(data);
+                console.log('End annotation response:', data);
                 if (!data['restarted']){
                     ANNOTATION_ENDED = true
                     target_elem.textContent = 'Restart Annotation'
                 }
-                
+            })
+            .catch(error => {
+                console.error('End annotation error:', error)
             })
         }
-        
-        
     })
 }
 
@@ -185,28 +447,59 @@ function create_video_tag(){
 }
 function create_quest_ans_div({label=null, value=null, assoc_id=null, correct=null}){
     let label_value_div = document.createElement('div')
-    label_value_div.className = 'row-align'
+    label_value_div.className = 'label-value-div'
+
+    // Style for grid layout
+    label_value_div.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: ${correct ? '#f0fdf4' : '#ffffff'};
+    `
+
+    // Add correct-answer class for highlighting
+    if (correct) {
+        label_value_div.classList.add('correct-answer')
+    }
 
     let id_div = document.createElement('div')
     id_div.classList.add('qa_ids')
     id_div.id = `label-${assoc_id}`
- 
+    id_div.style.display = 'none'  // Hide the ID div
+
     label_value_div.appendChild(id_div)
 
     let label_div = document.createElement('div')
-    label_div.className = 'qa_label'
-    label_div.innerText = label+":"
+    label_div.className = 'qa-label'
+    label_div.style.cssText = `
+        font-weight: 600;
+        font-size: 14px;
+        color: #374151;
+    `
+
+    // Format label text nicely
+    let formattedLabel = label.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+    label_div.innerText = formattedLabel
+
     if (correct){
-        var inlines = create_inline_elemets()
-        var inline_good = inlines[0]
-        var inline_bad = inlines[1]
-        label_div.appendChild(inline_good)
-        
+        let correctBadge = document.createElement('span')
+        correctBadge.className = 'correct-badge'
+        correctBadge.innerHTML = '<span class="material-icons" style="font-size: 14px; vertical-align: middle; margin-left: 6px; color: #10b981;">check_circle</span>'
+        label_div.appendChild(correctBadge)
     }
     label_value_div.appendChild(label_div)
 
     let value_div = document.createElement('div')
-    value_div.className = 'qa_value'
+    value_div.className = 'qa-value'
+    value_div.style.cssText = `
+        font-size: 14px;
+        color: #6b7280;
+        line-height: 1.5;
+        word-wrap: break-word;
+    `
     value_div.innerText = value
     label_value_div.appendChild(value_div)
 
@@ -214,22 +507,31 @@ function create_quest_ans_div({label=null, value=null, assoc_id=null, correct=nu
 }
 // prepare_quest_answer_resp({data:data, isEdit:isEdit})
 function prepare_quest_answer_resp({quest_ans_data=null, isEdit=null}){
-    
+
     let question = quest_ans_data['question']
-    
-    
+
+
     let div = document.createElement('div')
     div.className = "edit_qa_div"
+
+    // Add grid layout for compact 2-row display
+    div.style.cssText = `
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+        align-items: start;
+        margin: 20px 0;
+    `
 
     if (question == null){
         let label = "No QandA"
         let value = "User rejected"
         var label_value_div = create_quest_ans_div({label:label, value:value})
         div.appendChild(label_value_div)
-        
+
     }else{
         for (let [label, value] of Object.entries(quest_ans_data)){
-            
+
             if (label.split('-').at(-1)=='correct'){
                 let first_hypen_index = label.indexOf('-')
                 let second_hypen_index = label.indexOf('-', first_hypen_index+1)
@@ -237,21 +539,21 @@ function prepare_quest_answer_resp({quest_ans_data=null, isEdit=null}){
                 let assoc_value = value["value"]
                 label = label.slice(0, second_hypen_index)
                 var label_value_div = create_quest_ans_div({label:label, value:assoc_value, assoc_id:assoc_id, correct:true})
-                
+
             }
             else{
                 let assoc_id = value['id']
                 let assoc_value = value["value"]
                 var label_value_div = create_quest_ans_div({label:label, value:assoc_value, assoc_id:assoc_id})
             }
-            
+
             div.appendChild(label_value_div)
         }
     }
-    
-    
-    
-    return div 
+
+
+
+    return div
 }
 
 function create_youtube_iframe(youtube_vid_id){
@@ -286,27 +588,39 @@ function create_vidlist_disp_span(file_name, checked_by, status, video_url, vide
     
     if (checked_by != null && status==true){
         span.appendChild(inline_good)
+        span.classList.add('processed-item')
     }
     else if(checked_by != null && status==false){
         span.appendChild(inline_bad)
+        span.classList.add('processed-item')
     }
     span.classList.add('vid_name')
     
     span.addEventListener('click', (e)=>{
         let cur_span = e.target
         let processed = false
-        
+        let clicked_span = span  // Reference to the outer span element
+
         if ((cur_span.textContent == 'done') || (cur_span.textContent == 'close')){
             //checks if the span has inline element, hence the parent elem changes
             let parent_elem = cur_span.parentNode
-            var file_name = parent_elem.id.split('_')[1]   
-            processed = true 
+            var file_name = parent_elem.id.split('_')[1]
+            clicked_span = parent_elem
+            processed = true
         }
         else {
             var file_name = cur_span.id.split('_')[1]
+            clicked_span = cur_span
         }
 
-        
+        // Highlight the clicked video
+        let video_list = document.getElementById('video_list_disp')
+        if (video_list) {
+            let all_videos = video_list.querySelectorAll('.vid_name')
+            all_videos.forEach(elem => elem.classList.remove('active'))
+            clicked_span.classList.add('active')
+        }
+
         const[span_heading, br_elem, span_category] = create_vidname_category_spans(assoc_category)
         
         let vid_preview = document.getElementById('vid_preview')
@@ -315,20 +629,30 @@ function create_vidlist_disp_span(file_name, checked_by, status, video_url, vide
         video_name.innerHTML = ""
         vid_tag.innerHTML = ""
         
-        if (video_url != ''){
+        // Prioritize YouTube videos if youtube_vid_id exists
+        if (youtube_vid_id && youtube_vid_id !== 'null' && youtube_vid_id !== 'None') {
+            let iframe = create_youtube_iframe(youtube_vid_id)
+            vid_tag.appendChild(iframe)
+            hideVideoPlaceholder()
+            updatePreviewStatus('playing', 'Playing')
+        }
+        else if (video_url && video_url !== '' && video_url !== 'None' && video_url !== 'null') {
             const video = create_video_tag()
-            
+
             // console.log(`video_url: ${video_url} \n file_name : ${file_name}`);
-            
+
             let video_path = base_vid_src+video_url+'/'+`${file_name}`
             video.src = video_path
             vid_tag.appendChild(video)
+            hideVideoPlaceholder()
+            updatePreviewStatus('playing', 'Playing')
         }
-        else{
-            let iframe = create_youtube_iframe(youtube_vid_id)
-            vid_tag.appendChild(iframe)
+        else {
+            console.warn('No valid video source found for:', file_name)
+            showVideoPlaceholder()
+            updatePreviewStatus('idle', 'No video')
         }
-        
+
 
         span_heading.textContent = file_name
         video_name.appendChild(span_heading)
@@ -342,10 +666,14 @@ function create_vidlist_disp_span(file_name, checked_by, status, video_url, vide
         var question_tag = document.querySelector('#question_tag')
         let cluster_keywords = document.querySelector('#cat_name')
         cluster_keywords = cluster_keywords.textContent.split('|')[0].trim()
-        
+
+        // Check if video was recently processed (dataset will be set)
+        // Otherwise use the original checked_by value
+        let current_checked_by = clicked_span.dataset.checkedBy ? clicked_span.dataset.checkedBy : checked_by
+
         // checks if the video has been approved or rejected
         const conditions = [`${file_name}done`, 'done', `${file_name}close`, 'close']
-        allow_edit_and_show_qa({checked_by:checked_by, project_type:project_type, 
+        allow_edit_and_show_qa({checked_by:current_checked_by, project_type:project_type,
             file_name:file_name, cluster_keywords:cluster_keywords, question_tag:question_tag})
         
     })
@@ -371,22 +699,35 @@ function allow_edit_and_show_qa({checked_by=null, project_type=null,
                 method: 'GET'
             }).then(response => response.json())
             .then((data)=>{
-                
-                
+
+
                 let quest_ans_data = data['data']
-                
+
                 question_tag.innerHTML = ""
                 question_tag.className = "qs_default"
                 let question_and_answers = prepare_quest_answer_resp({quest_ans_data:quest_ans_data})
-                question_tag.appendChild(question_and_answers)            
-        })     
-    }
-        let edit_btn_div = create_edit_btn({file_name:file_name, cluster_keywords:cluster_keywords, project_type:project_type})
-        let edit_reponse_div = document.querySelector('#edit-reponse')
-        let action_control = document.querySelector('#action-control')
-        edit_reponse_div.innerHTML = ""
-        action_control.innerHTML = ""
-        edit_reponse_div.appendChild(edit_btn_div)
+                question_tag.appendChild(question_and_answers)
+
+                // Create edit button AFTER Q&A data is loaded and displayed
+                let edit_btn_div = create_edit_btn({file_name:file_name, cluster_keywords:cluster_keywords, project_type:project_type})
+                let edit_reponse_div = document.querySelector('#edit-reponse')
+                let action_control = document.querySelector('#action-control')
+                edit_reponse_div.innerHTML = ""
+                action_control.innerHTML = ""
+                action_control.appendChild(edit_btn_div)
+            })
+            .catch((error) => {
+                console.error('Error fetching Q&A data:', error)
+            })
+        } else {
+            // For non-video_qa projects that are processed, show edit button
+            let edit_btn_div = create_edit_btn({file_name:file_name, cluster_keywords:cluster_keywords, project_type:project_type})
+            let edit_reponse_div = document.querySelector('#edit-reponse')
+            let action_control = document.querySelector('#action-control')
+            edit_reponse_div.innerHTML = ""
+            action_control.innerHTML = ""
+            action_control.appendChild(edit_btn_div)
+        }
     }
 
     else {
@@ -435,7 +776,7 @@ function allow_edit_and_show_qa({checked_by=null, project_type=null,
 
 
 function fecth_all_videos_in_category(endpoint, assoc_category){
-    
+
     endpoint = endpoint+assoc_category
     let video_list_disp = document.getElementById('video_list_disp')
     video_list_disp.innerHTML = ""
@@ -446,10 +787,10 @@ function fecth_all_videos_in_category(endpoint, assoc_category){
     .then((data)=>{
         let serialized_videos = data['serialized_videos']
         var project_type = data['project_type']
-        
+
         serialized_videos.forEach((video)=>{
             // console.log("video['fields']", video['fields']);
-            
+
             let video_fields = video['fields']
 
             let checked_by = video_fields['checked_by']
@@ -464,17 +805,22 @@ function fecth_all_videos_in_category(endpoint, assoc_category){
 
             let cur_span = create_vidlist_disp_span(file_name, checked_by, status,
                  video_url, video_similarity_score, keywords, assoc_category, project_type, youtube_vid_id)
-          
-            
-            
+
+
+
             video_list_disp.appendChild(cur_span)
 
-            
-        })  
-        // Function that gets the next unprocessed video and displays it 
+
+        })
+
+        // Hide loading indicator and update video count
+        hideLoadingIndicator()
+        updateVideoCountLabel(serialized_videos.length)
+
+        // Function that gets the next unprocessed video and displays it
         // Once a category is clicked
         get_next_video({assoc_category:assoc_category, project_type:project_type})
-    })  
+    })
 }
 
 
@@ -498,8 +844,8 @@ cat_headings.forEach((elem)=>{
     // console.log("full_get_videos_per_category ", full_get_videos_per_category);
     
     elem.addEventListener('click', ()=>{
-      
-        
+
+
         let assoc_category = category.split('|')[0].trim()
         // remove active class from all but the current video
         cat_headings.forEach((elem)=>{
@@ -507,15 +853,41 @@ cat_headings.forEach((elem)=>{
         })
         elem.classList.add('active')
         let cluster_id_i = document.createElement('i')
-       
+
         cluster_id_i.textContent = cluster_id
         cluster_id_i.classList.add("visibility_hidden")
-       
-        cat_name.textContent = category
-        
+
+        // Update panel title with category name and progress
+        let cleanCategory = assoc_category.trim()
+
+        // Extract progress info from category text (format: "keyword |remaining/total ...")
+        let progressMatch = category.match(/\|(\d+\/\d+)/)
+        let progressText = progressMatch ? progressMatch[0] : ''
+
+        // Create styled category label with progress badge
+        cat_name.innerHTML = `
+            <span class="category-label-text">${cleanCategory}</span>
+            ${progressText ? `<span class="category-label-progress">${progressText}</span>` : ''}
+        `
+
+        // Show loading indicator
+        const loadingIndicator = document.getElementById('videos_loading')
+        if (loadingIndicator) {
+            loadingIndicator.style.display = 'flex'
+        }
+
+        // Hide empty state
+        const emptyState = document.getElementById('video_list_empty')
+        if (emptyState) {
+            emptyState.style.display = 'none'
+        }
+
+        // Reset preview status
+        updatePreviewStatus('idle', 'Ready')
+
         // console.log("cat", category, "cluster", cluster_group);
-        
-        cat_name.classList.add('tm_headings')
+
+        cat_name.classList.remove('tm_headings')
         fecth_all_videos_in_category(get_videos_per_category, assoc_category)
         // fetch_vids(null, category=category, cluster_group=cluster_group)
         
@@ -527,28 +899,36 @@ cat_headings.forEach((elem)=>{
 
 function add_active_to_span(span_id, caller=''){
     function add_active(){
-        
-        let cur_span_id = 'li_'+span_id
-        let cur_span_tag = document.getElementById(cur_span_id)
-        // get parent of cur_span_tag, get her children and remove active class
-        let cur_span_tag_siblings = cur_span_tag.parentElement.childNodes
-        cur_span_tag_siblings.forEach(elem => {
-            // console.log('elem', elem);
+        let video_list = document.getElementById('video_list_disp')
+        if (!video_list) return
+
+        // Remove active class from all videos
+        let all_videos = video_list.querySelectorAll('.vid_name')
+        all_videos.forEach(elem => {
             elem.classList.remove('active')
-            
         })
 
-        cur_span_tag.classList.add('active')
-        // console.log('cur_span_tag', cur_span_tag.parentElement.childNodes);
+        // Find the first non-processed video (doesn't have 'processed-item' class)
+        let first_unprocessed = video_list.querySelector('.vid_name:not(.processed-item)')
+        if (first_unprocessed) {
+            first_unprocessed.classList.add('active')
+        } else {
+            // If all videos are processed, highlight the first one
+            let first_video = video_list.querySelector('.vid_name')
+            if (first_video) {
+                first_video.classList.add('active')
+            }
+        }
     }
     if (caller=='default'){
         // delay adding active until page is loaded
         setTimeout(add_active, 600)
-    }else{
-        add_active()
+    } else {
+        // Delay slightly to allow mark_good_bad animation to start
+        setTimeout(add_active, 50)
     }
-    
-    
+
+
 }
 
 function mark_good_bad(file_name, appr_rej) {
@@ -558,13 +938,39 @@ function mark_good_bad(file_name, appr_rej) {
     let cur_span_id = "li_"+file_name
     let cur_span = document.getElementById(cur_span_id)
 
-    if (appr_rej=='approve' && cur_span){
+    if (!cur_span) return cur_span
+
+    // Check if already marked by looking for existing icons - more robust than class check
+    let existingIcons = cur_span.querySelectorAll('i')
+    for (let icon of existingIcons) {
+        if (icon.textContent === 'done' || icon.textContent === 'close') {
+            return cur_span  // Already has an icon, don't add another
+        }
+    }
+
+    if (appr_rej=='approve'){
         cur_span.appendChild(inline_good)
     }
-    else if (appr_rej=='reject' && cur_span){
+    else if (appr_rej=='reject'){
         cur_span.appendChild(inline_bad)
     }
- 
+
+    // Mark as processed immediately so add_active_to_span can skip it
+    cur_span.classList.add('processed-item')
+
+    // Animate to bottom of list
+    let parent = cur_span.parentElement
+    if (parent) {
+        // Add transition class for smooth animation
+        cur_span.classList.add('moving-to-bottom')
+
+        // After animation completes, move to bottom
+        setTimeout(() => {
+            cur_span.classList.remove('moving-to-bottom')
+            parent.appendChild(cur_span)
+        }, 400)
+    }
+
     return cur_span
 }
 
@@ -631,7 +1037,7 @@ function show_mark_unavailable({project_type, project_name, file_name, category}
 
 }
 
-function show_video_in_preview({prev_file_name=null, assoc_category = null, data=null, appr_rej=null, caller='', project_type=null, isAdmin=null}){    
+function show_video_in_preview({prev_file_name=null, assoc_category = null, data=null, appr_rej=null, caller='', project_type=null, isAdmin=null}){
     const[span_heading, br_elem, span_category] = create_vidname_category_spans(assoc_category)
     let vid_preview = document.getElementById('vid_preview')
     let vid_tag = document.getElementById('vid_tag')
@@ -639,9 +1045,40 @@ function show_video_in_preview({prev_file_name=null, assoc_category = null, data
     video_name.innerHTML = ""
     vid_tag.innerHTML = ""
 
-    let next_video = data["serialized_next_video"][0]
-    
+    // Check if there are no more videos to process
+    let serialized_videos = data["serialized_next_video"]
+    if (!serialized_videos || serialized_videos.length === 0) {
+        // No more videos in this category
+        span_heading.textContent = "No more videos to process"
+        video_name.appendChild(span_heading)
 
+        // Only show completion message if ALL videos in the category are processed
+        let rem_total_per_category = data["rem_total_per_category"] || [0, 0]
+        let unprocessed_count = rem_total_per_category[0]
+
+        if (unprocessed_count === 0) {
+            let no_videos_msg = document.createElement('p')
+            no_videos_msg.textContent = "You have completed all videos in this category!"
+            no_videos_msg.style.textAlign = "center"
+            no_videos_msg.style.color = "green"
+            no_videos_msg.style.fontWeight = "bold"
+            vid_tag.appendChild(no_videos_msg)
+        }
+
+        // Return appropriate payload for the caller
+        if (caller === 'appr_rej') {
+            let user_all_processed = data["user_all_processed"] || [0, 0]
+            if (!isAdmin) {
+                mark_good_bad(prev_file_name, appr_rej)
+                return [null, rem_total_per_category[0], rem_total_per_category[1], null, user_all_processed]
+            } else {
+                return [rem_total_per_category, user_all_processed]
+            }
+        }
+        return null
+    }
+
+    let next_video = serialized_videos[0]
     let video_fields = next_video['fields']
     let file_name = video_fields['file_name']
     let video_url = video_fields['video_path'] 
@@ -660,18 +1097,28 @@ function show_video_in_preview({prev_file_name=null, assoc_category = null, data
     video_name.appendChild(br_elem)
     video_name.appendChild(span_category)
 
-    if (video_url != ''){
+    // Prioritize YouTube videos if youtube_vid_id exists
+    if (youtube_vid_id && youtube_vid_id !== 'null' && youtube_vid_id !== 'None') {
+        let iframe = create_youtube_iframe(youtube_vid_id)
+        vid_tag.appendChild(iframe)
+        hideVideoPlaceholder()
+        updatePreviewStatus('playing', 'Playing')
+    }
+    else if (video_url && video_url !== '' && video_url !== 'None' && video_url !== 'null') {
         const video = create_video_tag()
         let video_path = base_vid_src+video_url+'/'+`${file_name}`
         video.src = video_path
         vid_tag.appendChild(video)
+        hideVideoPlaceholder()
+        updatePreviewStatus('playing', 'Playing')
     }
-    else{
-        let iframe = create_youtube_iframe(youtube_vid_id)
-        vid_tag.appendChild(iframe)
+    else {
+        console.warn('No valid video source found for:', file_name)
+        showVideoPlaceholder()
+        updatePreviewStatus('idle', 'No video')
     }
- 
-    
+
+
     if (project_type=='video_qa'){
         
         var action_div = create_qa_btn_controls()
@@ -775,24 +1222,46 @@ function get_next_video_appr_rej({file_name=null, assoc_category=null, appr_rej=
     })
     .then(response => response.json())
     .then((data)=>{
-        
+
         if (!isAdmin){
             let vid_tag = document.querySelector('#vid_tag')
             if (vid_tag.contains(document.querySelector('iframe'))){
-                isIframe = true  
+                isIframe = true
             }
-            const[file_name_, unprocessed_vids, total_vids, html_node_vid_list, user_all_processed] = show_video_in_preview({prev_file_name:prev_file_name,  assoc_category:assoc_category, data:data, appr_rej:appr_rej, caller:'appr_rej', isAdmin:isAdmin, project_type:project_type})
-            
+            const result = show_video_in_preview({prev_file_name:prev_file_name,  assoc_category:assoc_category, data:data, appr_rej:appr_rej, caller:'appr_rej', isAdmin:isAdmin, project_type:project_type})
+
+            // Handle case when no more videos
+            if (!result || result[0] === null) {
+                // Update progress counters even when no more videos
+                let user_all_processed = result ? result[4] : [0, 0]
+                let unprocessed_vids = result ? result[1] : 0
+                let total_vids = result ? result[2] : 0
+
+                let all_processed = user_all_processed[1]
+                let user_processed = user_all_processed[0]
+
+                let processed_by_user_div = document.getElementById('processed_by_user_div')
+                let processed_by_all_div = document.getElementById('processed_by_all_div')
+
+                replace_rem_total_per_category({unprocessed_vids:unprocessed_vids, total_vids:total_vids})
+
+                let kwargs = {user_processed:user_processed, all_processed:all_processed, processed_by_user_div:processed_by_user_div, processed_by_all_div:processed_by_all_div}
+                replace_processed_by_all_and_user(kwargs)
+                return
+            }
+
+            const[file_name_, unprocessed_vids, total_vids, html_node_vid_list, user_all_processed] = result
+
             let all_processed = user_all_processed[1]
             let user_processed = user_all_processed[0]
-            
+
             // replace the progress  span on video_list_disp div
             let processed_by_user_div = document.getElementById('processed_by_user_div')
             let processed_by_all_div = document.getElementById('processed_by_all_div')
-            
+
             replace_rem_total_per_category({unprocessed_vids:unprocessed_vids, total_vids:total_vids})
-            let html_node_category = document.getElementsByClassName('cat_headings active')[0]    
-            
+            let html_node_category = document.getElementsByClassName('cat_headings active')[0]
+
             let kwargs = {user_processed:user_processed, all_processed:all_processed, processed_by_user_div:processed_by_user_div, processed_by_all_div:processed_by_all_div}
             replace_processed_by_all_and_user(kwargs)
             add_active_to_span(file_name_)
@@ -919,29 +1388,61 @@ var create_apr_rej = function appr_rej({file_name=null, assoc_category=null, cal
     approve_input.className = 'nist-button btn_apr_rej'
 
     approve_input.addEventListener('click', ()=>{
-        
-        try {
-            let end_annotation = document.getElementById('end-annotation')
-            let end_annotation_inner_text = end_annotation.innerText.trim()
-            if (end_annotation_inner_text == 'Restart Annotation' ){//user had already finished job so he must restart
-                const appr_rej = 'approve'
+        // Get project type
+        let project_type_elem = document.querySelector('#project_type')
+        let current_project_type = project_type_elem ? project_type_elem.innerText.trim() : project_type
+
+        // For video_qa projects, use different logic (admin review - don't load next video)
+        if (current_project_type === 'video_qa') {
+            console.log('Approving video_qa:', file_name, assoc_category)
+
+            // Mark video as approved in database without loading next video
+            let form_csrf_token = document.querySelector('#form-csrf-token')
+            let csrf_token_element = form_csrf_token.elements[0]
+            let csrf_token = csrf_token_element.value
+
+            let formData = new FormData()
+            formData.append('csrfmiddlewaretoken', csrf_token)
+            formData.append('file_name', file_name)
+            formData.append('cluster_keywords', assoc_category)
+            formData.append('appr_rej', 'approve')
+
+            fetch(`${base_url}/admin_approve_reject_video`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Mark the video as approved in the sidebar
+                    mark_good_bad(file_name, 'approve')
+                    console.log('Video approved successfully')
+                } else {
+                    console.error('Error approving video:', data.message)
+                }
+            })
+            .catch(error => {
+                console.error('Error approving video:', error)
+            })
+        } else {
+            // Original annotation project logic
+            try {
                 let end_annotation = document.getElementById('end-annotation')
-                // console.log('annotation_ended', end_annotation);
-                
-                let message =  "You already finished annotation. Do you want to restart?" 
-                // get_next_video_appr_rej(file_name, assoc_category, appr_rej, add_active_to_span)
-                customConfirm({message:message, target_elem:end_annotation, callback:handle_confirm_yes_or_no, appr_rej:appr_rej, file_name:file_name, assoc_category:assoc_category, callback2:add_active_to_span}) ;
-            }else{
-                
+                let end_annotation_inner_text = end_annotation.innerText.trim()
+                if (end_annotation_inner_text == 'Restart Annotation' ){//user had already finished job so he must restart
+                    const appr_rej = 'approve'
+                    let end_annotation = document.getElementById('end-annotation')
+
+                    let message =  "You already finished annotation. Do you want to restart?"
+                    customConfirm({message:message, target_elem:end_annotation, callback:handle_confirm_yes_or_no, appr_rej:appr_rej, file_name:file_name, assoc_category:assoc_category, callback2:add_active_to_span}) ;
+                }else{
+                    get_next_video({file_name: file_name, assoc_category: assoc_category, appr_rej: 'approve'})
+                }
+            } catch (error){
+                console.log("from admin apr", error);
                 get_next_video({file_name: file_name, assoc_category: assoc_category, appr_rej: 'approve'})
             }
-        } catch (error){
-            console.log("from admin apr", error);
-           
-            get_next_video({file_name: file_name, assoc_category: assoc_category, appr_rej: 'approve'})
-            
         }
-        
     })
     div.appendChild(approve_input)
 
@@ -954,39 +1455,67 @@ var create_apr_rej = function appr_rej({file_name=null, assoc_category=null, cal
     
 
     reject_input.addEventListener('click', ()=>{
-        
-        try {
-            let end_annotation = document.getElementById('end-annotation')
-            let end_annotation_inner_text = end_annotation.innerText.trim()
-            if (end_annotation_inner_text == 'Restart Annotation' ){
-                const appr_rej = 'reject'
+        // Get project type
+        let project_type_elem = document.querySelector('#project_type')
+        let current_project_type = project_type_elem ? project_type_elem.innerText.trim() : project_type
+
+        // For video_qa projects, use different logic (admin review - don't load next video)
+        if (current_project_type === 'video_qa') {
+            console.log('Rejecting video_qa:', file_name, assoc_category)
+
+            // Mark video as rejected in database without loading next video
+            let form_csrf_token = document.querySelector('#form-csrf-token')
+            let csrf_token_element = form_csrf_token.elements[0]
+            let csrf_token = csrf_token_element.value
+
+            let formData = new FormData()
+            formData.append('csrfmiddlewaretoken', csrf_token)
+            formData.append('file_name', file_name)
+            formData.append('cluster_keywords', assoc_category)
+            formData.append('appr_rej', 'reject')
+
+            fetch(`${base_url}/admin_approve_reject_video`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Mark the video as rejected in the sidebar
+                    mark_good_bad(file_name, 'reject')
+                    console.log('Video rejected successfully')
+                } else {
+                    console.error('Error rejecting video:', data.message)
+                }
+            })
+            .catch(error => {
+                console.error('Error rejecting video:', error)
+            })
+        } else {
+            // Original annotation project logic
+            try {
                 let end_annotation = document.getElementById('end-annotation')
-                // console.log('annotation_ended', end_annotation);
-                
-                let message =  "You already finished annotation. Do you want to restart?" 
-                customConfirm({message:message, target_elem:end_annotation, callback:handle_confirm_yes_or_no, appr_rej:appr_rej, file_name:file_name, assoc_category:assoc_category, callback2:add_active_to_span}) ;
-            }else{
+                let end_annotation_inner_text = end_annotation.innerText.trim()
+                if (end_annotation_inner_text == 'Restart Annotation' ){
+                    const appr_rej = 'reject'
+                    let end_annotation = document.getElementById('end-annotation')
+                    // console.log('annotation_ended', end_annotation);
+
+                    let message =  "You already finished annotation. Do you want to restart?"
+                    customConfirm({message:message, target_elem:end_annotation, callback:handle_confirm_yes_or_no, appr_rej:appr_rej, file_name:file_name, assoc_category:assoc_category, callback2:add_active_to_span}) ;
+                }else{
+                    get_next_video({file_name: file_name, assoc_category: assoc_category, appr_rej: 'reject'})
+                }
+            } catch (error){
+                console.log("from admin rej",error);
                 get_next_video({file_name: file_name, assoc_category: assoc_category, appr_rej: 'reject'})
             }
-        } catch (error){
-            console.log("from admin rej",error);
-          
-            get_next_video({file_name: file_name, assoc_category: assoc_category, appr_rej: 'reject'})
-            
-        }
-        // replaces the values of job summary with current values
-        // run thi callback only if called from admin page
 
-        // let project_type = document.querySelector('#project_type')
-        // console.log("project_type", project_type);
-        if (document.querySelector('#project_type')){
-            handle_show_job_summary()
+            // Update job summary for annotation projects
+            if (document.querySelector('#project_type')){
+                handle_show_job_summary()
+            }
         }
-        
-        
-        
-        
-      
     })
     div.appendChild(reject_input)
 
@@ -997,7 +1526,14 @@ function create_qa_edit_form_elem({id=null, label=null, value=null, submit=null}
     let parentDiv = document.createElement('div')
     parentDiv.classList.add('row-align')
 
-    
+    // Style for grid layout
+    parentDiv.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    `
+
+
     if (submit) {
         let label_div = document.createElement('div')
         label_div.classList.add('form-label')
@@ -1023,17 +1559,17 @@ function create_qa_edit_form_elem({id=null, label=null, value=null, submit=null}
                 let payload = submit_video_qa_form({isEdit:true})
                 // replace the old values of the the vide
                 // with user provided values
-                
+
             }else{
-                // retrieve next video 
+                // retrieve next video
                 submit_video_qa_form()
                 retrieve_next_video_qa()
             }
-            
-        
-            
-           
-            
+
+
+
+
+
         })
         submit_elem_div.append(submit_btn)
         parentDiv.appendChild(submit_elem_div)
@@ -1056,8 +1592,14 @@ function create_qa_edit_form_elem({id=null, label=null, value=null, submit=null}
         text_area.setAttribute('name', `${label.toLowerCase()}`);
         text_area.setAttribute('id', `${label.toLowerCase()}`);
         text_area.setAttribute('class', 'video_qa_vals')
-        text_area.setAttribute('cols', '50');
-        text_area.setAttribute('rows', '10');
+        // Make textarea responsive and compact for grid layout
+        text_area.style.cssText = `
+            width: 100%;
+            min-height: 80px;
+            resize: vertical;
+            box-sizing: border-box;
+        `
+        text_area.setAttribute('rows', '3');
         text_area.innerText = value
         // text_area.setAttribute('placeholder', `${value}`);
         form_input_div.appendChild(text_area)
@@ -1073,29 +1615,46 @@ function create_qa_edit_form_elem({id=null, label=null, value=null, submit=null}
 let default_question = null
 function create_edit_btn({file_name:file_name, cluster_keywords:cluster_keywords, project_type:project_type}){
 
-    let  app_rej_btn_div = create_apr_rej({file_name:file_name, cluster_keywords:cluster_keywords , caller:"appr_rej_admin"})
-    
+    // Create approve/reject buttons for annotation projects only
+    let app_rej_btn_div = create_apr_rej({file_name:file_name, assoc_category:cluster_keywords , caller:"appr_rej_admin"})
+
     let div = document.createElement('div')
     div.id = 'edit_res'
-    div.style.textAlign = 'center'
-    
 
     let btn = document.createElement('input')
     btn.type = 'button'
     btn.value = 'edit response'
     btn.classList.add('nist-button')
+    btn.style.cssText = 'display: block; visibility: visible; opacity: 1;'
 
     btn.addEventListener('click', ()=>{
         let edit_div = document.getElementById('edit_res')
         if (project_type=='video_qa'){
             let parent_div = document.querySelector('#question_tag')
-            // create_qa_edit_form_elem({id=null, label=null, value=null}
-            let qa_label = document.querySelectorAll('.qa_label')
-            let qa_value = document.querySelectorAll('.qa_value')
-            let qa_ids = document.querySelectorAll('.qa_ids')
+
+            // Query within parent_div to find the Q&A elements for this specific video
+            // Note: Classes use hyphens (qa-label, qa-value) not underscores
+            let qa_label = parent_div.querySelectorAll('.qa-label')
+            let qa_value = parent_div.querySelectorAll('.qa-value')
+            let qa_ids = parent_div.querySelectorAll('.qa_ids')
+
+            // Check if Q&A elements were found - only when entering edit mode
+            if (qa_label.length === 0 && parent_div.classList.contains('qs_default')) {
+                console.error('No Q&A elements found to edit')
+                return
+            }
+
             let qa_form = document.createElement('form')
             qa_form.method = "post"
             qa_form.id = "video_qs_form"
+
+            // Add CSS Grid layout for compact 2-row display
+            qa_form.style.cssText = `
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 15px;
+                align-items: start;
+            `
 
             for (let i=0; i<qa_label.length; i++){
                 let cur_label = qa_label[i].innerText.split(':').at(0)
@@ -1103,49 +1662,59 @@ function create_edit_btn({file_name:file_name, cluster_keywords:cluster_keywords
                 let cur_id = qa_ids[i].id
                 let cur_form_div = create_qa_edit_form_elem({id:cur_id, label:cur_label, value:cur_value})
                 qa_form.appendChild(cur_form_div)
-                
+
             }
             let submit_row = create_qa_edit_form_elem({id:'submit', label:"Send QandA", value:"Submit", submit:true})
             qa_form.appendChild(submit_row)
-            // console.log("parent_div", parent_div);
-            
-            // retrieve the old video qs data in 
+
+            // retrieve the old video qs data in
             // case the user decides not to edit anymore
-            if (parent_div.classList.contains('qs_default')){            
+            if (parent_div.classList.contains('qs_default')){
                 //save the current inner html
                 default_question = parent_div.innerHTML
                 parent_div.innerHTML = ""
                 parent_div.appendChild(qa_form)
-                let edit_btn = document.querySelector('#edit_res input')
-                edit_btn.value = "close edit"
-                
+
+                // Change button text to "close edit"
+                btn.value = "close edit"
+                btn.style.backgroundColor = '#f59e0b'  // Orange color to indicate edit mode
+                btn.style.color = '#ffffff'
+
                 // remove the class list
                 parent_div.classList.remove('qs_default')
-                
+
             }else{
                 parent_div.innerHTML = ""
                 parent_div.innerHTML = default_question
-                let edit_btn = document.querySelector('#edit_res input')
-                edit_btn.value = "edit response"
-                parent_div.className = 'qs_default'
+
+                // Change button text back to "edit response"
+                btn.value = "edit response"
+                btn.style.backgroundColor = ''  // Reset to default
+                btn.style.color = ''
+
+                parent_div.classList.add('qs_default')
             }
-            
-            
+
+
         }
         else{
-
+            // For annotation projects, toggle approve/reject buttons
             let action_control = document.querySelector('#action-control')
-            if (action_control.innerHTML == ""){
-                action_control.appendChild(app_rej_btn_div)
-            }else{
-                action_control.innerHTML = ""
-            }
-            // action_control.innerHTML = ""
-            
+            let existing_apr_rej = document.getElementById('apr_rej_btn_div')
+            let edit_btn_div = document.getElementById('edit_res')
 
+            if (existing_apr_rej){
+                // Hide approve/reject buttons
+                existing_apr_rej.remove()
+                btn.value = 'edit response'
+            } else if (app_rej_btn_div) {
+                // Show approve/reject buttons before the edit button (only for annotation projects)
+                action_control.insertBefore(app_rej_btn_div, edit_btn_div)
+                btn.value = 'close'
+            }
         }
-        
-        
+
+
     })
 
     div.appendChild(btn)
@@ -1156,4 +1725,4 @@ function create_edit_btn({file_name:file_name, cluster_keywords:cluster_keywords
 
 export {base_url, get_next_video_appr_rej, create_apr_rej, create_vidname_category_spans,
      create_video_tag, prepare_quest_answer_resp, create_edit_btn, create_qa_btn_controls,
-    create_video_QA_form, allow_edit_and_show_qa, add_active_to_span, show_mark_unavailable, create_youtube_iframe}
+    create_video_QA_form, allow_edit_and_show_qa, add_active_to_span, show_mark_unavailable, create_youtube_iframe, mark_good_bad}

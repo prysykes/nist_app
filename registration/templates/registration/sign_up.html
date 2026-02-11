@@ -1,81 +1,152 @@
-{% extends "base.html" %}
+{% load static %}
 
-{% block section %}
-        <div class="section">
-            <h1 class="tm_headings">NIST Automatic Video Anotation Application</h1>
-            
-            <div class="text-align-center">
-                
-
-                {% block main %}
-                <div class="tm_vid_main">
-                    
-
-                    {% block video_preview %}
-                    <div id="tm_preview">
-                        
-                        <div id="p-signup-form">
-                            <form  action="" method="POST" enctype="multipart/form-data">{% csrf_token %}
-                              <div class="form-column">
-                                <div class="form-row">
-                                  <h3> Registration Form</h3>
-                                  <hr>
-                                </div>
-                                <div class="form-row">
-                                  <div class="row-align" > 
-                                    <div>{{userreg_form.project_name.label}} </div>
-                                    <div> {{userreg_form.project_name}}</div>
-                                  </div>
-                                  <div class="row-align" > 
-                                    <div>{{userreg_form.project_type.label}} </div>
-                                    <div> {{userreg_form.project_type}}</div>
-                                  </div>
-                                  <div class="row-align" > 
-                                    <div>{{userreg_form.is_job_admin.label}} </div>
-                                    <div> {{userreg_form.is_job_admin}}</div>
-                                  </div>
-                                  <div class="row-align"> 
-                                    <div>{{registration_form.first_name.label}} </div>
-                                    <div> {{registration_form.first_name}}</div>  
-                                  </div>
-                                  <div class="row-align"> 
-                                    <div>{{registration_form.last_name.label}} </div>
-                                    <div> {{registration_form.last_name}} </div>  
-                                  </div>
-                                  <div class="row-align"> 
-                                    <div>{{registration_form.username.label}} </div>
-                                    <div> {{registration_form.username}} </div>  
-                                  </div>
-                                  <div class="row-align"> 
-                                    <div>{{registration_form.email.label}} </div>
-                                     <div> {{registration_form.email}} </div>  
-                                  </div>
-                                  <div class="row-align"> 
-                                    <div>{{registration_form.password1.label}} </div>
-                                    <div> {{registration_form.password1}} </div> 
-                                  </div>
-                                  <div class="row-align"> 
-                                    <div>{{registration_form.password2.label}} </div>
-                                    <div> {{registration_form.password2}} </div> 
-                                  </div>
-                                </div>
-                                <div class="form-row row-align">
-                                  <input name="signup" class="nist-button" type="submit" value="Sign-Up"> 
-                                 
-                                </div>
-                                
-                              </div>
-                
-                            </form>
-                            
-                          </div>
-                    </div>
-                    {% endblock video_preview %}
-                    
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{% static '/css/styles.css' %}">
+    <link rel="stylesheet" href="{% static '/css/auth.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Sign Up - NIST Video Annotation</title>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+            min-height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card signup-card">
+            <!-- Header -->
+            <div class="auth-header">
+                <div class="auth-logo">
+                    <span class="auth-logo-text">N</span>
                 </div>
-                {% endblock main %}
+                <h1 class="auth-title">Create Account</h1>
+                <p class="auth-subtitle">Join the NIST Video Annotation Platform</p>
             </div>
-           
+
+            <!-- Messages -->
+            {% if messages %}
+            <div class="messages-container">
+                {% for message in messages %}
+                <div class="message {{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Registration Form -->
+            <form action="" method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <!-- Project Information Section -->
+                <div class="auth-section-header">Project Information</div>
+
+                <div class="auth-form-group">
+                    <label for="id_project_name">{{ userreg_form.project_name.label }}</label>
+                    {{ userreg_form.project_name }}
+                    {% if userreg_form.project_name.help_text %}
+                    <p class="password-hint">{{ userreg_form.project_name.help_text }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="auth-form-row">
+                    <div class="auth-form-group">
+                        <label for="id_project_type">{{ userreg_form.project_type.label }}</label>
+                        {{ userreg_form.project_type }}
+                    </div>
+
+                    <div class="auth-form-group">
+                        <label>&nbsp;</label>
+                        <div class="auth-checkbox-group" style="height: 48px; display: flex; align-items: center;">
+                            {{ userreg_form.is_job_admin }}
+                            <label for="id_is_job_admin" style="margin: 0;">{{ userreg_form.is_job_admin.label }}</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Personal Information Section -->
+                <div class="auth-section-header">Personal Information</div>
+
+                <div class="auth-form-row">
+                    <div class="auth-form-group">
+                        <label for="id_first_name">{{ registration_form.first_name.label }}</label>
+                        {{ registration_form.first_name }}
+                    </div>
+
+                    <div class="auth-form-group">
+                        <label for="id_last_name">{{ registration_form.last_name.label }}</label>
+                        {{ registration_form.last_name }}
+                    </div>
+                </div>
+
+                <div class="auth-form-group">
+                    <label for="id_username">{{ registration_form.username.label }}</label>
+                    {{ registration_form.username }}
+                    {% if registration_form.username.help_text %}
+                    <p class="password-hint">{{ registration_form.username.help_text|striptags }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="auth-form-group">
+                    <label for="id_email">{{ registration_form.email.label }}</label>
+                    {{ registration_form.email }}
+                </div>
+
+                <!-- Security Section -->
+                <div class="auth-section-header">Security</div>
+
+                <div class="auth-form-group">
+                    <label for="id_password1">{{ registration_form.password1.label }}</label>
+                    {{ registration_form.password1 }}
+                    {% if registration_form.password1.help_text %}
+                    <p class="password-hint">{{ registration_form.password1.help_text|striptags }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="auth-form-group">
+                    <label for="id_password2">{{ registration_form.password2.label }}</label>
+                    {{ registration_form.password2 }}
+                    {% if registration_form.password2.help_text %}
+                    <p class="password-hint">{{ registration_form.password2.help_text|striptags }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Form Errors -->
+                {% if registration_form.errors or userreg_form.errors %}
+                <div class="auth-message error">
+                    <span>Please correct the errors below:</span>
+                    <ul style="margin: 8px 0 0 0; padding-left: 20px;">
+                        {% for field, errors in registration_form.errors.items %}
+                            {% for error in errors %}
+                            <li>{{ field|title }}: {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                        {% for field, errors in userreg_form.errors.items %}
+                            {% for error in errors %}
+                            <li>{{ field|title }}: {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <button type="submit" name="signup" class="auth-submit-btn">
+                    Create Account
+                </button>
+            </form>
+
+            <!-- Footer -->
+            <div class="auth-footer">
+                <p class="auth-footer-text">
+                    Already have an account?
+                    <a href="/" class="auth-footer-link">Sign In</a>
+                </p>
+            </div>
         </div>
-        
-    {% endblock section %}
+    </div>
+</body>
+</html>
