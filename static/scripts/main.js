@@ -46,25 +46,26 @@ function updateDashboardStats() {
 
     if (!totalCompletedElem || !totalPendingElem) return
 
-    // Get all progress elements that show remaining/total format
+    // Get all progress elements that show approved/rejected/total format
     const progressElements = document.querySelectorAll('.progress-text.progress')
 
-    let totalRemaining = 0
+    let totalApproved = 0
+    let totalRejected = 0
     let totalVideos = 0
 
     progressElements.forEach(elem => {
-        // Text format is "|remaining/total" - extract the numbers
+        // Text format is "a-N/r-N/t-N" - extract the numbers
         const text = elem.textContent.trim()
-        const match = text.match(/\|?(\d+)\/(\d+)/)
+        const match = text.match(/a-(\d+)\/r-(\d+)\/t-(\d+)/)
         if (match) {
-            const remaining = parseInt(match[1])
-            const total = parseInt(match[2])
-            totalRemaining += remaining
-            totalVideos += total
+            totalApproved += parseInt(match[1])
+            totalRejected += parseInt(match[2])
+            totalVideos += parseInt(match[3])
         }
     })
 
-    const totalCompleted = totalVideos - totalRemaining
+    const totalCompleted = totalApproved + totalRejected
+    const totalRemaining = totalVideos - totalCompleted
 
     totalCompletedElem.textContent = totalCompleted
     totalPendingElem.textContent = totalRemaining
@@ -664,8 +665,8 @@ function create_vidlist_disp_span(file_name, checked_by, status, video_url, vide
         
 
         var question_tag = document.querySelector('#question_tag')
-        let cluster_keywords = document.querySelector('#cat_name')
-        cluster_keywords = cluster_keywords.textContent.split('|')[0].trim()
+        let cluster_keywords = document.querySelector('#cat_name .category-label-text')
+        cluster_keywords = cluster_keywords ? cluster_keywords.textContent.trim() : document.querySelector('#cat_name').textContent.trim()
 
         // Check if video was recently processed (dataset will be set)
         // Otherwise use the original checked_by value
@@ -753,9 +754,8 @@ function allow_edit_and_show_qa({checked_by=null, project_type=null,
 
         if (project_type == 'video_qa'){
             // adds mark as unavailable when a video is clicked
-            let category = document.querySelector('#cat_name').innerText.split('|')[0].trim()
-        //     const category_h3 = document.getElementById('cat_name')
-        // const category = category_h3.textContent.split('|')[0]
+            let catLabel = document.querySelector('#cat_name .category-label-text')
+            let category = catLabel ? catLabel.textContent.trim() : document.querySelector('#cat_name').textContent.trim()
             let project_name = category.split('_')[0]
       
             let kwargs = {project_type:project_type, project_name:project_name, file_name:file_name, category:category}
@@ -781,7 +781,8 @@ function fecth_all_videos_in_category(endpoint, assoc_category){
     let video_list_disp = document.getElementById('video_list_disp')
     video_list_disp.innerHTML = ""
     const response = fetch(endpoint, {
-        method: 'GET'
+        method: 'GET',
+        cache: 'no-store'
     })
     .then(response => response.json())
     .then((data)=>{
@@ -829,9 +830,6 @@ cat_headings.forEach((elem)=>{
     let cluster_id = elem.querySelector('.cluster_id').textContent
     let cluster_group = elem.querySelector('.cluster_group').textContent
    
-    let text_content = elem.innerText
-    let category = text_content.split('-')[0]
-    // let term = category.trim().split('|')[0]
     let term = cluster_id
     
     
@@ -846,7 +844,7 @@ cat_headings.forEach((elem)=>{
     elem.addEventListener('click', ()=>{
 
 
-        let assoc_category = category.split('|')[0].trim()
+        let assoc_category = elem.querySelector('.category-name').textContent.trim()
         // remove active class from all but the current video
         cat_headings.forEach((elem)=>{
             elem.classList.remove('active')
@@ -860,9 +858,13 @@ cat_headings.forEach((elem)=>{
         // Update panel title with category name and progress
         let cleanCategory = assoc_category.trim()
 
-        // Extract progress info from category text (format: "keyword |remaining/total ...")
-        let progressMatch = category.match(/\|(\d+\/\d+)/)
-        let progressText = progressMatch ? progressMatch[0] : ''
+        // Extract progress info from the card's progress-text element (format: "approved/rejected/total")
+        let progressElem = elem.querySelector('.progress-text')
+        let progressText = ''
+        if (progressElem) {
+            let match = progressElem.textContent.trim().match(/a-\d+\/r-\d+\/t-\d+/)
+            progressText = match ? match[0] : ''
+        }
 
         // Create styled category label with progress badge
         cat_name.innerHTML = `
@@ -894,8 +896,111 @@ cat_headings.forEach((elem)=>{
         
    
     })
-    
+
 })
+
+// Bulk approve/reject on category card hover (annotation projects only)
+;(function initBulkCategoryActions() {
+    let projectTypeElem = document.querySelector('#project_type_user_pg')
+    if (!projectTypeElem) return
+    let projectType = projectTypeElem.textContent.trim()
+    if (projectType !== 'annotation') return
+
+    cat_headings.forEach((cardElem) => {
+        let bulkActionsDiv = cardElem.querySelector('.category-bulk-actions')
+        if (!bulkActionsDiv) return
+
+        let approveBtn = bulkActionsDiv.querySelector('.bulk-approve-btn')
+        let rejectBtn = bulkActionsDiv.querySelector('.bulk-reject-btn')
+
+        approveBtn.addEventListener('click', (e) => {
+            e.stopPropagation()
+            handleBulkAction(cardElem, 'approve')
+        })
+
+        rejectBtn.addEventListener('click', (e) => {
+            e.stopPropagation()
+            handleBulkAction(cardElem, 'reject')
+        })
+    })
+
+    function handleBulkAction(cardElem, action) {
+        let categoryName = cardElem.querySelector('.category-name').textContent.trim()
+        let encodedCategory = encodeURIComponent(categoryName)
+        let endpoint = `${base_url}/bulk_approve_reject_category?cluster_keywords=${encodedCategory}&action=${action}`
+
+        // Disable buttons during request
+        let btns = cardElem.querySelectorAll('.bulk-approve-btn, .bulk-reject-btn')
+        btns.forEach(b => { b.disabled = true; b.style.opacity = '0.5' })
+
+        fetch(endpoint, { method: 'GET', cache: 'no-store' })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        let errMsg = text
+                        try { errMsg = JSON.parse(text).error } catch(e) {}
+                        throw new Error(errMsg || `Server error ${response.status}`)
+                    })
+                }
+                return response.json()
+            })
+            .then((data) => {
+                if (!data || data.status !== 'success') {
+                    alert(`Bulk ${action} failed: ${(data && data.error) || 'Unknown error'}`)
+                    return
+                }
+
+                console.log(`Bulk ${action} result:`, `updated=${data.updated_count}`, `verified=${data.verified_count}`, `approved=${data.cat_approved} rejected=${data.cat_rejected} total=${data.total}`)
+
+                // Flash the card to give visual feedback
+                let flashColor = action === 'approve' ? '#d1fae5' : '#fee2e2'
+                cardElem.style.transition = 'background-color 0.3s'
+                cardElem.style.backgroundColor = flashColor
+                setTimeout(() => { cardElem.style.backgroundColor = '' }, 800)
+
+                // Update the progress text on the category card
+                let progressSpan = cardElem.querySelector('.progress-text')
+                if (progressSpan) {
+                    let svgContent = progressSpan.querySelector('svg')
+                    let svgHtml = svgContent ? svgContent.outerHTML : ''
+                    progressSpan.innerHTML = `${svgHtml} a-${data.cat_approved}/r-${data.cat_rejected}/t-${data.total}`
+                }
+
+                // Update global header progress counters
+                let processedByUserDiv = document.getElementById('processed_by_user_div')
+                if (processedByUserDiv) {
+                    let totalUserAssigned = processedByUserDiv.textContent.split('/')[1]
+                    processedByUserDiv.textContent = `${data.user_processed}/${totalUserAssigned}`
+                }
+
+                let processedByAllDiv = document.getElementById('processed_by_all_div')
+                if (processedByAllDiv) {
+                    let totalAll = processedByAllDiv.textContent.split('/')[1]
+                    processedByAllDiv.textContent = `${data.accepted_videos}/${totalAll}`
+                }
+
+                // Update approved/rejected counters
+                let userApprovedDiv = document.getElementById('user_approved_div')
+                if (userApprovedDiv) {
+                    userApprovedDiv.textContent = data.user_approved
+                }
+                let userRejectedDiv = document.getElementById('user_rejected_div')
+                if (userRejectedDiv) {
+                    userRejectedDiv.textContent = data.user_rejected
+                }
+
+                // Open this category and reload the video list from server
+                // so the user immediately sees all videos marked as approved/rejected
+                cardElem.click()
+            })
+            .catch((error) => {
+                alert(`Bulk ${action} error: ${error.message}`)
+            })
+            .finally(() => {
+                btns.forEach(b => { b.disabled = false; b.style.opacity = '' })
+            })
+    }
+})()
 
 function add_active_to_span(span_id, caller=''){
     function add_active(){
@@ -974,22 +1079,35 @@ function mark_good_bad(file_name, appr_rej) {
     return cur_span
 }
 
-function replace_rem_total_per_category({unprocessed_vids=null, total_vids=null, html_node_vid_list=null}){
+function replace_rem_total_per_category({approved_vids=null, rejected_vids=null, total_vids=null}){
     let vid_list_div = document.querySelector('#cat_name')
-    let text_content = vid_list_div.textContent
-    let cluster_keywords = text_content.split('|')[0]
-    let rem_total = `|${unprocessed_vids}/${total_vids}`
-    let new_text_content = cluster_keywords+rem_total
-    vid_list_div.textContent = new_text_content
-    
+    let labelText = vid_list_div.querySelector('.category-label-text')
+    let progressBadge = vid_list_div.querySelector('.category-label-progress')
+    let newProgress = `a-${approved_vids}/r-${rejected_vids}/t-${total_vids}`
+    if (progressBadge) {
+        progressBadge.textContent = newProgress
+    } else if (labelText) {
+        let span = document.createElement('span')
+        span.className = 'category-label-progress'
+        span.textContent = newProgress
+        vid_list_div.appendChild(span)
+    }
+
+    // Also update the sidebar card progress text for the active category
+    let activeCard = document.querySelector('.cat_headings.active .progress-text')
+    if (activeCard) {
+        let svgContent = activeCard.querySelector('svg')
+        let svgHtml = svgContent ? svgContent.outerHTML : ''
+        activeCard.innerHTML = `${svgHtml} ${newProgress}`
+    }
 }
 
-function replace_processed_by_all_and_user({user_processed=null, all_processed=null, processed_by_user_div=null, processed_by_all_div=null, isAdmin=null, html_node_user=null}){
+function replace_processed_by_all_and_user({user_processed=null, all_processed=null, processed_by_user_div=null, processed_by_all_div=null, isAdmin=null, html_node_user=null, user_approved=null, user_rejected=null}){
     if (isAdmin){
         let total_videos = processed_by_all_div.innerText.split('/').at(1)
         let new_text_content_all = `${all_processed}/${total_videos}`
         processed_by_all_div.innerText = new_text_content_all
-        
+
     }else{
         let text_content_user_node = processed_by_user_div.textContent
         let total_vids_category = text_content_user_node.split('/')[1]
@@ -999,7 +1117,17 @@ function replace_processed_by_all_and_user({user_processed=null, all_processed=n
         let text_content_all = processed_by_all_div.textContent
         let total_vids = text_content_all.split('/')[1]
         let new_text_content_all = all_processed+"/"+total_vids
-        processed_by_all_div.textContent = new_text_content_all   
+        processed_by_all_div.textContent = new_text_content_all
+
+        // Update approved/rejected counters
+        if (user_approved !== null) {
+            let approvedDiv = document.getElementById('user_approved_div')
+            if (approvedDiv) approvedDiv.textContent = user_approved
+        }
+        if (user_rejected !== null) {
+            let rejectedDiv = document.getElementById('user_rejected_div')
+            if (rejectedDiv) rejectedDiv.textContent = user_rejected
+        }
     }
 
 }
@@ -1053,8 +1181,11 @@ function show_video_in_preview({prev_file_name=null, assoc_category = null, data
         video_name.appendChild(span_heading)
 
         // Only show completion message if ALL videos in the category are processed
-        let rem_total_per_category = data["rem_total_per_category"] || [0, 0]
-        let unprocessed_count = rem_total_per_category[0]
+        let rem_total_per_category = data["rem_total_per_category"] || [0, 0, 0]
+        let approved_count = rem_total_per_category[0]
+        let rejected_count = rem_total_per_category[1]
+        let total_count = rem_total_per_category[2]
+        let unprocessed_count = total_count - approved_count - rejected_count
 
         if (unprocessed_count === 0) {
             let no_videos_msg = document.createElement('p')
@@ -1070,7 +1201,7 @@ function show_video_in_preview({prev_file_name=null, assoc_category = null, data
             let user_all_processed = data["user_all_processed"] || [0, 0]
             if (!isAdmin) {
                 mark_good_bad(prev_file_name, appr_rej)
-                return [null, rem_total_per_category[0], rem_total_per_category[1], null, user_all_processed]
+                return [null, rem_total_per_category[0], rem_total_per_category[1], rem_total_per_category[2], null, user_all_processed]
             } else {
                 return [rem_total_per_category, user_all_processed]
             }
@@ -1142,8 +1273,8 @@ function show_video_in_preview({prev_file_name=null, assoc_category = null, data
     action_control.appendChild(action_div)
     if (project_type == 'video_qa'){
         
-        const category_h3 = document.getElementById('cat_name')
-        const category = category_h3.textContent.split('|')[0]
+        const catLabel = document.querySelector('#cat_name .category-label-text')
+        const category = catLabel ? catLabel.textContent.trim() : document.getElementById('cat_name').textContent.trim()
         let project_name = category.split('_')[0]
         
         let kwargs = {project_type:project_type, project_name:project_name, file_name:file_name, category:category}
@@ -1160,16 +1291,17 @@ function show_video_in_preview({prev_file_name=null, assoc_category = null, data
         let rem_total_per_category = data["rem_total_per_category"]
         let user_all_processed = data["user_all_processed"]
         if (!isAdmin){
-            
+
             // admin page not not mark span as resolved
             mark_good_bad(prev_file_name, appr_rej)
 
-            let unprocessed_vids = rem_total_per_category[0]
-            let total_vids = rem_total_per_category[1]
+            let approved_vids = rem_total_per_category[0]
+            let rejected_vids = rem_total_per_category[1]
+            let total_vids = rem_total_per_category[2]
             let html_node_vid_list = document.getElementById('cat_name')
-            
-                
-            var payload = [file_name, unprocessed_vids, total_vids, html_node_vid_list, user_all_processed]
+
+
+            var payload = [file_name, approved_vids, rejected_vids, total_vids, html_node_vid_list, user_all_processed]
             
             
         }
@@ -1233,9 +1365,10 @@ function get_next_video_appr_rej({file_name=null, assoc_category=null, appr_rej=
             // Handle case when no more videos
             if (!result || result[0] === null) {
                 // Update progress counters even when no more videos
-                let user_all_processed = result ? result[4] : [0, 0]
-                let unprocessed_vids = result ? result[1] : 0
-                let total_vids = result ? result[2] : 0
+                let user_all_processed = result ? result[5] : [0, 0]
+                let approved_vids = result ? result[1] : 0
+                let rejected_vids = result ? result[2] : 0
+                let total_vids = result ? result[3] : 0
 
                 let all_processed = user_all_processed[1]
                 let user_processed = user_all_processed[0]
@@ -1243,14 +1376,14 @@ function get_next_video_appr_rej({file_name=null, assoc_category=null, appr_rej=
                 let processed_by_user_div = document.getElementById('processed_by_user_div')
                 let processed_by_all_div = document.getElementById('processed_by_all_div')
 
-                replace_rem_total_per_category({unprocessed_vids:unprocessed_vids, total_vids:total_vids})
+                replace_rem_total_per_category({approved_vids:approved_vids, rejected_vids:rejected_vids, total_vids:total_vids})
 
-                let kwargs = {user_processed:user_processed, all_processed:all_processed, processed_by_user_div:processed_by_user_div, processed_by_all_div:processed_by_all_div}
+                let kwargs = {user_processed:user_processed, all_processed:all_processed, processed_by_user_div:processed_by_user_div, processed_by_all_div:processed_by_all_div, user_approved:data.user_approved, user_rejected:data.user_rejected}
                 replace_processed_by_all_and_user(kwargs)
                 return
             }
 
-            const[file_name_, unprocessed_vids, total_vids, html_node_vid_list, user_all_processed] = result
+            const[file_name_, approved_vids, rejected_vids, total_vids, html_node_vid_list, user_all_processed] = result
 
             let all_processed = user_all_processed[1]
             let user_processed = user_all_processed[0]
@@ -1259,10 +1392,10 @@ function get_next_video_appr_rej({file_name=null, assoc_category=null, appr_rej=
             let processed_by_user_div = document.getElementById('processed_by_user_div')
             let processed_by_all_div = document.getElementById('processed_by_all_div')
 
-            replace_rem_total_per_category({unprocessed_vids:unprocessed_vids, total_vids:total_vids})
+            replace_rem_total_per_category({approved_vids:approved_vids, rejected_vids:rejected_vids, total_vids:total_vids})
             let html_node_category = document.getElementsByClassName('cat_headings active')[0]
 
-            let kwargs = {user_processed:user_processed, all_processed:all_processed, processed_by_user_div:processed_by_user_div, processed_by_all_div:processed_by_all_div}
+            let kwargs = {user_processed:user_processed, all_processed:all_processed, processed_by_user_div:processed_by_user_div, processed_by_all_div:processed_by_all_div, user_approved:data.user_approved, user_rejected:data.user_rejected}
             replace_processed_by_all_and_user(kwargs)
             add_active_to_span(file_name_)
         }

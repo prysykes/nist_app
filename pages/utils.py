@@ -897,12 +897,11 @@ def serialize_objects(obj, *args):
     return serialized_objects
 
 def get_rem_total_per_category(category):
-    uprocessed_videos = category.get_unprocessed_videos()
     total_videos = category.get_total_videos()
-    rem_total_per_category = (len(uprocessed_videos), len(total_videos))
-
-    # context = {"rem_total_per_category": rem_total_per_category}
-    return rem_total_per_category
+    total_count = len(total_videos)
+    approved_count = category.video_categories.filter(status=True, is_available=True).count()
+    rejected_count = category.video_categories.filter(status=False, is_available=True).count()
+    return (approved_count, rejected_count, total_count)
 
 def get_user_all_processed(user, is_admin=None, category=None, project=None):
     """

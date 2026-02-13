@@ -2,6 +2,8 @@
 {% load check_user_group %}
 {%load get_unprocessed_videos %}
 {% load get_total_videos %}
+{% load get_approved_videos %}
+{% load get_rejected_videos %}
 
 
 
@@ -44,6 +46,14 @@
                     <div class="stat-item">
                         <span class="stat-label">Your Progress</span>
                         <span class="stat-value highlight" id="processed_by_user_div">{{user_processed_videos}}/{{total_user_assigned_vids}}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Total Approved</span>
+                        <span class="stat-value approved-stat" id="user_approved_div">{{user_approved_count}}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Total Rejected</span>
+                        <span class="stat-value rejected-stat" id="user_rejected_div">{{user_rejected_count}}</span>
                     </div>
                     {% endif %}
                     <div class="stat-item">
@@ -401,13 +411,19 @@
                                         <div class="category-header">
                                             <h3 class="category-name">{{ category.cluster_keywords }}</h3>
                                         </div>
+                                        {% if request.user.userreg.project.project_type == 'annotation' and request.user.userreg.group %}
+                                        <div class="category-bulk-actions">
+                                            <button class="bulk-approve-btn" type="button">Approve All</button>
+                                            <button class="bulk-reject-btn" type="button">Reject All</button>
+                                        </div>
+                                        {% endif %}
                                         <div class="category-meta">
                                             <div class="category-progress">
                                                 <span class="progress-text progress">
                                                     <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                                                     </svg>
-                                                    |{{ category|get_unprocessed_videos:request.user }}/{{ category|get_total_videos }}
+                                                    a-{{ category|get_approved_videos }}/r-{{ category|get_rejected_videos }}/t-{{ category|get_total_videos }}
                                                 </span>
                                             </div>
                                             <div class="category-confidence">

@@ -1,4 +1,4 @@
-#!/Users/chukwuemekaduru/Documents/workspace/nist_app/.venv/bin/python3.12
+#!/Users/chukwuemekaduru/Documents/workspace/nist_app/.venv/bin/python
 # -*- coding: utf-8 -*-
 import re
 import sys

@@ -11,6 +11,7 @@ urlpatterns = [
     path('get_next_video', views.get_next_video, name='get_next_video'),
     path('get_unprocessed_vids', views.get_unprocessed_vids, name='get_unprocessed_vids'),
     path('process_user_decision', views.process_user_decision, name='process_user_decision'),
+    path('bulk_approve_reject_category', views.bulk_approve_reject_category, name='bulk_approve_reject_category'),
     path('admin_approve', views.admin_approve, name='admin_approve'),
     path('admin_approve_reject_video', views.admin_approve_reject_video, name='admin_approve_reject_video'),
     # path('reject_all', views.reject_all, name="reject_all"),

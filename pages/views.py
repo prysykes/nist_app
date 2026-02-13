@@ -87,7 +87,7 @@ def index(request):
             ).count()
             accepted_videos = Videos.objects.filter(
                 project=assoc_project,
-                status=True,
+                status__isnull=False,
                 is_available=True
             ).count()
 
@@ -267,10 +267,10 @@ def index(request):
 
                 return render(request, 'index.html', context)
     
-        # Regular user view
+        # Regular user view — count all processed videos (approved + rejected)
         accepted_videos = Videos.objects.filter(
             project=assoc_project,
-            status=True,
+            status__isnull=False,
             is_available=True
         ).count()
         total_videos = Videos.objects.filter(
@@ -308,6 +308,18 @@ def index(request):
             status__isnull=False,
             is_available=True
         )
+        user_approved_count = Videos.objects.filter(
+            project=assoc_project,
+            checked_by=user,
+            status=True,
+            is_available=True
+        ).count()
+        user_rejected_count = Videos.objects.filter(
+            project=assoc_project,
+            checked_by=user,
+            status=False,
+            is_available=True
+        ).count()
 
         try:
             if total_user_assigned_vids > 0:
@@ -326,7 +338,9 @@ def index(request):
                 'user_processed_videos': user_processed_videos.count(),
                 'total_user_assigned_vids': total_user_assigned_vids,
                 'accepted_videos': accepted_videos,
-                'total_videos': total_videos
+                'total_videos': total_videos,
+                'user_approved_count': user_approved_count,
+                'user_rejected_count': user_rejected_count,
             }
         else:
             first_category = categories.first()
@@ -339,7 +353,9 @@ def index(request):
                 'total_user_assigned_vids': total_user_assigned_vids,
                 'accepted_videos': accepted_videos,
                 'total_videos': total_videos,
-                'project_type': project_type
+                'project_type': project_type,
+                'user_approved_count': user_approved_count,
+                'user_rejected_count': user_rejected_count,
             }
 
         return render(request, 'index.html', context)
@@ -928,7 +944,115 @@ def process_user_decision(request):
         if appr_rej == 'approve':
             return JsonResponse({'info': f"Approved {file_name}"}) 
         elif appr_rej == 'reject':
-            return JsonResponse({'info': f"Rejected {file_name}"}) 
+            return JsonResponse({'info': f"Rejected {file_name}"})
+
+
+@login_required
+@require_GET
+def bulk_approve_reject_category(request):
+    """Bulk approve or reject all available videos in a category for an annotator user."""
+    try:
+        cur_user = request.user
+        cluster_keywords = request.GET.get('cluster_keywords')
+        action = request.GET.get('action')
+
+        try:
+            userreg = Userreg.objects.select_related('project', 'group').get(user=cur_user)
+        except Userreg.DoesNotExist:
+            return JsonResponse({'error': 'User registration not found'}, status=404)
+
+        if userreg.is_job_admin:
+            return JsonResponse({'error': 'Unauthorized: admins cannot use this endpoint'}, status=403)
+
+        project = userreg.project
+        if not project or project.project_type != 'annotation':
+            return JsonResponse({'error': 'Bulk actions only available for annotation projects'}, status=400)
+
+        if not cluster_keywords or action not in ('approve', 'reject'):
+            return JsonResponse({'error': 'Invalid parameters'}, status=400)
+
+        try:
+            category = Category.objects.get(cluster_keywords=cluster_keywords, project=project)
+        except Category.DoesNotExist:
+            return JsonResponse({'error': f'Category not found: {cluster_keywords}'}, status=404)
+        except Category.MultipleObjectsReturned:
+            category = Category.objects.filter(cluster_keywords=cluster_keywords, project=project).first()
+
+        status_value = True if action == 'approve' else False
+
+        # Use explicit queryset on Videos model with category filter
+        with transaction.atomic():
+            updated_count = Videos.objects.filter(
+                category=category,
+                is_available=True
+            ).update(
+                status=status_value,
+                checked_by_id=cur_user.pk
+            )
+
+        # Verify the update actually persisted
+        verified_count = Videos.objects.filter(
+            category=category,
+            is_available=True,
+            status=status_value,
+            checked_by_id=cur_user.pk
+        ).count()
+
+        total = Videos.objects.filter(category=category, is_available=True).count()
+        cat_approved = Videos.objects.filter(
+            category=category, status=True, is_available=True
+        ).count()
+        cat_rejected = Videos.objects.filter(
+            category=category, status=False, is_available=True
+        ).count()
+
+        user_processed = Videos.objects.filter(
+            project=project,
+            checked_by=cur_user,
+            status__isnull=False,
+            is_available=True
+        ).count()
+        accepted_videos = Videos.objects.filter(
+            project=project,
+            status__isnull=False,
+            is_available=True
+        ).count()
+        total_project = Videos.objects.filter(
+            project=project,
+            is_available=True
+        ).count()
+        user_approved = Videos.objects.filter(
+            project=project,
+            checked_by=cur_user,
+            status=True,
+            is_available=True
+        ).count()
+        user_rejected = Videos.objects.filter(
+            project=project,
+            checked_by=cur_user,
+            status=False,
+            is_available=True
+        ).count()
+
+        return JsonResponse({
+            'status': 'success',
+            'updated_count': updated_count,
+            'verified_count': verified_count,
+            'cat_approved': cat_approved,
+            'cat_rejected': cat_rejected,
+            'total': total,
+            'action': action,
+            'user_processed': user_processed,
+            'accepted_videos': accepted_videos,
+            'total_project': total_project,
+            'user_approved': user_approved,
+            'user_rejected': user_rejected,
+        })
+
+    except Exception as e:
+        logger.error(f"Error in bulk_approve_reject_category: {str(e)}", exc_info=True)
+        return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
+
 
 @login_required
 @require_GET
@@ -1034,11 +1158,24 @@ def get_next_video(request):
             else:
                 user_all_processed = get_user_all_processed(cur_user, project=assoc_project)
 
-            return JsonResponse({
+            response_data = {
                 "serialized_next_video": serialized_next_video,
                 "rem_total_per_category": rem_total_per_category,
                 "user_all_processed": user_all_processed
-            })
+            }
+
+            # Add approved/rejected counts for regular users
+            if not is_admin:
+                response_data["user_approved"] = Videos.objects.filter(
+                    project=assoc_project, checked_by=cur_user,
+                    status=True, is_available=True
+                ).count()
+                response_data["user_rejected"] = Videos.objects.filter(
+                    project=assoc_project, checked_by=cur_user,
+                    status=False, is_available=True
+                ).count()
+
+            return JsonResponse(response_data)
 
     except Exception as e:
         logger.error(f"Error in get_next_video: {str(e)}", exc_info=True)

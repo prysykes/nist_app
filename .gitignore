@@ -23,3 +23,6 @@ PRODUCTION_DEPLOYMENT.md
 .env
 .env.*
 !.env.example
+.venv
+.env.local
+.env.prod

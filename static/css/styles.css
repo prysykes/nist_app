@@ -411,6 +411,53 @@ Admin page styles end
     font-size:small;
 
 }
+
+/* Category Bulk Actions (Approve All / Reject All on hover) */
+.category-bulk-actions {
+    display: none;
+    gap: 6px;
+    padding: 4px 8px 4px 0;
+    justify-content: flex-end;
+}
+
+.cat_headings:hover .category-bulk-actions {
+    display: flex;
+}
+
+.category-bulk-actions .bulk-approve-btn,
+.category-bulk-actions .bulk-reject-btn {
+    border: none;
+    border-radius: 4px;
+    padding: 3px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+
+.category-bulk-actions .bulk-approve-btn {
+    background-color: #059669;
+    color: #fff;
+}
+
+.category-bulk-actions .bulk-approve-btn:hover {
+    opacity: 0.85;
+}
+
+.category-bulk-actions .bulk-reject-btn {
+    background-color: #dc2626;
+    color: #fff;
+}
+
+.category-bulk-actions .bulk-reject-btn:hover {
+    opacity: 0.85;
+}
+
+.categories:hover .category-bulk-actions .bulk-approve-btn,
+.categories:hover .category-bulk-actions .bulk-reject-btn {
+    color: #fff;
+}
+
 .tm-explore{
     background-color: rgb(244, 244, 249);
     color: rgb(115, 0, 0);

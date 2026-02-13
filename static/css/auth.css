@@ -495,6 +495,14 @@
     color: #4ade80;
 }
 
+.stat-value.approved-stat {
+    color: #4ade80;
+}
+
+.stat-value.rejected-stat {
+    color: #f87171;
+}
+
 /* User Section */
 .header-user {
     display: flex;
