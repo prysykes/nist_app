@@ -24,6 +24,13 @@ warning() {
     echo -e "${YELLOW}[WARNING] [$(date +'%Y-%m-%d %H:%M:%S')]${NC} $1"
 }
 
+# Ensure resource directories exist
+log "Creating resource directories..."
+mkdir -p nist_trecvid_resources/cluster_csv
+mkdir -p nist_trecvid_resources/videos
+mkdir -p nist_trecvid_resources/youtube_files_json
+mkdir -p nist_trecvid_resources/youtube_files_txt
+
 # Wait for database to be ready
 log "Waiting for database to be ready..."
 max_retries=30
@@ -77,16 +84,18 @@ else
 fi
 
 # Calculate optimal number of workers
-# Formula: (2 x NUM_CORES) + 1
-NUM_CORES=$(nproc)
-WORKERS=$((2 * NUM_CORES + 1))
-log "Starting Gunicorn with $WORKERS workers..."
+# Using 1 worker to ensure in-memory upload progress tracking works
+# across requests (progress tracker is not shared between processes).
+# For multi-worker support, migrate to a shared backend (Redis/DB).
+WORKERS=1
+log "Starting Gunicorn with $WORKERS worker..."
 
 # Start Gunicorn with production settings
 exec gunicorn nist_app.wsgi:application \
     --bind 0.0.0.0:8000 \
     --workers $WORKERS \
-    --worker-class sync \
+    --threads 4 \
+    --worker-class gthread \
     --worker-connections 1000 \
     --max-requests 10000 \
     --max-requests-jitter 1000 \

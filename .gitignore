@@ -26,3 +26,4 @@ PRODUCTION_DEPLOYMENT.md
 .venv
 .env.local
 .env.prod
+nginx/certs/

@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   db:
-    image: postgres:15-alpine
+    image: postgres:17-alpine
     container_name: nist_postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -12,7 +12,7 @@ services:
     ports:
       - "5434:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      test: ["CMD-SHELL", "pg_isready -U nist_user"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -31,10 +31,7 @@ services:
       - media_data:/app/media
       - static_data:/app/staticfiles
       - logs_data:/app/logs
-      - ./nist_trecvid_resources/videos:/app/videos:ro
-      - ./nist_trecvid_resources/youtube_files_json:/app/youtube_files_json:ro
-      - ./nist_trecvid_resources/cluster_csv:/app/cluster_csv:ro
-      - ./nist_trecvid_resources/youtube_files_txt:/app/youtube_files_txt:ro
+      - ./nist_trecvid_resources:/app/nist_trecvid_resources
     expose:
       - "8000"
     env_file:
@@ -60,6 +57,7 @@ services:
       - "8443:443"
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
       - static_data:/app/staticfiles:ro
       - media_data:/app/media:ro
     depends_on:

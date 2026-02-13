@@ -3,37 +3,70 @@ AVCAS is an internal tool developed to streamline video understanding and annota
 ***
 ## Features
 * Flexible application for video annotation and question answering.
-* Accepts thousands of unlabeled, random video files or youtube IDs.
-* Utilizes machine learning for optimizued video clustering.
-* Sorts clusters by Intra-cluster similarity score, prioritizing the most informative ones for annotators and reducing the time required for relevant video file selection.
+* Accepts thousands of unlabeled, random video files or YouTube IDs.
+* Utilizes machine learning for optimized video clustering.
+* Sorts clusters by intra-cluster similarity score, prioritizing the most informative ones for annotators and reducing the time required for relevant video file selection.
 * Offers an intuitive UI for monitoring annotation progress.
 ***
 ## How to Use
 ### Starting AVCAS - first steps
 AVCAS is a Django application and requires the following steps:
-A. Using Docker (recommended).
+
+### A. Using Docker (recommended)
 1. Ensure you have Docker installed on your computer and the Docker daemon is running, then follow these steps:
     a. Clone this repository: `git clone https://github.com/prysykes/nist_app.git`
     b. Configure the environment: `cp .env.example .env.prod` and update `.env.prod` with your actual values (database password, secret key, etc.)
-    c. Create the resource directories that the application expects:
+    c. Create the resource directories inside the project folder:
        ```
        mkdir -p nist_trecvid_resources/cluster_csv
        mkdir -p nist_trecvid_resources/videos
        mkdir -p nist_trecvid_resources/youtube_files_json
        mkdir -p nist_trecvid_resources/youtube_files_txt
        ```
-    d. Build and start the containers: `docker compose up --build`
-    e. The application can be accessed at http://localhost:8080 (served via nginx)
-    f. Django Admin Site: http://localhost:8080/admin
-    g. To create a superuser: `docker compose exec web python manage.py createsuperuser` and follow the prompt.
-    h. Visit the admin site to log into your application.
-2. Add your resource files to the appropriate directories:
-    a. Your cluster CSV files to `nist_trecvid_resources/cluster_csv` (if any);
-    b. Your video files to `nist_trecvid_resources/videos` (if any);
-    c. Your youtube JSON files to `nist_trecvid_resources/youtube_files_json` (if any);
-    d. Your youtube TXT files to `nist_trecvid_resources/youtube_files_txt` (if any);
+    d. Add your resource files to the corresponding subdirectories:
+       - **Cluster CSV files** (output from ML pipeline) go in `nist_trecvid_resources/cluster_csv/`
+       - **Video files** go in `nist_trecvid_resources/videos/`
+       - **YouTube JSON files** go in `nist_trecvid_resources/youtube_files_json/`
+       - **YouTube TXT files** go in `nist_trecvid_resources/youtube_files_txt/`
 
-B. Local Development (without Docker)
+       This folder is mounted into the Docker container automatically. Files can be added before or after starting the containers.
+
+    e. Build and start the containers: `docker compose up --build`
+    f. The application can be accessed at:
+       - **HTTP:** http://localhost:8080
+       - **HTTPS:** https://localhost:8443 (requires SSL setup, see below)
+    g. Django Admin Site: http://localhost:8080/admin
+    h. To create a superuser: `docker compose exec web python manage.py createsuperuser` and follow the prompt.
+    i. Visit the admin site to log into your application.
+
+> **Note on file paths:** When uploading through the app, enter the full path from your computer (e.g., `/Users/you/nist_trecvid_resources/videos`). The app automatically resolves the path for both local and Docker environments. For Docker, ensure the files are placed in the project's `nist_trecvid_resources/` directory first, as that is the directory mounted into the container.
+
+#### Enabling HTTPS (SSL) for Docker
+To enable HTTPS access on port 8443, generate a self-signed SSL certificate:
+1. Create the certs directory:
+   ```
+   mkdir -p nginx/certs
+   ```
+2. Generate a self-signed certificate:
+   ```
+   openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+     -keyout nginx/certs/nginx.key \
+     -out nginx/certs/nginx.crt \
+     -subj "/CN=localhost"
+   ```
+3. Add the HTTPS origins to `DJANGO_CSRF_TRUSTED_ORIGINS` in `.env.prod`:
+   ```
+   DJANGO_CSRF_TRUSTED_ORIGINS=http://127.0.0.1:8080,http://localhost:8080,https://127.0.0.1:8443,https://localhost:8443
+   ```
+4. Restart the containers:
+   ```
+   docker compose down && docker compose up -d
+   ```
+5. Access the application at https://localhost:8443. Your browser will show a certificate warning since it is self-signed — click through it to proceed.
+
+> **Note:** The `nginx/certs/` directory is gitignored and certificates should not be committed to the repository. Each developer should generate their own.
+
+### B. Local Development (without Docker)
 1. Clone: `git clone https://github.com/prysykes/nist_app.git`
 2. Create a virtual environment: `python -m venv .venv && source .venv/bin/activate`
 3. Install dependencies: `pip install -r requirements.txt`
@@ -45,69 +78,73 @@ B. Local Development (without Docker)
 9. Access the application at http://localhost:8000/
 10. Access the Django admin at http://localhost:8000/admin
 
-
+***
 ### Machine Learning (ML) Pipeline
-We have provided a jupyter notebook that accepts thousands of unlabeled video and clusters them.
+We have provided a Jupyter notebook that accepts thousands of unlabeled videos and clusters them.
 1. The program accepts a path to unlabeled videos and outputs a CSV file.
-2. The CSV file contains video defualt filenames, cluster membership IDs, video keywords descriptions, cluster keywords description, intracluster performance scores.
-3. The CSV file is saved as full_cluster_csv.csv.
-### AVCAS Usecases
-AVCAS Supports two kinds of video analytics pipelines
-1. **Video Annotation (annotation)**
-2. **Video Question and Answering (Video_qa)**
-#### Video Annotation 
-To use AVCAS for ***video annotation***, kindly follow  these steps
-1. Create an annotator coordinator account using the user registration form
-2. Choose Video Annotation (default) as the Project type
-3. The "is job admin" check box should only be selected when creating a coordinator account.
-4. Login to the application (http://localhost:8080/) using the coordinator credentials
-5. Click upload videos
-6. Choose 'Video Annotation' in the 'select project type'
-7. Enter project name e.g. 'Trecvid 2025'. This must match the project name chosen during the coordinator account creation.
-8. Enter the cluster_csv path i.e. nist_trecvid_resources/cluster_csv (the output from the ML pipeline), if any.
-9. Enter the number of annotators e.g. 3 (number of annotators are the number of people to assign the current job).
-10. Enter the video directory path i.e: nist_trecvid_resources/videos or any local path.
+2. The CSV file contains video default filenames, cluster membership IDs, video keywords descriptions, cluster keywords descriptions, and intra-cluster performance scores.
+3. The CSV file is saved as `full_cluster_csv.csv`.
+
+***
+### AVCAS Use Cases
+AVCAS supports two kinds of video analytics pipelines:
+1. **Video Annotation**
+2. **Video Question and Answering (Video QA)**
+
+#### Video Annotation
+To use AVCAS for ***video annotation***, follow these steps:
+1. Create a coordinator account using the user registration form.
+2. Choose **Video Annotation** (default) as the Project type.
+3. The "is job admin" checkbox should only be selected when creating a coordinator account.
+4. Log in to the application using the coordinator credentials.
+5. Click **Upload Videos**.
+6. Choose **Video Annotation** in the "Select project type" dropdown.
+7. Enter a project name (e.g., `Trecvid2025`). This must match the project name chosen during the coordinator account creation.
+8. Enter the cluster CSV path (e.g., `/Users/you/nist_trecvid_resources/cluster_csv`) — the output from the ML pipeline, if any.
+9. Enter the number of annotators (e.g., `3`) — the number of people to assign the current job.
+10. Enter the video directory path (e.g., `/Users/you/nist_trecvid_resources/videos`).
 11. Ignore "Select youtube source type" since you are working with local video files.
-12. Click "create job".
-13. The application uploads the videos, creates a project and unique groups based on the project name and number of annotators thus:
-    a. Project = Trevec2025
-    b. Unique annotator groups = "Trevec2025_grp_1", "Trevec2025_grp_2", "Trevec2025_grp_3".
-##### Annotator Video Assignment 
+12. Click **Create Job**.
+13. The application uploads the videos, creates a project and unique groups based on the project name and number of annotators:
+    - Project = `Trecvid2025`
+    - Unique annotator groups = `Trecvid2025_grp_1`, `Trecvid2025_grp_2`, `Trecvid2025_grp_3`
+
+##### Annotator Video Assignment
 1. Ask annotators to create annotator accounts corresponding to the number of annotators required for the current job cycle.
-2. Annotators must not check the "is job admin" box.
+2. Annotators must **not** check the "is job admin" box.
 3. The Project name and Project type must match those selected by the job admin.
-2. Once the account is created, the application assigned a group to the annotator as well as corresponding unique video.
-3. An annotator's assigned group determines the videos displayed on their dashboard, ensuring that each annotator only works with the videos associated with their specific group.
+4. Once the account is created, the application assigns a group to the annotator as well as corresponding unique videos.
+5. An annotator's assigned group determines the videos displayed on their dashboard, ensuring that each annotator only works with the videos associated with their specific group.
 
 #### Video Question and Answering
-To use AVCAS for ***video question and answering***, kindly follow  these steps
-1. Create a video question and answering admin account using the user registration form
-2. Choose Video Question Answering as the Project type.
-3. The "is job admin" check box should only be selected for the coordinator account.
-4. Login to the application (http://localhost:8080/) using the coordinator credentials
-5. Click upload videos
-6. Choose 'Video Question Answering' in the 'Select project type'
-7. Enter project name e.g. 'TrecvidVQA2025'. This must match the project name chosen during admin account creation.
-8. Enter the cluster_csv path i.e. nist_trecvid_resources/cluster_csv (the output from the ML pipepline), if any.
-9. Enter the number of annotators e.g. 3 (number of annotators are the number of people to assign the current job).
-10. Enter the video directory path i.e: nist_trecvid_resources/videos
+To use AVCAS for ***video question and answering***, follow these steps:
+1. Create a Video QA admin account using the user registration form.
+2. Choose **Video Question Answering** as the Project type.
+3. The "is job admin" checkbox should only be selected for the coordinator account.
+4. Log in to the application using the coordinator credentials.
+5. Click **Upload Videos**.
+6. Choose **Video Question Answering** in the "Select project type" dropdown.
+7. Enter a project name (e.g., `TrecvidVQA2025`). This must match the project name chosen during admin account creation.
+8. Enter the cluster CSV path (e.g., `/Users/you/nist_trecvid_resources/cluster_csv`) — the output from the ML pipeline, if any.
+9. Enter the number of annotators (e.g., `3`) — the number of people to assign the current job.
+10. Enter the video directory path (e.g., `/Users/you/nist_trecvid_resources/videos`).
 11. Ignore "Select youtube source type" since you are working with local video files.
-12. Click "create job".
-13. The application uploads the videos, creates a project and unique groups based on the project name and number of annotators thus:
-    a. Project = TrecvidVQA2025
-    b. Unique annotator groups = "TrecvidVQA2025_grp_1", "TrecvidVQA2025_grp_2", "TrecvidVQA2025_grp_3".
+12. Click **Create Job**.
+13. The application uploads the videos, creates a project and unique groups based on the project name and number of annotators:
+    - Project = `TrecvidVQA2025`
+    - Unique annotator groups = `TrecvidVQA2025_grp_1`, `TrecvidVQA2025_grp_2`, `TrecvidVQA2025_grp_3`
 
-#### The Video Question Answering pipeline also work with files containing youtube IDs thus:
-To use AVCAS for ***videos from youtube for video question and answering***, kindly follow  these steps
-1. Create a video question and answering admin account using the user registration form
-2. Choose Video Question Answering as the Project type.
-3. The "is job admin" check box should only be selected when creating an admin account.
-4. Login to the application (http://localhost:8080/) using this video QA admin credentials
-5. Choose 'Video Question Answering' in the 'Select project type'
-6. Enter project name e.g. 'TrecvidVQA2025'. This must match the project name chosen during admin account creation.
-7. Enter the number of annotators e.g. 3 (number of annotators are the number of people to assign the current job).
-8. Click the "Select youtube source type :- Select either "JSON Files" or "TXT Files", depending on how you data is stored.
-9. Click "create job".
-10. The application uploads the videos, creates a project and unique groups based on the project name and number of annotators thus:
-    a. Project = TrecvidVQA2025
-    b. Unique annotator groups = "TrecvidVQA2025_grp_1", "TrecvidVQA2025_grp_2", "TrecvidVQA2025_grp_3".
+#### Video QA with YouTube IDs
+To use AVCAS for ***videos from YouTube for video question and answering***, follow these steps:
+1. Create a Video QA admin account using the user registration form.
+2. Choose **Video Question Answering** as the Project type.
+3. The "is job admin" checkbox should only be selected when creating an admin account.
+4. Log in to the application using the Video QA admin credentials.
+5. Choose **Video Question Answering** in the "Select project type" dropdown.
+6. Enter a project name (e.g., `TrecvidVQA2025`). This must match the project name chosen during admin account creation.
+7. Enter the number of annotators (e.g., `3`) — the number of people to assign the current job.
+8. Click "Select youtube source type" and choose either **JSON Files** or **TXT Files**, depending on how your data is stored.
+9. Click **Create Job**.
+10. The application uploads the videos, creates a project and unique groups based on the project name and number of annotators:
+    - Project = `TrecvidVQA2025`
+    - Unique annotator groups = `TrecvidVQA2025_grp_1`, `TrecvidVQA2025_grp_2`, `TrecvidVQA2025_grp_3`
