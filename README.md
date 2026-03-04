@@ -31,17 +31,32 @@ AVCAS is a Django application and requires the following steps:
 
        This folder is mounted into the Docker container automatically. Files can be added before or after starting the containers.
 
-    e. Build and start the containers: `docker compose up --build`
-    f. The application can be accessed at:
+    e. **(Optional) Enable HTTPS:** To enable HTTPS access on port 8443, generate a self-signed SSL certificate before starting the containers:
+       ```
+       mkdir -p nginx/certs
+       openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+         -keyout nginx/certs/nginx.key \
+         -out nginx/certs/nginx.crt \
+         -subj "/CN=localhost"
+       ```
+       Then add the HTTPS origins to `DJANGO_CSRF_TRUSTED_ORIGINS` in `.env.prod`:
+       ```
+       DJANGO_CSRF_TRUSTED_ORIGINS=http://127.0.0.1:8080,http://localhost:8080,https://127.0.0.1:8443,https://localhost:8443
+       ```
+       > **Note:** The `nginx/certs/` directory is gitignored and certificates should not be committed to the repository. Each developer should generate their own.
+
+    f. Build and start the containers: `docker compose up --build`
+       Nginx starts immediately alongside the application. The app may return 502 briefly while migrations and startup complete.
+    g. The application can be accessed at:
        - **HTTP:** http://localhost:8080
-       - **HTTPS:** https://localhost:8443 (requires SSL setup, see below)
-    g. Django Admin Site: http://localhost:8080/admin
-    h. Create a superuser (admin account):
+       - **HTTPS:** https://localhost:8443 (if SSL was configured in step e). Your browser will show a certificate warning since it is self-signed — click through it to proceed.
+    h. Django Admin Site: http://localhost:8080/admin
+    i. Create a superuser (admin account):
        ```
        docker compose exec web python manage.py createsuperuser
        ```
        Follow the prompts to enter a username, email, and password. A superuser is a Django admin account with full access to the Django Admin panel, where you can manage all database records, users, groups, and application data directly.
-    i. Visit the Django Admin site at http://localhost:8080/admin and log in with your superuser credentials.
+    j. Visit the Django Admin site at http://localhost:8080/admin and log in with your superuser credentials.
 
 #### Upload Form — File Path Reference
 When using the **Upload Videos** form, you can enter short directory/file names instead of full system paths. The app automatically resolves paths relative to the `nist_trecvid_resources/` directory.
@@ -54,31 +69,6 @@ When using the **Upload Videos** form, you can enter short directory/file names 
 | **Text Directory** | `youtube_files_txt` | `nist_trecvid_resources/youtube_files_txt` |
 
 > **Note:** Full system paths (e.g., `/Users/you/nist_trecvid_resources/videos`) are also supported and will work in both local and Docker environments. For Docker, ensure the files are placed in the project's `nist_trecvid_resources/` directory first, as that is the directory mounted into the container.
-
-#### Enabling HTTPS (SSL) for Docker
-To enable HTTPS access on port 8443, generate a self-signed SSL certificate:
-1. Create the certs directory:
-   ```
-   mkdir -p nginx/certs
-   ```
-2. Generate a self-signed certificate:
-   ```
-   openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-     -keyout nginx/certs/nginx.key \
-     -out nginx/certs/nginx.crt \
-     -subj "/CN=localhost"
-   ```
-3. Add the HTTPS origins to `DJANGO_CSRF_TRUSTED_ORIGINS` in `.env.prod`:
-   ```
-   DJANGO_CSRF_TRUSTED_ORIGINS=http://127.0.0.1:8080,http://localhost:8080,https://127.0.0.1:8443,https://localhost:8443
-   ```
-4. Restart the containers:
-   ```
-   docker compose down && docker compose up -d
-   ```
-5. Access the application at https://localhost:8443. Your browser will show a certificate warning since it is self-signed — click through it to proceed.
-
-> **Note:** The `nginx/certs/` directory is gitignored and certificates should not be committed to the repository. Each developer should generate their own.
 
 #### Connecting to the Docker Database
 You can connect to the PostgreSQL database from your host machine using any database client (pgAdmin, DBeaver, TablePlus, DataGrip, or `psql`).
