@@ -33,7 +33,7 @@ const base_url = window.location.origin
 const full_url_path = base_url+'/display_videos?term='
 const get_videos_per_category = base_url+'/get_videos_per_category?term='
 const process_user_decision = base_url+'/process_user_decision?selection='
-const base_vid_src = "nist_trecvid_resources/"
+const base_vid_src = "/nist_trecvid_resources/"
 const mark_unavailable_url = base_url + '/mark_as_unavailable'
 
 // let full_url_path = base_url+'/display_videos?term='

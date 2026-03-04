@@ -36,10 +36,24 @@ AVCAS is a Django application and requires the following steps:
        - **HTTP:** http://localhost:8080
        - **HTTPS:** https://localhost:8443 (requires SSL setup, see below)
     g. Django Admin Site: http://localhost:8080/admin
-    h. To create a superuser: `docker compose exec web python manage.py createsuperuser` and follow the prompt.
-    i. Visit the admin site to log into your application.
+    h. Create a superuser (admin account):
+       ```
+       docker compose exec web python manage.py createsuperuser
+       ```
+       Follow the prompts to enter a username, email, and password. A superuser is a Django admin account with full access to the Django Admin panel, where you can manage all database records, users, groups, and application data directly.
+    i. Visit the Django Admin site at http://localhost:8080/admin and log in with your superuser credentials.
 
-> **Note on file paths:** When uploading through the app, enter the full path from your computer (e.g., `/Users/you/nist_trecvid_resources/videos`). The app automatically resolves the path for both local and Docker environments. For Docker, ensure the files are placed in the project's `nist_trecvid_resources/` directory first, as that is the directory mounted into the container.
+#### Upload Form — File Path Reference
+When using the **Upload Videos** form, you can enter short directory/file names instead of full system paths. The app automatically resolves paths relative to the `nist_trecvid_resources/` directory.
+
+| Form Field | What to Enter | Resolves To |
+|---|---|---|
+| **CSV File Path** | `full_cluster_csv.csv` | `nist_trecvid_resources/cluster_csv/full_cluster_csv.csv` |
+| **Video Directory** | `videos` | `nist_trecvid_resources/videos` |
+| **JSON Directory** | `youtube_files_json` | `nist_trecvid_resources/youtube_files_json` |
+| **Text Directory** | `youtube_files_txt` | `nist_trecvid_resources/youtube_files_txt` |
+
+> **Note:** Full system paths (e.g., `/Users/you/nist_trecvid_resources/videos`) are also supported and will work in both local and Docker environments. For Docker, ensure the files are placed in the project's `nist_trecvid_resources/` directory first, as that is the directory mounted into the container.
 
 #### Enabling HTTPS (SSL) for Docker
 To enable HTTPS access on port 8443, generate a self-signed SSL certificate:
@@ -65,6 +79,23 @@ To enable HTTPS access on port 8443, generate a self-signed SSL certificate:
 5. Access the application at https://localhost:8443. Your browser will show a certificate warning since it is self-signed — click through it to proceed.
 
 > **Note:** The `nginx/certs/` directory is gitignored and certificates should not be committed to the repository. Each developer should generate their own.
+
+#### Connecting to the Docker Database
+You can connect to the PostgreSQL database from your host machine using any database client (pgAdmin, DBeaver, TablePlus, DataGrip, or `psql`).
+
+Use the following connection details (from your `.env.prod` file):
+- **Host:** `localhost`
+- **Port:** `5434`
+- **Database:** value of `POSTGRES_DB` (e.g., `nist_db`)
+- **User:** value of `POSTGRES_USER` (e.g., `nist_user`)
+- **Password:** value of `POSTGRES_PASSWORD`
+
+Example using `psql`:
+```
+psql -h localhost -p 5434 -U nist_user -d nist_db
+```
+
+> **Note:** Port `5434` is the external port mapped in `docker-compose.yml`. The internal container port remains `5432`.
 
 ### B. Local Development (without Docker)
 1. Clone: `git clone https://github.com/prysykes/nist_app.git`

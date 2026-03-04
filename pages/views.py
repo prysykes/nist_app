@@ -157,9 +157,10 @@ def index(request):
                     youtube_json_input = request.POST.get('youtube_json_path', '').strip()
                     youtube_txt_input = request.POST.get('youtube_txt_path', '').strip()
 
-                    def resolve_resource_path(input_path):
+                    def resolve_resource_path(input_path, base_dir=None):
                         """Resolve a resource path for both local and Docker environments.
                         If the path exists directly (local dev), use it as-is.
+                        If a base_dir is provided, try resolving relative to it.
                         Otherwise, extract the nist_trecvid_resources/... portion
                         and resolve it relative to the working directory (Docker).
                         """
@@ -167,6 +168,11 @@ def index(request):
                             return None
                         if os.path.exists(input_path):
                             return input_path
+                        # Try resolving relative to the known base directory
+                        if base_dir:
+                            candidate = os.path.join(base_dir, input_path)
+                            if os.path.exists(candidate):
+                                return candidate
                         marker = 'nist_trecvid_resources'
                         if marker in input_path:
                             idx = input_path.index(marker)
@@ -177,15 +183,15 @@ def index(request):
 
                     video_path = None
                     if video_path_input:
-                        video_path = resolve_resource_path(video_path_input)
+                        video_path = resolve_resource_path(video_path_input, resources_dir)
                         logger.info(f"Video path resolved to: {video_path}")
 
                     yt_file_type = None
                     if youtube_json_input:
-                        yt_file_type = resolve_resource_path(youtube_json_input)
+                        yt_file_type = resolve_resource_path(youtube_json_input, resources_dir)
                         logger.info(f"YouTube JSON path resolved to: {yt_file_type}")
                     elif youtube_txt_input:
-                        yt_file_type = resolve_resource_path(youtube_txt_input)
+                        yt_file_type = resolve_resource_path(youtube_txt_input, resources_dir)
                         logger.info(f"YouTube TXT path resolved to: {yt_file_type}")
 
                     if not video_path and not yt_file_type:

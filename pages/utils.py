@@ -346,10 +346,18 @@ def pipeline_with_cluster_csv(new_project, num_annotators, groups, cluster_csv, 
             cluster_keyword_id_similarity_pair=cluster_keyword_id_similarity_pair
         )
 
-        # Create destination directory
+        # Determine if source videos are already inside the videos directory
         project_name = new_project.project_name
-        destination_path = os.path.join(local_video_path, project_name)
-        os.makedirs(destination_path, exist_ok=True)
+        source_already_in_videos = os.path.commonpath([os.path.abspath(video_path), os.path.abspath(local_video_path)]) == os.path.abspath(local_video_path)
+
+        if source_already_in_videos:
+            # Videos are already in place, compute relative path from nist_trecvid_resources
+            relative_video_path = os.path.relpath(video_path, resources_dir)
+            destination_path = None
+        else:
+            destination_path = os.path.join(local_video_path, project_name)
+            os.makedirs(destination_path, exist_ok=True)
+            relative_video_path = f'videos/{project_name}'
 
         if task_id:
             upload_progress_tracker.update(task_id, message='Processing videos...')
@@ -403,7 +411,6 @@ def pipeline_with_cluster_csv(new_project, num_annotators, groups, cluster_csv, 
                     continue
 
                 # Create video record
-                relative_video_path = f'videos/{project_name}'
                 cur_vid = Videos(
                     video_path=relative_video_path,
                     checked_by=None,
@@ -416,8 +423,9 @@ def pipeline_with_cluster_csv(new_project, num_annotators, groups, cluster_csv, 
                 cur_vid.description = description if pd.notna(description) else None
                 cur_vid.save()
 
-                # Copy video file
-                move_video_file(source_file, destination_path)
+                # Copy video file only if source is outside the videos directory
+                if destination_path:
+                    move_video_file(source_file, destination_path)
                 processed_count += 1
 
                 # Update progress
@@ -476,10 +484,17 @@ def pipeline_without_cluster_csv(new_project, num_annotators, groups, video_path
             min_idx = 0
             max_idx = videos_per_category
 
-            # Fix: Use new_project.project_name instead of project_name.project_name
+            # Determine if source videos are already inside the videos directory
             project_name = new_project.project_name
-            destination_path = os.path.join(local_video_path, project_name)
-            os.makedirs(destination_path, exist_ok=True)
+            source_already_in_videos = os.path.commonpath([os.path.abspath(video_path), os.path.abspath(local_video_path)]) == os.path.abspath(local_video_path)
+
+            if source_already_in_videos:
+                relative_video_path = os.path.relpath(video_path, resources_dir)
+                destination_path = None
+            else:
+                destination_path = os.path.join(local_video_path, project_name)
+                os.makedirs(destination_path, exist_ok=True)
+                relative_video_path = f'videos/{project_name}'
 
             if task_id:
                 upload_progress_tracker.update(task_id, message='Processing videos...')
@@ -495,7 +510,6 @@ def pipeline_without_cluster_csv(new_project, num_annotators, groups, video_path
 
                     source_file = os.path.join(assoc_video_path, video_name)
                     file_name = video_name.split('/')[-1]
-                    relative_video_path = f'videos/{project_name}'
 
                     cur_video = Videos(
                         video_path=relative_video_path,
@@ -506,11 +520,12 @@ def pipeline_without_cluster_csv(new_project, num_annotators, groups, video_path
                     cur_video.project = new_project
                     cur_video.save()
 
-                    # Copy video file to destination
-                    try:
-                        move_video_file(source_file, destination_path)
-                    except Exception as e:
-                        logger.error(f"Error copying video file {video_name}: {str(e)}")
+                    # Copy video file only if source is outside the videos directory
+                    if destination_path:
+                        try:
+                            move_video_file(source_file, destination_path)
+                        except Exception as e:
+                            logger.error(f"Error copying video file {video_name}: {str(e)}")
 
                     processed_count += 1
                     if task_id:

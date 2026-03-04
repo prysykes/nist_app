@@ -193,8 +193,12 @@ function custom_confirm({message=null, callback=null, endpoint=null, cat_elem=nu
 
 if(export_all_videos){
     export_all_videos.addEventListener('click', ()=>{
+        if (user_processed_categories.length === 0) {
+            alert('No processed videos found.')
+            return
+        }
 
-        let message = "Are you sure you want to export all videos?"
+        let message = "Are you sure you want to export processed videos?"
         let callback = handle_export_all_videos
         custom_confirm({message: message, callback: callback})
 
@@ -251,6 +255,11 @@ if (delete_all_videos_btn) {
             return response.json()
         })
         .then((data) => {
+            if (data.total_videos === 0) {
+                alert('There are no videos to delete.')
+                return
+            }
+
             let warningMessage = ''
 
             if (data.has_ongoing_jobs) {

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:17-alpine
@@ -60,6 +58,7 @@ services:
       - ./nginx/certs:/etc/nginx/certs:ro
       - static_data:/app/staticfiles:ro
       - media_data:/app/media:ro
+      - ./nist_trecvid_resources:/app/nist_trecvid_resources:ro
     depends_on:
       web:
         condition: service_healthy
